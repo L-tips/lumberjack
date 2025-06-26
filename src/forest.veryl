@@ -1,0 +1,26 @@
+module Forest (
+    clk: input clock,
+    rst: input reset,
+) {
+
+    inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
+
+    inst feature_registers: Regfile #(
+        NUM_PORTS       : 2 ,
+        FEATURE_WIDTH   : 32,
+        MAX_NUM_FEATURES: 16,
+    ) (
+        clk                        ,
+        rst                        ,
+        write_enable : 0           ,
+        write_data   : 0           ,
+        write_address: 0           ,
+        read_port    : feature_port,
+    );
+
+    inst tree_1: TreePredictor (
+        clk           ,
+        rst           ,
+        feature_port  ,
+    );
+}

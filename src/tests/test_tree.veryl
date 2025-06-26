@@ -1,0 +1,17 @@
+module TestTree (
+    clk  : input clock,
+    rst  : input reset,
+    start: input bool ,
+) {
+    inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
+
+    inst tree: TreePredictor (
+        clk           ,
+        rst           ,
+        feature_port  ,
+        start         ,
+    );
+}
+
+#[test(test_tree, TestTree)]
+include (cocotb, "../../tb/tree_predict.py");

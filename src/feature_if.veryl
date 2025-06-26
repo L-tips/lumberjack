@@ -1,0 +1,18 @@
+interface FeatureBus #(
+    param MAX_FEATURES: u16 = 256,
+) {
+    const DATA_WIDTH: u8  = 32;
+    const ADDR_WIDTH: u32 = $clog2(MAX_FEATURES);
+
+    var address: logic<ADDR_WIDTH>;
+    var feature: logic<DATA_WIDTH>;
+
+    modport slave {
+        address: input ,
+        feature: output,
+    }
+
+    modport master {
+        ..converse(slave)
+    }
+}

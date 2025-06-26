@@ -1,0 +1,119 @@
+module TreePredictor (
+    clk: input clock,
+    rst: input reset,
+
+    start: input bool,
+
+    ready     : output bool     ,
+    busy      : output bool     ,
+    prediction: output logic<32>,
+    error     : output bool     ,
+
+    feature_port: modport FeatureBus::master,
+) {
+
+    struct Flags {
+        left_predict : logic    ,
+        right_predict: logic    ,
+        split_idx    : logic<30>,
+    }
+
+    struct Node {
+        left : logic<32>,
+        right: logic<32>,
+        split: logic<32>,
+        flags: Flags    ,
+    }
+
+    var tree_mem: logic<32> [8];
+
+    var node_ptr: logic<3>;
+    var node    : Node    ;
+
+    // Mux node ptr to handle immediate start condition
+    let effective_ptr: logic<3> = if (start && !busy) ? 0 : node_ptr;
+
+    // Break the node down into its components
+    assign node.left  = tree_mem[effective_ptr];
+    assign node.right = tree_mem[effective_ptr + 1];
+    assign node.split = tree_mem[effective_ptr + 2];
+    assign node.flags = tree_mem[effective_ptr + 3];
+
+    // Retrieve the feature based on the split index
+    /* verilator lint_off WIDTHTRUNC */
+    assign feature_port.address = node.flags.split_idx;
+    /* verilator lint_on WIDTHTRUNC */
+
+    // Signals for tree traversal logic
+    var next_node_ptr  : logic<3> ;
+    var next_ready     : bool     ;
+    var next_busy      : bool     ;
+    var next_prediction: logic<32>;
+    var next_error     : bool     ;
+    var do_traverse    : bool     ;
+
+    always_comb {
+        // Default: maintain current state
+        next_node_ptr   = node_ptr;
+        next_ready      = ready;
+        next_busy       = busy;
+        next_prediction = prediction;
+        next_error      = error;
+
+        // Determine when to perform traversal
+        do_traverse = busy || (start && !busy);
+
+        if (start && busy) {
+            next_error = true;
+        }
+
+        // Trigger tree traversal
+        if (start && !busy) {
+            next_node_ptr = 0;
+            next_ready    = false;
+            next_busy     = true;
+        }
+
+        // Traverse down the tree, one node per cycle
+        if (do_traverse) {
+            /* verilator lint_off WIDTHTRUNC */
+            if (feature_port.feature <= node.split) {
+                if (node.flags.left_predict) {
+                    next_ready      = true;
+                    next_busy       = false;
+                    next_prediction = node.left;
+                } else {
+                    // TODO: ptr math
+                    next_node_ptr = node.left * 4;
+                }
+            } else {
+                if (node.flags.right_predict) {
+                    next_ready      = true;
+                    next_busy       = false;
+                    next_prediction = node.right;
+                } else {
+                    // TODO: ptr math
+                    next_node_ptr = node.right * 4;
+                }
+            }
+            /* verilator lint_on WIDTHTRUNC */
+        }
+    }
+
+    // Sequential logic to update state
+    always_ff {
+        if_reset {
+            node_ptr   = 0;
+            ready      = false;
+            busy       = false;
+            error      = false;
+            prediction = 0;
+        } else {
+            node_ptr   = next_node_ptr;
+            ready      = next_ready;
+            busy       = next_busy;
+            prediction = next_prediction;
+            error      = next_error;
+        }
+    }
+}
