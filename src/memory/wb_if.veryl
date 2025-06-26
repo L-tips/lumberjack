@@ -1,0 +1,55 @@
+/// A minimal Wishbone interface that only implements
+/// the required signals, plus the byte selection (SEL)
+interface Wishbone #(
+    param ADDR_WIDTH: u8 = 32,
+    param DATA_WIDTH: u8 = 32,
+) {
+    const SEL_WIDTH: u8 = DATA_WIDTH / 8;
+
+    var cyc: logic;
+    var stb: logic;
+
+    /// Write enable bit
+    var write_enable: logic;
+    /// Byte selection bits
+    var select: logic<SEL_WIDTH>;
+
+    var addr      : logic<ADDR_WIDTH>;
+    var write_data: logic<DATA_WIDTH>;
+    var read_data : logic<DATA_WIDTH>;
+
+    var ack  : logic;
+    var stall: logic;
+
+    var lock: logic;
+    var err : logic;
+    var rty : logic;
+
+    function valid_request -> bool {
+        return cyc && stb;
+    }
+
+    modport slave {
+        cyc         : input,
+        stb         : input,
+        write_enable: input,
+        select      : input,
+
+        addr      : input ,
+        write_data: input ,
+        ack       : output,
+        stall     : output,
+
+        read_data: output,
+
+        lock: input ,
+        rty : output,
+        err : output,
+
+        valid_request: import,
+    }
+
+    modport master {
+        ..converse(slave)
+    }
+}

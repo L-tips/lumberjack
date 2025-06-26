@@ -1,0 +1,62 @@
+/// Single port block RAM wishbone slave
+/// Adheres to the Wishbone B4 pipelined specification
+pub module WishboneSpRam #(
+    /// Initialize memory with hex file if not empty
+    param INIT_FILE : string = "",
+    param ADDR_WIDTH: u8     = 32,
+    param DATA_WIDTH: u8     = 32,
+    /// RAM size, in bytes
+    param SIZE: u32 = 4096,
+) (
+    clk: input clock           ,
+    rst: input reset_async_high,
+
+    port: modport Wishbone::slave,
+) {
+    const COL_WIDTH: u8  = 8;
+    const NUM_COL  : u8  = DATA_WIDTH / COL_WIDTH;
+    const DEPTH    : u32 = SIZE / {24'b0, NUM_COL};
+
+    // (* RAM_STYLE="BLOCK" *)
+    var mem: logic<DATA_WIDTH> [DEPTH];
+
+    initial {
+        if INIT_FILE != "" {
+            $readmemh(INIT_FILE, mem);
+        }
+    }
+
+    var read_data_next: logic<DATA_WIDTH>;
+    var ack_next      : logic            ;
+
+    always_ff {
+        if_reset {
+            read_data_next = 0;
+            ack_next       = 0;
+        } else {
+            ack_next = port.valid_request();
+
+            for i: u32 in 0..NUM_COL {
+                if port.valid_request() {
+
+                    // Write logic
+                    if port.write_enable && port.select[i] {
+                        mem[port.addr][i * COL_WIDTH +: COL_WIDTH] = port.write_data[i * COL_WIDTH +: COL_WIDTH];
+                    }
+
+                    // Read logic
+                    // Only data at bytes enabled by SELECT
+                    // are guaranteed to be valid during a read
+                    if port.select[i] {
+                        read_data_next[i * COL_WIDTH +: COL_WIDTH] = mem[port.addr][i * COL_WIDTH +: COL_WIDTH];
+                    }
+                }
+            }
+        }
+    }
+
+    assign port.read_data = read_data_next;
+    assign port.ack       = ack_next;
+    assign port.err = 0;
+    assign port.rty = 0;
+}
