@@ -14,4 +14,4 @@ module TestTree (
 }
 
 #[test(test_tree, TestTree)]
-include (cocotb, "../../tb/tree_predict.py");
+include (cocotb, "../../tb/tree_predictor.py");

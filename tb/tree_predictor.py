@@ -2,37 +2,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-TREE_MEM = """
-// --- Node 0 ---
-00000000 // left: prediction: class 0
-00000001 // right: ptr: 1
-0000000A // split: 0xA = 10
-80000000 // left: true, right: false, split feat: 0 
-// --- Node 1 ---
-00000001 // left: prediction: class 1
-00000002 // right: prediction: class 2
-0000000A // split: 0xA = 10
-c0000001 // left: true, right: true, split feat: 1
-"""
-
-def binary_to_hex(bin_str):
-    # Convert binary string to hexadecimal
-    hex_str = hex(int(str(bin_str), 2))[2:]
-    hex_str = hex_str.zfill(8)
-    return hex_str.upper()
-
-@cocotb.coroutine
-async def init_memory(mem, hexfile):
-    offset = 0
-    for raw_data in hexfile.splitlines() :
-        str_data = raw_data.split("/")[0].strip()
-        # Skip empty lines
-        if str_data != "":
-            print(str_data)
-            data = int(str_data, 16)
-            mem[offset].value = data
-            offset += 1
-    
+import utils
 
 @cocotb.test()
 async def tree_test(dut):
@@ -44,7 +14,7 @@ async def tree_test(dut):
     dut.rst.value = 0
     # Always return "11" as the feature
     dut.feature_port.feature.value = 11
-    await init_memory(dut.tree.tree_mem, TREE_MEM)
+    await utils.init_memory(dut.tree.tree_mem, "single_tree_2_nodes.hex")
 
     await RisingEdge(dut.clk)
     # Release reset
@@ -59,7 +29,6 @@ async def tree_test(dut):
     assert dut.tree.node_ptr.value == 0
     assert dut.tree.ready.value == 0
     assert dut.tree.busy.value == 0
-
 
     await RisingEdge(dut.clk)
 
@@ -99,7 +68,6 @@ async def tree_test(dut):
     dut.feature_port.feature.value = 11
 
     await RisingEdge(dut.clk)
-
 
     # Intentionally trigger error by not resetting
     # start to 0. Prediction should still complete

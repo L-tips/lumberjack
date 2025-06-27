@@ -1,7 +1,10 @@
 [project]
-name = "rf_hw_accel"
+name = "lumberjack"
 version = "0.1.0"
 authors = ["Justin Beaurivage <code@beaurivage.io>"]
+
+[dependencies]
+memutils = { version = "0.1.0", path = "../memutils-veryl" }
 
 [build]
 clock_type = "posedge"
@@ -12,3 +15,7 @@ target = { type = "directory", path = "target/veryl" }
 
 [test]
 waveform_target = { type = "directory", path = "target/waveform" }
+include_files = [
+	"tb/utils.py",
+	"tb/single_tree_2_nodes.hex",
+]
