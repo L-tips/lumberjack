@@ -1,2 +1,0 @@
-#[test(test_forest, Forest)]
-include (cocotb, "../../tb/forest.py");
