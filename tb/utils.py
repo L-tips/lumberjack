@@ -16,7 +16,6 @@ async def init_memory(mem, hexfile):
         str_data = raw_data.split("/")[0].strip()
         # Skip empty lines
         if str_data != "":
-            print(str_data)
             data = int(str_data, 16)
             mem[offset].value = data
             offset += 1
