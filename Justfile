@@ -1,4 +1,5 @@
 alias t := test
+alias ta := test-all
 alias b := build
 alias c := check
 
@@ -18,3 +19,6 @@ test TEST *extra_args:
     veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
         {{justfile_directory()}}/src/*.veryl \
         --wave --quiet {{extra_args}}
+
+test-all:
+    veryl test --wave --quiet

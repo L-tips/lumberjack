@@ -4,25 +4,6 @@ from cocotb.triggers import RisingEdge, Timer
 
 import utils
 
-def start_read_txn(dut, address, byte_select):
-    dut.ram_bus.cyc.value = 1
-    dut.ram_bus.stb.value = 1
-    dut.ram_bus.write_enable = 0
-    dut.ram_bus.select.value = byte_select
-    dut.ram_bus.addr.value = address
-
-def start_write_txn(dut, address, data, byte_select):
-    dut.ram_bus.cyc.value = 1
-    dut.ram_bus.stb.value = 1
-    dut.ram_bus.write_enable = 1
-    dut.ram_bus.select.value = byte_select
-    dut.ram_bus.addr.value = address
-    dut.ram_bus.write_data.value = data
-
-def finish_txn(dut):
-    dut.ram_bus.cyc.value = 0
-    dut.ram_bus.stb.value = 0
-
 @cocotb.test()
 async def tree_test(dut):
     # Start a 10 ns clock
