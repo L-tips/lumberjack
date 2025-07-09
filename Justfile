@@ -15,12 +15,6 @@ fmt:
     veryl fmt --quiet
 
 test TEST *extra_args:
-    veryl +nightly test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
+    veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
         {{justfile_directory()}}/src/*.veryl \
         --wave --quiet {{extra_args}}
-
-test_cargo TEST *extra_args:
-    cargo r --manifest-path="$HOME/Desktop/veryl/Cargo.toml" --bin veryl -- \
-        test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
-        {{justfile_directory()}}/src/*.veryl \
-         --wave --quiet {{extra_args}}

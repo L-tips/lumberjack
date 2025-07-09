@@ -1,15 +1,40 @@
 module TestTree (
-    clk  : input clock,
-    rst  : input reset,
-    start: input bool ,
+    clk            : input clock    ,
+    rst            : input reset    ,
+    start          : input bool     ,
+    first_node_addr: input logic<32>,
 ) {
     inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
 
+    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+
+    let mem_rst: reset_async_high = rst as reset_async_high;
+    inst ram: memutils::WishboneRam #(
+        ADDR_WIDTH: 32  ,
+        DATA_WIDTH: 32  ,
+        SIZE      : 4096,
+    ) (
+        clk          ,
+        rst : mem_rst,
+        port: ram_bus,
+    );
+
+    var busy      : logic    ;
+    var prediction: logic<32>;
+    var ready     : logic    ;
+
     inst tree: TreePredictor (
-        clk           ,
-        rst           ,
-        feature_port  ,
-        start         ,
+        clk              ,
+        rst              ,
+        feature_port     ,
+        first_node_addr  ,
+        start            ,
+
+        ready       ,
+        busy        ,
+        prediction  ,
+
+        ram_port: ram_bus,
     );
 }
 
