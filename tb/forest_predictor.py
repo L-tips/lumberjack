@@ -20,9 +20,9 @@ async def tree_test(dut):
 
     # Insert features in the scratchpad, must be done after reset
     dut.forest.features.mem.value = [
+        9,
         11,
-        11,
-        11,
+        9,
         11,
         11,
         11,
@@ -48,5 +48,10 @@ async def tree_test(dut):
 
     dut.en.value = 0
 
-    for _ in range(0,100):
+    cycle_count = 1
+
+    while not dut.ready.value == 1:
+        cycle_count += 1
         await RisingEdge(dut.clk)
+
+    print(f"Prediction took {cycle_count} cycles.")

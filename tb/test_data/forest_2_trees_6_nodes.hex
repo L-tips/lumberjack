@@ -12,7 +12,7 @@
 00000001 // 0x00000020 | left: prediction: class 1
 00000003 // 0x00000024 | right: ptr: 3
 0000000A // 0x00000028 | split: 0xA = 10
-80000001 // 0x0000002c | left: true, right: false, split feat: 1
+80000002 // 0x0000002c | left: true, right: false, split feat: 2
 // --- Node 3: Tree 0 ---
 00000002 // 0x00000030 | left: prediction: class 2
 00000003 // 0x00000034 | right: prediction: class 3

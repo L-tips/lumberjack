@@ -78,6 +78,9 @@ module TreePredictor (
     var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
+    var debug_branch_taken : logic<2>;
+    var debug_is_prediction: bool    ;
+
     always_comb {
         // Default: maintain current state
         next_state         = state;
@@ -92,6 +95,9 @@ module TreePredictor (
         ram_port.addr = node_ptr;
         ram_port.stb  = false;
         ram_port.cyc  = false;
+
+        debug_branch_taken  = 0;
+        debug_is_prediction = false;
 
         // State machine
         case state {
@@ -148,15 +154,19 @@ module TreePredictor (
                 /* verilator lint_off WIDTHTRUNC */
                 if feature_port.data <= node.split {
 
+                    debug_branch_taken = 1;
+
                     if node.flags.left_predict {
                         // Leaf node reached - use prediction
                         next_ready      = true;
                         next_busy       = false;
                         next_prediction = node.left;
                         next_state      = State::idle;
+
+                        debug_is_prediction = true;
+
                     } else {
                         // Go to left child
-
                         // Start RAM read request
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
@@ -167,12 +177,17 @@ module TreePredictor (
                     }
                 } else {
 
+                    debug_branch_taken = 2;
+
                     if node.flags.right_predict {
                         // Leaf node reached - use prediction
                         next_ready      = true;
                         next_busy       = false;
                         next_prediction = node.right;
                         next_state      = State::idle;
+
+                        debug_is_prediction = true;
+
                     } else {
                         // Go to right child
                         // Start RAM read request
