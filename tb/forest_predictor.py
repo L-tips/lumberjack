@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 import utils
 
@@ -18,8 +18,8 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
     dut.rst.value = 1  # release reset
 
-    # Insert features in the feat vector, must be done after reset
-    dut.forest.feature_registers.registers.value = [
+    # Insert features in the scratchpad, must be done after reset
+    dut.forest.features.mem.value = [
         11,
         11,
         11,

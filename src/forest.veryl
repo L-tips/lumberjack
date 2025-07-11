@@ -16,19 +16,18 @@ module Forest (
     var enable     : bool;
     var next_enable: bool;
 
-    inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
+    inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
+    inst feature_read_port : memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
 
-    inst feature_registers: Regfile #(
-        NUM_PORTS       : 1 ,
-        FEATURE_WIDTH   : 32,
-        MAX_NUM_FEATURES: 16,
+    inst feature_registers: memutils::ScratchpadRam #(
+        DATA_WIDTH: 32,
+        DEPTH     : 16,
     ) (
-        clk                        ,
-        rst                        ,
-        write_enable : 0           ,
-        write_data   : 0           ,
-        write_address: 0           ,
-        read_port    : feature_port,
+        clk  ,
+        rst  ,
+
+        write: feature_write_port,
+        read : feature_read_port ,
     );
 
     var tree_ready: bool;
@@ -47,8 +46,8 @@ module Forest (
         start          : start_tree      ,
         prediction     : _tree_prediction,
 
-        feature_port  ,
-        ram_port      ,
+        feature_port: feature_read_port,
+        ram_port                       ,
     );
 
     var tree_idx     : logic<16>;

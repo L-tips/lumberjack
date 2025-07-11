@@ -4,9 +4,8 @@ module TestTree (
     start          : input bool     ,
     first_node_addr: input logic<32>,
 ) {
-    inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
-
-    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst feature_port: memutils::ScratchpadRamPort #( ADDR_WIDTH: 4, DATA_WIDTH: 32 );
+    inst ram_bus     : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
 
     let mem_rst: reset_async_high = rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
@@ -26,7 +25,6 @@ module TestTree (
     inst tree: TreePredictor (
         clk              ,
         rst              ,
-        feature_port     ,
         first_node_addr  ,
         start            ,
 
@@ -34,7 +32,8 @@ module TestTree (
         busy        ,
         prediction  ,
 
-        ram_port: ram_bus,
+        feature_port         ,
+        ram_port    : ram_bus,
     );
 }
 

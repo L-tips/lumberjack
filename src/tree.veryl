@@ -2,23 +2,27 @@ module TreePredictor (
     clk: input clock,
     rst: input reset,
 
-    start          : input bool     ,
+    start: input bool,
+    // TODO: hardcoded
     first_node_addr: input logic<32>,
 
-    ready     : output bool     ,
-    busy      : output bool     ,
+    ready: output bool,
+    busy : output bool,
+    // TODO: hardcoded
     prediction: output logic<32>,
 
-    feature_port: modport FeatureBus::master        ,
-    ram_port    : modport memutils::Wishbone::master,
+    feature_port: modport memutils::ScratchpadRamPort::read_master,
+    ram_port    : modport memutils::Wishbone::master              ,
 ) {
 
+    // TODO: hardcoded
     struct Flags {
         left_predict : logic    ,
         right_predict: logic    ,
         split_idx    : logic<30>,
     }
 
+    // TODO: hardcoded
     struct Node {
         left : logic<32>,
         right: logic<32>,
@@ -32,12 +36,15 @@ module TreePredictor (
         evaluating,
     }
 
-    var node_ptr    : logic<32> ;
+    // TODO: hardcoded
+    var node_ptr: logic<32>;
+    // TODO: hardcoded
     var fetched_node: logic<128>;
     var node        : Node      ;
 
-    var state             : State   ;
-    var next_state        : State   ;
+    var state     : State;
+    var next_state: State;
+    // TODO: hardcoded
     var fetch_counter     : logic<3>;
     var next_fetch_counter: logic<3>;
 
@@ -46,6 +53,7 @@ module TreePredictor (
 
     // Break the node down into its components
     /// Node size in bytes
+    // TODO: hardcoded
     const NODE_SIZE : u8 = 16;
     assign node.left  = fetched_node[0+:32];
     assign node.right = fetched_node[32+:32];
@@ -57,6 +65,7 @@ module TreePredictor (
     assign feature_port.address = node.flags.split_idx;
     /* verilator lint_on WIDTHTRUNC */
 
+    // TODO: hardcoded
     var next_node_ptr: logic<32>;
 
     var ready_reg : bool;
@@ -65,6 +74,7 @@ module TreePredictor (
     var busy_reg : bool;
     var next_busy: bool;
 
+    // TODO: hardcoded
     var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
@@ -117,6 +127,7 @@ module TreePredictor (
                     ram_port.addr      =  node_ptr + next_fetch_counter * 4;
 
                     // Store the data returned from memory
+                    // TODO: hardcoded
                     next_fetched_node[fetch_counter * 32+:32] = ram_port.read_data;
 
                     if fetch_counter == 3 {
@@ -135,7 +146,7 @@ module TreePredictor (
             State::evaluating: {
                 // Evaluate the node and decide next action
                 /* verilator lint_off WIDTHTRUNC */
-                if feature_port.feature <= node.split {
+                if feature_port.data <= node.split {
 
                     if node.flags.left_predict {
                         // Leaf node reached - use prediction
@@ -205,5 +216,6 @@ module TreePredictor (
     assign busy                  = busy_reg || start;
     assign ready                 = ready_reg && !start;
     assign ram_port.write_enable = false;
-    assign ram_port.select       = 4'b1111;
+    // TODO: hardcoded
+    assign ram_port.select = 4'b1111;
 }
