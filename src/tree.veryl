@@ -32,11 +32,9 @@ module TreePredictor (
         evaluating,
     }
 
-    var first_node_ptr     : logic<32> ;
-    var next_first_node_ptr: logic<32> ;
-    var node_ptr           : logic<32> ;
-    var fetched_node       : logic<128>;
-    var node               : Node      ;
+    var node_ptr    : logic<32> ;
+    var fetched_node: logic<128>;
+    var node        : Node      ;
 
     var state             : State   ;
     var next_state        : State   ;
@@ -44,7 +42,7 @@ module TreePredictor (
     var next_fetch_counter: logic<3>;
 
     // Mux node ptr to handle immediate start condition
-    // let effective_ptr: logic<3> = if (start && !busy) ? 0 : node_ptr;
+    // let effective_ptr: logic<3> = if (start && !busy_reg) ? 0 : node_ptr;
 
     // Break the node down into its components
     /// Node size in bytes
@@ -59,23 +57,26 @@ module TreePredictor (
     assign feature_port.address = node.flags.split_idx;
     /* verilator lint_on WIDTHTRUNC */
 
-    // Signals for tree traversal logic
-    var next_node_ptr    : logic<32> ;
-    var next_ready       : bool      ;
-    var next_busy        : bool      ;
+    var next_node_ptr: logic<32>;
+
+    var ready_reg : bool;
+    var next_ready: bool;
+
+    var busy_reg : bool;
+    var next_busy: bool;
+
     var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
     always_comb {
         // Default: maintain current state
-        next_state          = state;
-        next_node_ptr       = node_ptr;
-        next_ready          = ready;
-        next_busy           = busy;
-        next_prediction     = prediction;
-        next_fetch_counter  = fetch_counter;
-        next_fetched_node   = fetched_node;
-        next_first_node_ptr = first_node_ptr;
+        next_state         = state;
+        next_node_ptr      = node_ptr;
+        next_ready         = ready_reg;
+        next_busy          = busy_reg;
+        next_prediction    = prediction;
+        next_fetch_counter = fetch_counter;
+        next_fetched_node  = fetched_node;
 
         // RAM control defaults
         ram_port.addr = node_ptr;
@@ -86,12 +87,11 @@ module TreePredictor (
         case state {
             State::idle: {
                 if start {
-                    next_state          = State::fetching;
-                    next_first_node_ptr = first_node_addr;
-                    next_node_ptr       = first_node_addr;
-                    next_ready          = false;
-                    next_busy           = true;
-                    next_fetch_counter  = 0;
+                    next_state         = State::fetching;
+                    next_node_ptr      = first_node_addr;
+                    next_ready         = false;
+                    next_busy          = true;
+                    next_fetch_counter = 0;
 
                     // Start RAM read request
                     ram_port.stb  = true;
@@ -102,19 +102,19 @@ module TreePredictor (
 
             State::fetching: {
                 // Continue the read transaction
-                ram_port.stb  = true;
-                ram_port.cyc  = true;
+                ram_port.stb = true;
+                ram_port.cyc = true;
 
                 // Wait for the bus to un-stall
                 if ram_port.stall {
                     // TODO handle stalls and bus errors
 
 
-                // Store incoming data at the appropriate position in fetched_node
+                    // Store incoming data at the appropriate position in fetched_node
                 } else if ram_port.ack && !ram_port.stall {
                     // Fetch next word
                     next_fetch_counter += 1;
-                    ram_port.addr = node_ptr + next_fetch_counter * 4;
+                    ram_port.addr      =  node_ptr + next_fetch_counter * 4;
 
                     // Store the data returned from memory
                     next_fetched_node[fetch_counter * 32+:32] = ram_port.read_data;
@@ -122,8 +122,8 @@ module TreePredictor (
                     if fetch_counter == 3 {
                         // Release the bus for one cycle so it can
                         // potentially process other requests
-                        ram_port.stb  = false;
-                        ram_port.cyc  = false;
+                        ram_port.stb = false;
+                        ram_port.cyc = false;
 
                         // We've fetched all 4 words (128 bits)
                         next_state         = State::evaluating;
@@ -136,6 +136,7 @@ module TreePredictor (
                 // Evaluate the node and decide next action
                 /* verilator lint_off WIDTHTRUNC */
                 if feature_port.feature <= node.split {
+
                     if node.flags.left_predict {
                         // Leaf node reached - use prediction
                         next_ready      = true;
@@ -148,12 +149,13 @@ module TreePredictor (
                         // Start RAM read request
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
-                        next_node_ptr = node.left * NODE_SIZE + first_node_ptr;
+                        next_node_ptr = node.left * NODE_SIZE;
                         ram_port.addr = next_node_ptr;
 
                         next_state = State::fetching;
                     }
                 } else {
+
                     if node.flags.right_predict {
                         // Leaf node reached - use prediction
                         next_ready      = true;
@@ -165,7 +167,7 @@ module TreePredictor (
                         // Start RAM read request
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
-                        next_node_ptr = node.right * NODE_SIZE + first_node_ptr;
+                        next_node_ptr = node.right * NODE_SIZE;
                         ram_port.addr = next_node_ptr;
 
                         next_state = State::fetching;
@@ -180,29 +182,28 @@ module TreePredictor (
         }
     }
 
-    // Sequential logic to update state
     always_ff {
         if_reset {
-            node_ptr       = 0;
-            ready          = false;
-            busy           = false;
-            prediction     = 0;
-            state          = State::idle;
-            fetch_counter  = 0;
-            fetched_node   = 0;
-            first_node_ptr = 0;
+            node_ptr      = 0;
+            ready_reg     = false;
+            busy_reg      = false;
+            prediction    = 0;
+            state         = State::idle;
+            fetch_counter = 0;
+            fetched_node  = 0;
         } else {
-            node_ptr       = next_node_ptr;
-            ready          = next_ready;
-            busy           = next_busy;
-            prediction     = next_prediction;
-            state          = next_state;
-            fetch_counter  = next_fetch_counter;
-            fetched_node   = next_fetched_node;
-            first_node_ptr = next_first_node_ptr;
+            node_ptr      = next_node_ptr;
+            ready_reg     = next_ready;
+            busy_reg      = next_busy;
+            prediction    = next_prediction;
+            state         = next_state;
+            fetch_counter = next_fetch_counter;
+            fetched_node  = next_fetched_node;
         }
     }
 
+    assign busy                  = busy_reg || start;
+    assign ready                 = ready_reg && !start;
     assign ram_port.write_enable = false;
     assign ram_port.select       = 4'b1111;
 }

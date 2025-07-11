@@ -1,7 +1,20 @@
 module Forest (
     clk: input clock,
     rst: input reset,
+
+    en             : input logic    ,
+    first_node_addr: input logic<32>,
+    num_trees      : input logic<16>,
+
+    busy      : output bool     ,
+    ready     : output bool     ,
+    prediction: output logic<32>,
+
+    ram_port: modport memutils::Wishbone::master,
 ) {
+
+    var enable     : bool;
+    var next_enable: bool;
 
     inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
 
@@ -18,11 +31,81 @@ module Forest (
         read_port    : feature_port,
     );
 
-    // inst wb: memutils::Wishbone #(ADDR_WIDTH: 32, DATA_WIDTH: 32)();
+    var tree_ready: bool;
+    var tree_busy : bool;
 
-    inst tree_1: TreePredictor (
-        clk           ,
-        rst           ,
+    let tree_node_addr  : logic<32> = tree_idx * 16 + first_node_addr;
+    var _tree_prediction: logic<32>;
+
+    inst tree: TreePredictor (
+        clk  ,
+        rst  ,
+
+        first_node_addr: tree_node_addr  ,
+        ready          : tree_ready      ,
+        busy           : tree_busy       ,
+        start          : start_tree      ,
+        prediction     : _tree_prediction,
+
         feature_port  ,
+        ram_port      ,
     );
+
+    var tree_idx     : logic<16>;
+    var next_tree_idx: logic<16>;
+
+    var start_tree     : bool;
+    var next_start_tree: bool;
+
+    var next_busy : bool;
+    var next_ready: bool;
+
+    always_comb {
+        next_start_tree = false;
+        next_tree_idx   = 'hFFFF;
+        next_busy       = busy;
+        next_ready      = ready;
+        next_enable     = enable;
+
+        if en {
+            next_enable = true;
+        }
+
+        if next_enable {
+
+            next_tree_idx   = tree_idx;
+            next_start_tree = false;
+
+            if !tree_busy {
+                if tree_idx <: num_trees - 1 || tree_idx == 'hFFFF {
+                    next_start_tree =  true;
+                    next_ready      =  false;
+                    next_busy       =  true;
+                    next_tree_idx   += 1;
+
+                } else {
+                    next_tree_idx = 'hFFFF;
+                    next_ready    = true;
+                    next_busy     = false;
+                    next_enable   = false;
+                }
+            }
+        }
+    }
+
+    always_ff {
+        if_reset {
+            tree_idx   = 'hFFFF;
+            start_tree = false;
+            busy       = false;
+            ready      = false;
+            enable     = false;
+        } else {
+            tree_idx   = next_tree_idx;
+            start_tree = next_start_tree;
+            busy       = next_busy;
+            ready      = next_ready;
+            enable     = next_enable;
+        }
+    }
 }

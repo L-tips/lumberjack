@@ -1,0 +1,46 @@
+module TestForest (
+    clk: input clock,
+    rst: input reset,
+
+    en             : input logic    ,
+    first_node_addr: input logic<32>,
+    num_trees      : input logic<16>,
+
+    busy : output bool,
+    ready: output bool,
+
+) {
+
+    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+
+    let mem_rst: reset_async_high = rst as reset_async_high;
+    inst ram: memutils::WishboneRam #(
+        ADDR_WIDTH: 32  ,
+        DATA_WIDTH: 32  ,
+        SIZE      : 4096,
+    ) (
+        clk          ,
+        rst : mem_rst,
+        port: ram_bus,
+    );
+
+    var prediction: logic<32>;
+
+    inst forest: Forest (
+        clk  ,
+        rst  ,
+
+        en               ,
+        first_node_addr  ,
+        num_trees        ,
+
+        ready       ,
+        busy        ,
+        prediction  ,
+
+        ram_port: ram_bus,
+    );
+}
+
+#[test(test_forest, TestForest)]
+include (cocotb, "../../tb/forest_predictor.py");

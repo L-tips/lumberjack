@@ -1,30 +1,30 @@
 // --- Node 0: Tree 0 ---
-00000002 // left: ptr: 2
-00000000 // right: prediction: class 0
-0000000A // split: 0xA = 10
-40000000 // left: false, right: true, split feat: 0 
+00000002 // 0x00000000 | left: ptr: 2
+00000000 // 0x00000004 | right: prediction: class 0
+0000000A // 0x00000008 | split: 0xA = 10
+40000000 // 0x0000000c | left: false, right: true, split feat: 0 
 // --- Node 1: Tree 1 ---
-00000004 // left: ptr: 4
-00000005 // right: ptr: 5
-0000000A // split: 0xA = 10
-00000001 // left: false, right: false, split feat: 1
+00000004 // 0x00000010 | left: ptr: 4
+00000005 // 0x00000014 | right: ptr: 5
+0000000A // 0x00000018 | split: 0xA = 10
+00000001 // 0x0000001c | left: false, right: false, split feat: 1
 // --- Node 2: Tree 0 ---
-00000000 // left: prediction: class 1
-00000003 // right: ptr: 3
-0000000A // split: 0xA = 10
-80000001 // left: true, right: false, split feat: 1
+00000001 // 0x00000020 | left: prediction: class 1
+00000003 // 0x00000024 | right: ptr: 3
+0000000A // 0x00000028 | split: 0xA = 10
+80000001 // 0x0000002c | left: true, right: false, split feat: 1
 // --- Node 3: Tree 0 ---
-00000002 // left: prediction: class 2
-00000003 // right: prediction: class 3
-0000000A // split: 0xA = 10
-c0000002 // left: true, right: true, split feat: 2
+00000002 // 0x00000030 | left: prediction: class 2
+00000003 // 0x00000034 | right: prediction: class 3
+0000000A // 0x00000038 | split: 0xA = 10
+c0000002 // 0x0000003c | left: true, right: true, split feat: 2
 // --- Node 4: Tree 1 ---
-00000002 // left: prediction: class 2
-00000005 // right: ptr: 5
-0000000A // split: 0xA = 10
-40000000 // left: false, right: true, split feat: 0 
+00000002 // 0x00000040 | left: prediction: class 2
+00000005 // 0x00000044 | right: ptr: 5
+0000000A // 0x00000048 | split: 0xA = 10
+40000000 // 0x0000004c | left: false, right: true, split feat: 0 
 // --- Node 5: Tree 1 ---
-00000001 // left: prediction: class 1
-00000002 // right: prediction: class 2
-0000000A // split: 0xA = 10
-c0000002 // left: true, right: true, split feat: 2
+00000001 // 0x00000050 | left: prediction: class 1
+00000002 // 0x00000054 | right: prediction: class 2
+0000000A // 0x00000058 | split: 0xA = 10
+c0000002 // 0x0000005c | left: true, right: true, split feat: 2
