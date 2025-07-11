@@ -10,7 +10,7 @@ module TestFeatures (
     inst feature_port: FeatureBus #( MAX_FEATURES: 16 );
 
     inst feature_registers: Regfile #(
-        NUM_PORTS       : 2 ,
+        NUM_PORTS       : 1 ,
         FEATURE_WIDTH   : 32,
         MAX_NUM_FEATURES: 16,
     ) (

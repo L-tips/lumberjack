@@ -34,7 +34,7 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
 
     dut.start.value = 0
-    assert dut.tree.busy.value == 0
+    assert dut.tree.busy.value == 1
 
     # Takes 4 cycles to fetch the full node
     await RisingEdge(dut.clk)
@@ -153,8 +153,7 @@ async def tree_test(dut):
     assert dut.prediction.value == 0
 
     # Intentionally don't reset start to 0.
-    # Prediction should still complete
-    # with expected outcome.
+    # Prediction should never show ready.
 
     dut.start.value = 1
     await RisingEdge(dut.clk)
@@ -165,9 +164,11 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-    assert dut.prediction.value == 0
-    assert dut.ready.value == 1
-    assert dut.busy.value == 0
+    # Even though the state is idle,
+    assert dut.tree.state.value == 0
+    # the status still isn't ready
+    assert dut.ready.value == 0
+    assert dut.busy.value == 1
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
