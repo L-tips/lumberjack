@@ -4,5 +4,12 @@ version = 1
 
 [[projects]]
 name = "memutils"
-source = "../memutils-veryl"
 dependencies = []
+
+[projects.source]
+uuid = "06d3f5a6-968b-5d58-8514-36946cd45540"
+url = "https://github.com/jbeaurivage/memutils-veryl.git"
+path = ""
+project = "memutils"
+version = "0.2.0"
+revision = "2cdc344ae2dc6d8dc60e390d1ef962733a879bb6"

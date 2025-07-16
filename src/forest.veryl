@@ -21,9 +21,10 @@ module Forest (
 
     // TODO: hardcoded max number of features
     inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
-    inst feature_read_port : memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
+    inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
 
     inst features: memutils::ScratchpadRam #(
+        READ_PORTS: 1 ,
         DATA_WIDTH: 32,
         DEPTH     : 16,
     ) (
@@ -45,11 +46,12 @@ module Forest (
     // Hold the votes counter and tree
     // in reset so that it holds all 0s when we start a new
     // forest prediction
-    var tree_rst: reset;
+    var tree_rst  : reset_async_low;
+    let tree_rst_i: reset           = tree_rst as reset;
 
     inst tree: TreePredictor (
-        clk          ,
-        rst: tree_rst,
+        clk            ,
+        rst: tree_rst_i,
 
         first_node_addr: tree_node_addr ,
         ready          : tree_ready     ,
@@ -57,8 +59,8 @@ module Forest (
         start          : start_tree     ,
         prediction     : tree_prediction,
 
-        feature_port: feature_read_port,
-        ram_port                       ,
+        feature_port: feature_read_port[0],
+        ram_port                          ,
     );
 
     // TODO: hardcoded
@@ -74,7 +76,7 @@ module Forest (
 
     // TODO: hardcoded max number of classes + trees
     inst votes_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
-    inst votes_read_port : memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
+    inst votes_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
 
     inst votes_ram: memutils::ScratchpadRam #(
         // Max # of trees
@@ -82,8 +84,8 @@ module Forest (
         // Max number of classes
         DEPTH: 16,
     ) (
-        clk          ,
-        rst: tree_rst,
+        clk            ,
+        rst: tree_rst_i,
 
         write: votes_write_port,
         read : votes_read_port ,
@@ -98,7 +100,7 @@ module Forest (
         max_vote: logic<32>,
     }
 
-    var votes: VoteResult;
+    var votes     : VoteResult;
     var next_votes: VoteResult;
 
     always_comb {
@@ -114,7 +116,7 @@ module Forest (
         // Read votes
         // TODO: hardcoded
         /* verilator lint_off WIDTHTRUNC */
-        votes_read_port.address = tree_prediction;
+        votes_read_port[0].address = tree_prediction;
         /* verilator lint_on WIDTHTRUNC */
 
         if en {
@@ -129,15 +131,15 @@ module Forest (
             // we start a new tree prediction
             if !tree_busy {
                 if tree_idx <: num_trees - 1 {
-                    next_start_tree =  true;
-                    next_ready      =  false;
-                    next_busy       =  true;
+                    next_start_tree = true;
+                    next_ready      = false;
+                    next_busy       = true;
 
                     // Special-case the first tree prediction, where
                     // READY will be set to 0. For all subsequent preds,
                     // READY will be 1.
                     if tree_ready {
-                        next_tree_idx   += 1;
+                        next_tree_idx += 1;
                     }
 
                 } else {
@@ -168,11 +170,11 @@ module Forest (
                 /* verilator lint_off WIDTHTRUNC */
                 votes_write_port.write_enable = true;
                 votes_write_port.address      = tree_prediction;
-                votes_write_port.data         = votes_read_port.data + 1;
+                votes_write_port.data         = votes_read_port[0].data + 1;
 
                 // Update max vote and index if needed
-                if (votes_read_port.data + 1 >: votes.max_vote) {
-                    votes.max_vote       = votes_read_port.data + 1;
+                if (votes_read_port[0].data + 1 >: votes.max_vote) {
+                    votes.max_vote       = votes_read_port[0].data + 1;
                     votes.max_vote_class = tree_prediction;
                 }
                 /* verilator lint_on WIDTHTRUNC */
@@ -183,6 +185,7 @@ module Forest (
     always_ff (clk, rst) {
         if_reset {
             tree_idx   = 0;
+            tree_rst   = 0;
             start_tree = false;
             busy       = false;
             ready      = false;
