@@ -20,5 +20,5 @@ test TEST *extra_args:
         {{justfile_directory()}}/src/*.veryl \
         --wave --quiet {{extra_args}}
 
-test-all:
-    veryl test --wave --quiet
+test-all *extra_args:
+    veryl test --wave --quiet {{extra_args}}

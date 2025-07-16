@@ -1,4 +1,7 @@
-module TreePredictor (
+module TreePredictor #(
+    param RAM_ADDR_WIDTH: u8 = 32,
+    param RAM_DATA_WIDTH: u8 = 32,
+) (
     clk: input clock,
     rst: input reset,
 

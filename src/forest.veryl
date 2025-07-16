@@ -1,29 +1,86 @@
-module Forest (
+pub module Forest #(
+    /// Feature size in bytes
+    param FEATURE_SIZE: u8 = 4,
+
+    param RAM_ADDR_WIDTH: u8 = 32,
+    param RAM_DATA_WIDTH: u8 = 32,
+
+) (
     clk: input clock,
     rst: input reset,
 
     en: input logic,
+
     // TODO: hardcoded
     first_node_addr: input logic<32>,
     // TODO: hardcoded
     num_trees: input logic<16>,
 
+    // TODO: hardcoded
+    first_feature_addr: input logic<32>,
+    // TODO: hardcoded
+    num_features: input logic<4>,
+
     busy : output bool,
     ready: output bool,
     // TODO: hardcoded
     prediction: output logic<32>,
+    // TODO hardcoded
+    num_votes: output logic<32>,
 
     ram_port: modport memutils::Wishbone::master,
 ) {
+    enum State {
+        idle,
+        fetch_features,
+        evaluate_trees,
+    }
 
-    var enable     : bool;
-    var next_enable: bool;
+    // TODO: hardcoded
+    struct VoteResult {
+        /// The most voted class
+        max_vote_class: logic<32>,
+        /// The number of votes that has the most
+        /// voted class
+        max_vote: logic<32>,
+    }
+
+    inst ram_bus_mux: memutils::Wishbone [2] #( ADDR_WIDTH: RAM_ADDR_WIDTH, DATA_WIDTH: RAM_DATA_WIDTH );
+
+    // If we're evaluating trees, we delegate control of
+    // the RAM bus to the tree evaluater. Otherwise we keep
+    // control so we can use it to fetch features.
+    let master_select: logic = state == State::evaluate_trees;
+
+    // New evaluation request incoming
+    let new_request: bool = state == State::idle && en;
+    let fetch_complete: bool = fetch_counter == num_features - 1;
+
+    inst ram_demux: memutils::WishboneDemux #(
+        ADDR_WIDTH: 32,
+        DATA_WIDTH: 32,
+        // NUM_SLAVES: 2 ,
+    ) (
+        masters      : ram_bus_mux,
+        slave        : ram_port   ,
+        master_select             ,
+    );
+
+    var state             : State   ;
+    var next_state        : State   ;
+    var fetch_counter     : logic<4>;
+    var next_fetch_counter: logic<4>;
+
+    // TODO: hardcoded
+    var feature_ptr: logic<32>;
+    // TODO: hardcoded
+    var next_feature_ptr: logic<32>;
 
     // TODO: hardcoded max number of features
     inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
     inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
 
-    inst features: memutils::ScratchpadRam #(
+    inst feature_cache: memutils::ScratchpadRam #(
         READ_PORTS: 1 ,
         DATA_WIDTH: 32,
         DEPTH     : 16,
@@ -49,7 +106,10 @@ module Forest (
     var tree_rst  : reset_async_low;
     let tree_rst_i: reset           = tree_rst as reset;
 
-    inst tree: TreePredictor (
+    inst tree: TreePredictor #(
+        RAM_ADDR_WIDTH  ,
+        RAM_DATA_WIDTH  ,
+    ) (
         clk            ,
         rst: tree_rst_i,
 
@@ -60,7 +120,7 @@ module Forest (
         prediction     : tree_prediction,
 
         feature_port: feature_read_port[0],
-        ram_port                          ,
+        ram_port    : ram_bus_mux[1]      ,
     );
 
     // TODO: hardcoded
@@ -91,15 +151,6 @@ module Forest (
         read : votes_read_port ,
     );
 
-    // TODO: hardcoded
-    struct VoteResult {
-        /// The most voted class
-        max_vote_class: logic<32>,
-        /// The number of votes that has the most
-        /// voted class
-        max_vote: logic<32>,
-    }
-
     var votes     : VoteResult;
     var next_votes: VoteResult;
 
@@ -109,7 +160,10 @@ module Forest (
         next_tree_idx = 0;
         next_busy     = busy;
         next_ready    = ready;
-        next_enable   = enable;
+
+        next_state         = state;
+        next_fetch_counter = fetch_counter;
+        next_feature_ptr   = feature_ptr;
 
         next_votes = votes;
 
@@ -119,35 +173,100 @@ module Forest (
         votes_read_port[0].address = tree_prediction;
         /* verilator lint_on WIDTHTRUNC */
 
-        if en {
-            next_enable = true;
-        }
+        // Default: don't write features to cache
+        feature_write_port.write_enable = false;
+        feature_write_port.address      = 0;
+        feature_write_port.data         = 0;
 
-        if next_enable {
-            next_tree_idx   = tree_idx;
-            next_start_tree = false;
+        // RAM control defaults
+        ram_bus_mux[0].addr   = feature_ptr;
+        ram_bus_mux[0].stb    = false;
+        ram_bus_mux[0].cyc    = false;
+        ram_bus_mux[0].select = 4'b1111;
 
-            // If the tree is not busy, this means
-            // we start a new tree prediction
-            if !tree_busy {
-                if tree_idx <: num_trees - 1 {
-                    next_start_tree = true;
-                    next_ready      = false;
-                    next_busy       = true;
+        case state {
+            State::idle: {
+                if en {
+                    next_state         = State::fetch_features;
+                    next_feature_ptr   = first_feature_addr;
+                    next_ready         = false;
+                    next_busy          = true;
+                    next_fetch_counter = 0;
 
-                    // Special-case the first tree prediction, where
-                    // READY will be set to 0. For all subsequent preds,
-                    // READY will be 1.
-                    if tree_ready {
-                        next_tree_idx += 1;
-                    }
-
-                } else {
-                    next_tree_idx = 0;
-                    next_ready    = true;
-                    next_busy     = false;
-                    next_enable   = false;
+                    // Start RAM read request
+                    ram_bus_mux[0].stb  = true;
+                    ram_bus_mux[0].cyc  = true;
+                    ram_bus_mux[0].addr = first_feature_addr;
                 }
+            }
+
+            State::fetch_features: {
+                // Continue the read transaction
+                ram_bus_mux[0].stb = true;
+                ram_bus_mux[0].cyc = true;
+
+                // Wait for the bus to un-stall
+                if ram_bus_mux[0].stall {
+                    // TODO handle stalls and bus errors
+
+
+                    // Store incoming data in cache
+                } else if ram_bus_mux[0].ack && !ram_bus_mux[0].stall {
+                    // Fetch next word
+                    next_fetch_counter  += 1;
+                    ram_bus_mux[0].addr =  feature_ptr + next_fetch_counter * 4;
+
+                    // Store the data returned from memory
+                    feature_write_port.write_enable = 1;
+                    feature_write_port.address      = fetch_counter;
+                    feature_write_port.data         = ram_bus_mux[0].read_data;
+
+                    // We've fetched all the features and stored them
+                    // into cache. Time to move on to evaluation step
+                    if fetch_counter == num_features - 1 {
+                        // Release the bus
+                        ram_bus_mux[0].stb = false;
+                        ram_bus_mux[0].cyc = false;
+
+                        next_state         = State::evaluate_trees;
+                        next_fetch_counter = 0;
+
+                        // Kick off the tree evaluator
+                        next_start_tree = true;
+                    }
+                }
+            }
+
+            State::evaluate_trees: {
+                next_tree_idx   = tree_idx;
+                next_start_tree = false;
+
+                // If the tree is not busy, this means
+                // we start a new tree prediction
+                if !tree_busy {
+                    if tree_idx <: num_trees - 1 {
+                        next_start_tree = true;
+                        next_ready      = false;
+                        next_busy       = true;
+
+                        // Special-case the first tree prediction, where
+                        // READY will be set to 0. For all subsequent predictions,
+                        // READY will be 1.
+                        if tree_ready {
+                            next_tree_idx += 1;
+                        }
+
+                    } else {
+                        next_tree_idx = 0;
+                        next_ready    = true;
+                        next_busy     = false;
+                        next_state    = State::idle;
+                    }
+                }
+            }
+
+            default: {
+                // TODO: do nothing?
             }
         }
     }
@@ -182,6 +301,7 @@ module Forest (
         }
     }
 
+    // Advance state machine
     always_ff (clk, rst) {
         if_reset {
             tree_idx   = 0;
@@ -189,20 +309,27 @@ module Forest (
             start_tree = false;
             busy       = false;
             ready      = false;
-            enable     = false;
+
+            state         = State::idle;
+            fetch_counter = 0;
+            feature_ptr   = 0;
         } else {
             tree_idx   = next_tree_idx;
             start_tree = next_start_tree;
             busy       = next_busy;
             ready      = next_ready;
-            enable     = next_enable;
 
-            tree_rst = next_enable;
+            state         = next_state;
+            fetch_counter = next_fetch_counter;
+            feature_ptr   = next_feature_ptr;
+
+            tree_rst = next_state != State::idle;
         }
     }
 
     // TODO: hardcoded
     /* verilator lint_off WIDTHEXPAND */
     assign prediction = votes.max_vote_class;
+    assign num_votes  = votes.max_vote;
     /* verilator lint_on WIDTHEXPAND */
 }

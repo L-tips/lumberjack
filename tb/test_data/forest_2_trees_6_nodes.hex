@@ -28,3 +28,7 @@ c0000002 // 0x0000003c | left: true, right: true, split feat: 2
 00000002 // 0x00000054 | right: prediction: class 2
 0000000A // 0x00000058 | split: 0xA = 10
 c0000002 // 0x0000005c | left: true, right: true, split feat: 2
+// --- Features ---
+00000009 // 0x00000060 | Feature 0 = 9
+0000000B // 0x00000064 | Feature 1 = 11
+00000009 // 0x00000068 | Feature 2 = 9

@@ -18,31 +18,14 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
     dut.rst.value = 1  # release reset
 
-    # Insert features in the scratchpad, must be done after reset
-    dut.forest.features.mem.value = [
-        9,
-        11,
-        9,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-        11,
-    ]
-
     await RisingEdge(dut.clk)
 
     dut.en.value = 1
     dut.first_node_addr.value = 0
     dut.num_trees.value = 2
+
+    dut.first_feature_addr = 0x60
+    dut.num_features.value = 3
 
     await RisingEdge(dut.clk)
 
@@ -53,5 +36,9 @@ async def tree_test(dut):
     while not dut.ready.value == 1:
         cycle_count += 1
         await RisingEdge(dut.clk)
+
+    # Forest should predict class #1 with 2 votes
+    assert dut.prediction.value == 1
+    assert dut.num_votes.value == 2
 
     print(f"Prediction took {cycle_count} cycles.")
