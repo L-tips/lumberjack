@@ -4,7 +4,7 @@ alias b := build
 alias c := check
 
 wave file:
-    surfer {{justfile_directory()}}/target/waveform/{{file}}.vcd >& /dev/null & 
+    surfer {{justfile_directory()}}/target/waveform/{{file}}.fst >& /dev/null & 
 
 build:
     veryl build --quiet

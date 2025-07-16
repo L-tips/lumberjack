@@ -16,6 +16,7 @@ target = { type = "directory", path = "target/veryl" }
 
 [test]
 waveform_target = { type = "directory", path = "target/waveform" }
+waveform_format = "fst"
 include_files = [
     "tb/utils.py",
     "tb/test_data/single_tree_2_nodes.hex",
