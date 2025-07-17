@@ -1,0 +1,122 @@
+/// Top-level random forest hardware accelerator.
+///
+/// Defines the interface and registers
+/// to control the hardware.
+module ForestTop #(
+    /// Feature size in bytes
+    param FEATURE_SIZE: u8 = 4,
+
+    param RAM_ADDR_WIDTH: u8 = 32,
+    param RAM_DATA_WIDTH: u8 = 32,
+
+) (
+    clk: input clock,
+    rst: input reset,
+
+    /// Port to CPU bus for control/status
+    control_port: modport memutils::Wishbone::slave,
+
+    /// Port to RAM where the forest and features
+    /// are stored
+    ram_port: modport memutils::Wishbone::master,
+) {
+    const CSR_ADDR_WIDTH: u8 = 4;
+    const CSR_DATA_WIDTH: u8 = 32;
+
+    var enable            : logic    ;
+    var first_node_addr   : logic<32>;
+    var num_trees         : logic<16>;
+    var first_feature_addr: logic<32>;
+    var num_features      : logic<4> ;
+    var busy              : logic    ;
+    var ready             : logic    ;
+    var prediction        : logic<32>;
+    var num_votes         : logic<32>;
+
+    inst evaluator: Forest #(
+        FEATURE_SIZE    ,
+        RAM_ADDR_WIDTH  ,
+        RAM_DATA_WIDTH  ,
+    ) (
+        clk  ,
+        rst  ,
+
+        enable  ,
+
+        first_node_addr     ,
+        num_trees           ,
+        first_feature_addr  ,
+        num_features        ,
+
+        busy        ,
+        ready       ,
+        prediction  ,
+        num_votes   ,
+
+        ram_port  ,
+    );
+
+    var csr_address: logic<CSR_ADDR_WIDTH>;
+    var csr_write  : logic                ;
+    var csr_read   : logic                ;
+    var csr_wdata  : logic<CSR_DATA_WIDTH>;
+    var csr_rdata  : logic<CSR_DATA_WIDTH>;
+
+    inst csr: CsrInterface (
+        clk  ,
+        rst  ,
+
+        address: csr_address,
+        write  : csr_write  ,
+        read   : csr_read   ,
+        wdata  : csr_wdata  ,
+        rdata  : csr_rdata  ,
+
+        enable                           ,
+        num_trees                        ,
+        first_node   : first_node_addr   ,
+        num_features                     ,
+        first_feature: first_feature_addr,
+
+        ready       ,
+        busy        ,
+        prediction  ,
+        num_votes   ,
+    );
+
+    var prev_select: logic<4>;
+
+    always_ff {
+        if_reset {
+            control_port.ack = 0;
+            prev_select      = 0;
+        } else {
+            control_port.ack = control_port.valid_request();
+            prev_select      = control_port.select;
+        }
+    }
+
+    always_comb {
+        csr_wdata              = 0;
+        control_port.read_data = 0;
+
+        for i: u32 in 0..4 {
+            if control_port.select[i] && control_port.valid_request() {
+                if control_port.write_enable {
+                    csr_wdata[(i * 8)+:8] = control_port.write_data[(i * 8)+:8];
+                }
+            }
+
+            // Only show requested bytes during read
+            if prev_select[i] && control_port.ack {
+                control_port.read_data[(i * 8)+:8] = csr_rdata[(i * 8)+:8];
+            }
+        }
+    }
+
+    assign csr_write = control_port.write_enable && control_port.valid_request();
+    assign csr_read  = !control_port.write_enable && control_port.valid_request();
+    // Control port is byte-addressed, but CSRs are word-addressed
+    let word_idx   : logic<CSR_DATA_WIDTH> = control_port.addr >> 2;
+    assign csr_address = word_idx[CSR_ADDR_WIDTH - 1:0];
+}

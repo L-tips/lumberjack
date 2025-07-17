@@ -1,0 +1,179 @@
+/// CSR interface for controlling the ForestTop module.
+module CsrInterface (
+    clk: input clock,
+    rst: input reset,
+
+    // --- CSR interface signals ---
+    address: input  logic<ADDR_WIDTH>,
+    write  : input  bool             , // Write enable
+    read   : input  bool             , // Read enable
+    wdata  : input  logic<32>        , // Write data
+    rdata  : output logic<32>        , // Read data
+
+    // --- Output control signals ---
+    enable       : output logic    ,
+    num_trees    : output logic<16>,
+    first_node   : output logic<32>,
+    num_features : output logic<4> ,
+    first_feature: output logic<32>,
+
+    // --- Input control signals ---
+    ready     : input logic    ,
+    busy      : input logic    ,
+    prediction: input logic<32>,
+    num_votes : input logic<32>,
+
+) {
+    const ADDR_WIDTH: u32 = $clog2(9);
+
+    const CTRL         : logic<ADDR_WIDTH> = 0;
+    const CTRL_SET     : logic<ADDR_WIDTH> = 1;
+    const CTRL_CLR     : logic<ADDR_WIDTH> = 2;
+    const NUM_TREES    : logic<ADDR_WIDTH> = 3;
+    const FIRST_NODE   : logic<ADDR_WIDTH> = 4;
+    const NUM_FEATURES : logic<ADDR_WIDTH> = 5;
+    const FIRST_FEATURE: logic<ADDR_WIDTH> = 6;
+    const PREDICTION   : logic<ADDR_WIDTH> = 7;
+    const NUM_VOTES    : logic<ADDR_WIDTH> = 8;
+
+    const ENABLE_BIT: u8 = 0;
+    const READY_BIT : u8 = 1;
+    const BUSY_BIT  : u8 = 2;
+
+    var enable_reg : logic;
+    var next_enable: logic;
+    var user_enable: logic;
+
+    assign enable = next_enable;
+
+    var num_trees_reg : logic<16>;
+    var next_num_trees: logic<16>;
+    assign num_trees      = num_trees_reg;
+
+    var first_node_reg : logic<32>;
+    var next_first_node: logic<32>;
+    assign first_node      = first_node_reg;
+
+    var num_features_reg : logic<4>;
+    var next_num_features: logic<4>;
+    assign num_features      = num_features_reg;
+
+    var first_feature_reg : logic<32>;
+    var next_first_feature: logic<32>;
+    assign first_feature      = first_feature_reg;
+
+    // Write logic
+    always_comb {
+        // Defaults
+        next_enable        = enable_reg;
+        next_num_trees     = num_trees_reg;
+        next_first_node    = first_node_reg;
+        next_num_features  = num_features_reg;
+        next_first_feature = first_feature_reg;
+        user_enable        = 0;
+
+        // Write to CTRL register
+        if write && (address == CTRL) {
+            user_enable = wdata[0];
+            next_enable = user_enable;
+        }
+
+        // Set CTRL register bits
+        if write && (address == CTRL_SET) {
+            // Can only write to ENABLE bit
+            user_enable |= wdata[0];
+            next_enable =  user_enable;
+        }
+
+        // Clear CTRL register bits
+        if write && (address == CTRL_CLR) {
+            // Can only write to ENABLE bit
+            user_enable &= ~wdata[0];
+            next_enable =  user_enable;
+        }
+
+        // Write to NUM_TREES register (enable-protected)
+        if write && address == NUM_TREES && !enable {
+            next_num_trees = wdata[15:0];
+        }
+
+        // Write to FIRST_NODE register (enable-protected)
+        if write && address == FIRST_NODE && !enable {
+            next_first_node = wdata;
+        }
+
+        // Write to NUM_FEATURES register (enable-protected)
+        if write && address == NUM_FEATURES && !enable {
+            next_num_features = wdata[3:0];
+        }
+
+        // Write to FIRST_FEATURE register (enable-protected)
+        if write && address == FIRST_FEATURE && !enable {
+            next_first_feature = wdata;
+        }
+
+        // Clear the enable bit if the forest
+        // has just finished evaluating
+        if !busy && ready && !user_enable {
+            next_enable = 0;
+        }
+    }
+
+    // Read logic
+    always_ff {
+        // Default
+        rdata = 0;
+
+        // Read CTRL register
+        if read && (address == CTRL || address == CTRL_SET || address == CTRL_CLR) {
+            rdata = {29'b0, busy, ready, enable};
+        }
+
+        // Read NUM_TREES register
+        if read && address == NUM_TREES {
+            rdata = {16'h0, num_trees_reg};
+        }
+
+        // Read FIRST_NODE register
+        if read && address == FIRST_NODE {
+            rdata = first_node_reg;
+        }
+
+        // Read NUM_FEATURES register
+        if read && address == NUM_FEATURES {
+            rdata = {28'h0, num_features_reg};
+        }
+
+        // Read FIRST_FEATURE register
+        if read && address == FIRST_FEATURE {
+            rdata = first_feature_reg;
+        }
+
+        // Read PREDICTION register
+        if read && address == PREDICTION {
+            rdata = prediction;
+        }
+
+        // Read NUM_VOTES register
+        if read && address == NUM_VOTES {
+            rdata = num_votes;
+        }
+    }
+
+    // Advance state machine
+    always_ff {
+        if_reset {
+            enable_reg        = 0;
+            num_trees_reg     = 0;
+            first_node_reg    = 0;
+            num_features_reg  = 0;
+            first_feature_reg = 0;
+        } else {
+            enable_reg        = next_enable;
+            num_trees_reg     = next_num_trees;
+            first_node_reg    = next_first_node;
+            num_features_reg  = next_num_features;
+            first_feature_reg = next_first_feature;
+        }
+    }
+}

@@ -1,0 +1,34 @@
+module TestForestTop (
+    clk: input clock,
+    rst: input reset,
+) {
+
+    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst control_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+
+    inst forest: ForestTop #(
+        FEATURE_SIZE  : 4 ,
+        RAM_ADDR_WIDTH: 32,
+        RAM_DATA_WIDTH: 32,
+    ) (
+        clk                      ,
+        rst                      ,
+        control_port: control_bus,
+        ram_port    : ram_bus    ,
+    );
+
+    // Wishbone spec mandates an active high reset
+    let mem_rst: reset_async_high = rst as reset_async_high;
+    inst ram: memutils::WishboneRam #(
+        ADDR_WIDTH: 32  ,
+        DATA_WIDTH: 32  ,
+        SIZE      : 4096,
+    ) (
+        clk          ,
+        rst : mem_rst,
+        port: ram_bus,
+    );
+}
+
+#[test(test_forest_top, TestForestTop)]
+include (cocotb, "../../tb/forest_top.py");

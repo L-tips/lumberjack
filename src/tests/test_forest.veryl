@@ -2,7 +2,7 @@ module TestForest (
     clk: input clock,
     rst: input reset,
 
-    en: input logic,
+    enable: input logic,
 
     first_node_addr: input logic<32>,
     num_trees      : input logic<16>,
@@ -35,7 +35,7 @@ module TestForest (
         clk  ,
         rst  ,
 
-        en  ,
+        enable  ,
 
         first_node_addr  ,
         num_trees        ,

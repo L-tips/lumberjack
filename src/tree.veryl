@@ -1,7 +1,4 @@
-module TreePredictor #(
-    param RAM_ADDR_WIDTH: u8 = 32,
-    param RAM_DATA_WIDTH: u8 = 32,
-) (
+module TreePredictor (
     clk: input clock,
     rst: input reset,
 
@@ -26,11 +23,12 @@ module TreePredictor #(
     }
 
     // TODO: hardcoded
+    // Field order inverted - little-endian memory
     struct Node {
-        left : logic<32>,
-        right: logic<32>,
-        split: logic<32>,
         flags: Flags    ,
+        split: logic<32>,
+        right: logic<32>,
+        left : logic<32>,
     }
 
     enum State {
@@ -43,7 +41,8 @@ module TreePredictor #(
     var node_ptr: logic<32>;
     // TODO: hardcoded
     var fetched_node: logic<128>;
-    var node        : Node      ;
+
+    let node: Node = fetched_node as Node;
 
     var state     : State;
     var next_state: State;
@@ -51,17 +50,10 @@ module TreePredictor #(
     var fetch_counter     : logic<3>;
     var next_fetch_counter: logic<3>;
 
-    // Mux node ptr to handle immediate start condition
-    // let effective_ptr: logic<3> = if (start && !busy_reg) ? 0 : node_ptr;
-
     // Break the node down into its components
     /// Node size in bytes
     // TODO: hardcoded
-    const NODE_SIZE : u8 = 16;
-    assign node.left  = fetched_node[0+:32];
-    assign node.right = fetched_node[32+:32];
-    assign node.split = fetched_node[64+:32];
-    assign node.flags = fetched_node[96+:32];
+    const NODE_SIZE: u8 = 16;
 
     // Retrieve the feature based on the split index
     /* verilator lint_off WIDTHTRUNC */

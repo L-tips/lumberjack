@@ -5,7 +5,7 @@ from cocotb.triggers import RisingEdge
 import utils
 
 @cocotb.test()
-async def tree_test(dut):
+async def forest_test(dut):
     # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await RisingEdge(dut.clk)
@@ -20,7 +20,7 @@ async def tree_test(dut):
 
     await RisingEdge(dut.clk)
 
-    dut.en.value = 1
+    dut.enable.value = 1
     dut.first_node_addr.value = 0
     dut.num_trees.value = 2
 
@@ -28,8 +28,6 @@ async def tree_test(dut):
     dut.num_features.value = 3
 
     await RisingEdge(dut.clk)
-
-    dut.en.value = 0
 
     cycle_count = 1
 
@@ -40,5 +38,8 @@ async def tree_test(dut):
     # Forest should predict class #1 with 2 votes
     assert dut.prediction.value == 1
     assert dut.num_votes.value == 2
+
+    dut.enable.value = 0
+    await RisingEdge(dut.clk)
 
     print(f"Prediction took {cycle_count} cycles.")

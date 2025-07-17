@@ -1,0 +1,28 @@
+interface IbexBus #(
+    param DATA_WIDTH: u8 = 32,
+    param ADDR_WIDTH: u8 = 32,
+) {
+    var req  : logic            ;
+    var addr : logic<ADDR_WIDTH>;
+    var we   : logic            ;
+    var be   : logic<4>         ;
+    var wdata: logic<DATA_WIDTH>;
+
+    var rvalid: logic            ;
+    var rdata : logic<DATA_WIDTH>;
+
+    modport master {
+        req  : output,
+        addr : output,
+        we   : output,
+        be   : output,
+        wdata: output,
+
+        rvalid: input,
+        rdata : input,
+    }
+
+    modport slave {
+        ..converse(master)
+    }
+}
