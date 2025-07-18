@@ -1,6 +1,8 @@
 module TestForestTop (
     clk: input clock,
     rst: input reset,
+
+    interrupt_line: output logic,
 ) {
 
     inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
@@ -11,10 +13,11 @@ module TestForestTop (
         RAM_ADDR_WIDTH: 32,
         RAM_DATA_WIDTH: 32,
     ) (
-        clk                      ,
-        rst                      ,
-        control_port: control_bus,
-        ram_port    : ram_bus    ,
+        clk                         ,
+        rst                         ,
+        control_port: control_bus   ,
+        ram_port    : ram_bus       ,
+        interrupt   : interrupt_line,
     );
 
     // Wishbone spec mandates an active high reset

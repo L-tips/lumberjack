@@ -19,6 +19,9 @@ module ForestTop #(
     /// Port to RAM where the forest and features
     /// are stored
     ram_port: modport memutils::Wishbone::master,
+
+    /// Interrupt line
+    interrupt: output logic,
 ) {
     const CSR_ADDR_WIDTH: u8 = 4;
     const CSR_DATA_WIDTH: u8 = 32;
@@ -82,6 +85,7 @@ module ForestTop #(
         busy        ,
         prediction  ,
         num_votes   ,
+        interrupt   ,
     );
 
     var prev_select: logic<4>;

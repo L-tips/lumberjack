@@ -107,6 +107,15 @@ async def forest_top_test(dut):
     # Check that first_feature hasn't changed (enable protection works)
     assert dut.forest.first_feature_addr.value == 0x60
 
+    # Enable the interrupt
+    begin_write(dut, 0x24, 0b1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
     while not dut.forest.ready.value == 1:
         await RisingEdge(dut.clk)
 
@@ -115,3 +124,75 @@ async def forest_top_test(dut):
     # Forest should predict class #1 with 2 votes
     assert dut.forest.prediction.value == 1
     assert dut.forest.num_votes.value == 2
+
+    # Interrupt line should be set
+    assert dut.interrupt_line.value == 1
+
+    # Clear the interrupt by reading prediction
+    begin_read(dut, 0x1C, 0b1111)
+
+    await RisingEdge(dut.clk)
+
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
+    # Also make sure that reading the prediction works
+    # correctly by the same occasion
+    prediction = read_data(dut)
+
+    assert prediction == 1
+
+    # Interrupt should now be inactive
+    assert dut.interrupt_line.value == 0
+    # Also read the number of votes
+    begin_read(dut, 0x20, 0b1111)
+
+    await RisingEdge(dut.clk)
+
+    # Restart a second time
+    begin_write(dut, 0x0, 0x1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    num_votes = read_data(dut)
+    assert num_votes == 2
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
+    while not dut.forest.ready.value == 1:
+        await RisingEdge(dut.clk)
+
+    assert dut.interrupt_line == 1
+
+    # Clear the interrupt by writing a 1 to INTFLAG
+    begin_write(dut, 0x2C, 0b1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
+    assert dut.interrupt_line == 0
+
+    # Disable the interrupt
+    begin_write(dut, 0x28, 0b1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    # Restart for a 3rd time
+    begin_write(dut, 0x0, 0x1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
+    while not dut.forest.ready.value == 1:
+        await RisingEdge(dut.clk)
+
+    # Interrupt should not fire
+    assert dut.interrupt_line == 0

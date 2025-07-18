@@ -16,6 +16,7 @@ module CsrInterface (
     first_node   : output logic<32>,
     num_features : output logic<4> ,
     first_feature: output logic<32>,
+    interrupt    : output logic    ,
 
     // --- Input control signals ---
     ready     : input logic    ,
@@ -35,6 +36,9 @@ module CsrInterface (
     const FIRST_FEATURE: logic<ADDR_WIDTH> = 6;
     const PREDICTION   : logic<ADDR_WIDTH> = 7;
     const NUM_VOTES    : logic<ADDR_WIDTH> = 8;
+    const INTEN_SET    : logic<ADDR_WIDTH> = 9;
+    const INTEN_CLR    : logic<ADDR_WIDTH> = 10;
+    const INTFLAG      : logic<ADDR_WIDTH> = 11;
 
     const ENABLE_BIT: u8 = 0;
     const READY_BIT : u8 = 1;
@@ -62,6 +66,23 @@ module CsrInterface (
     var next_first_feature: logic<32>;
     assign first_feature      = first_feature_reg;
 
+    var inten_reg : logic;
+    var next_inten: logic;
+
+    var intflag_reg : logic;
+    var next_intflag: logic;
+    var prev_ready  : logic;
+
+    always_ff {
+        if_reset {
+            prev_ready = 0;
+        } else {
+            prev_ready = ready;
+        }
+    }
+
+    assign interrupt = next_intflag && next_inten;
+
     // Write logic
     always_comb {
         // Defaults
@@ -70,6 +91,8 @@ module CsrInterface (
         next_first_node    = first_node_reg;
         next_num_features  = num_features_reg;
         next_first_feature = first_feature_reg;
+        next_inten         = inten_reg;
+        next_intflag       = intflag_reg;
         user_enable        = 0;
 
         // Write to CTRL register
@@ -112,10 +135,39 @@ module CsrInterface (
             next_first_feature = wdata;
         }
 
+        // Set INTEN register bits
+        if write && (address == INTEN_SET) {
+            // Can only write to 0th bit
+            next_inten |= wdata[0];
+        }
+
+        // Clear INTEN register bits
+        if write && (address == INTEN_CLR) {
+            // Can only write to 0th bit
+            next_inten &= ~wdata[0];
+        }
+
+        // Clear INTFLAG register bits
+        if write && (address == INTFLAG) {
+            // Can only write to 0th bit
+            next_intflag &= ~wdata[0];
+        }
+
         // Clear the enable bit if the forest
         // has just finished evaluating
         if !busy && ready && !user_enable {
             next_enable = 0;
+        }
+
+        // Clear the interrupt flag when reading
+        // the prediction register
+        if read && address == PREDICTION {
+            next_intflag = 0;
+        }
+
+        // Set the interrupt flag if ready
+        if ready && !prev_ready {
+            next_intflag = 1;
         }
     }
 
@@ -158,6 +210,16 @@ module CsrInterface (
         if read && address == NUM_VOTES {
             rdata = num_votes;
         }
+
+        // Read INTEN register
+        if read && (address == INTEN_SET || address == INTEN_CLR) {
+            rdata = {31'b0, next_inten};
+        }
+
+        // Read INTFLAG register
+        if read && address == INTFLAG {
+            rdata = {31'b0, next_intflag};
+        }
     }
 
     // Advance state machine
@@ -168,12 +230,16 @@ module CsrInterface (
             first_node_reg    = 0;
             num_features_reg  = 0;
             first_feature_reg = 0;
+            inten_reg         = 0;
+            intflag_reg       = 0;
         } else {
             enable_reg        = next_enable;
             num_trees_reg     = next_num_trees;
             first_node_reg    = next_first_node;
             num_features_reg  = next_num_features;
             first_feature_reg = next_first_feature;
+            inten_reg         = next_inten;
+            intflag_reg       = next_intflag;
         }
     }
 }
