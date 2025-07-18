@@ -1,0 +1,20 @@
+/// Protocol converter from an Wishbone pipelined
+/// master to an Ibex Bus slave.
+module Wishbone2IbexBus #(
+    param ADDR_WIDTH: u8 = 32,
+    param DATA_WIDTH: u8 = 32,
+) (
+    slave: modport IbexBus::master            ,
+    master : modport memutils::Wishbone::slave,
+) {
+    assign slave.req          = master.valid_request();
+    assign slave.addr         = master.addr;
+    assign slave.we = master.write_enable;
+    assign slave.be       = master.select;
+    assign slave.wdata   = master.write_data;
+
+    assign master.read_data  = slave.rdata;
+    assign master.ack = slave.rvalid;
+
+    // STALL, LOCK, ERR, RTY not supported by Ibex bus
+}

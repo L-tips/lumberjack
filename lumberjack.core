@@ -1,0 +1,25 @@
+CAPI=2:
+
+name: "lumberjack"
+description: "Random forest hardware accelerator"
+
+filesets:
+  rtl:
+    files:
+      - target/veryl/forest_top.sv
+      - target/veryl/forest.sv
+      - target/veryl/tree.sv
+      - target/veryl/csr.sv
+      - target/veryl/ibex_bus.sv
+      - target/veryl/ibex_bus2wb.sv
+      - target/veryl/wb2ibex_bus.sv
+      - dependencies/memutils/src/wishbone_if.sv
+      - dependencies/memutils/src/scratchpad_ram.sv
+      - dependencies/memutils/src/wb_demux.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets:
+      - rtl
+    toplevel: lumberjack_ForestTop

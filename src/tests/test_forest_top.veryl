@@ -27,9 +27,9 @@ module TestForestTop (
         DATA_WIDTH: 32  ,
         SIZE      : 4096,
     ) (
-        clk          ,
-        rst : mem_rst,
-        port: ram_bus,
+        clk         ,
+        rst: mem_rst,
+        wb : ram_bus,
     );
 }
 
