@@ -6,7 +6,19 @@ module TestForestTop (
 ) {
 
     inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst ram_out    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+
+    inst arbiter: SelfArbiter #(
+        RAM_ADDR_WIDTH: 32,
+        RAM_DATA_WIDTH: 32,
+        CSR_ADDR_WIDTH: 32,
+        CSR_DATA_WIDTH: 32,
+    ) (
+        csr_in : control_bus,
+        ram_in : ram_bus    ,
+        ram_out             ,
+    );
 
     inst forest: ForestTop #(
         FEATURE_SIZE  : 4 ,
@@ -29,7 +41,7 @@ module TestForestTop (
     ) (
         clk         ,
         rst: mem_rst,
-        wb : ram_bus,
+        wb : ram_out,
     );
 }
 

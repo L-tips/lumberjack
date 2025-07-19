@@ -13,7 +13,7 @@ async def forest_test(dut):
     # Init and reset
     dut.rst.value = 0
     
-    await utils.init_memory(dut.ram.mem, "forest_2_trees_6_nodes.hex")
+    await utils.init_memory(dut.ram.ram.mem, "forest_2_trees_6_nodes.hex")
 
     await RisingEdge(dut.clk)
     dut.rst.value = 1  # release reset

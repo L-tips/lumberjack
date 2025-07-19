@@ -1,0 +1,22 @@
+/// A simple arbiter, to be used in
+/// systems where the forest accelerator is
+/// connected to the same bus twice, both the control
+/// bus as a slave, and the memory bus as a master.
+/// Priority will always be given to the control bus.
+module SelfArbiter #(
+    param RAM_DATA_WIDTH: u8 = 32,
+    param RAM_ADDR_WIDTH: u8 = 32,
+    param CSR_DATA_WIDTH: u8 = 32,
+    param CSR_ADDR_WIDTH: u8 = 32,
+) (
+    csr_in : modport memutils::Wishbone::slave ,
+    ram_out: modport memutils::Wishbone::master,
+    ram_in : modport memutils::Wishbone::slave ,
+) {
+    always_comb {
+        ram_in       <> ram_out;
+        ram_in.stall =  ram_in.stall || csr_in.cyc;
+        ram_out.stb  =  ram_in.stb && !ram_in.stall;
+    }
+
+}

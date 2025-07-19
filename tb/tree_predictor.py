@@ -23,7 +23,7 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
 
     # Initialize memory
-    await utils.init_memory(dut.ram.mem, "single_tree_2_nodes.hex")
+    await utils.init_memory(dut.ram.ram.mem, "single_tree_2_nodes.hex")
 
     await RisingEdge(dut.clk)
 

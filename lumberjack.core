@@ -10,12 +10,12 @@ filesets:
       - target/veryl/forest.sv
       - target/veryl/tree.sv
       - target/veryl/csr.sv
-      - target/veryl/ibex_bus.sv
-      - target/veryl/ibex_bus2wb.sv
-      - target/veryl/wb2ibex_bus.sv
-      - dependencies/memutils/src/wishbone_if.sv
+      - target/veryl/self_arbiter.sv
+      - target/veryl/ibex_bus/ibex_bus.sv
+      - target/veryl/ibex_bus/wb2ibex_bus.sv
+      - dependencies/memutils/src/wb/wishbone_if.sv
+      - dependencies/memutils/src/wb/wb_demux.sv
       - dependencies/memutils/src/scratchpad_ram.sv
-      - dependencies/memutils/src/wb_demux.sv
     file_type: systemVerilogSource
 
 targets:

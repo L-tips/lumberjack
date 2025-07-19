@@ -42,7 +42,7 @@ async def forest_top_test(dut):
     # Init and reset
     dut.rst.value = 0
     
-    await utils.init_memory(dut.ram.mem, "forest_2_trees_6_nodes.hex")
+    await utils.init_memory(dut.ram.ram.mem, "forest_2_trees_6_nodes.hex")
 
     await RisingEdge(dut.clk)
     dut.rst.value = 1  # release reset
@@ -135,6 +135,8 @@ async def forest_top_test(dut):
 
     finish_txn(dut)
 
+    assert dut.interrupt_line.value == 1
+
     await RisingEdge(dut.clk)
 
     # Also make sure that reading the prediction works
@@ -164,6 +166,8 @@ async def forest_top_test(dut):
     while not dut.forest.ready.value == 1:
         await RisingEdge(dut.clk)
 
+    await RisingEdge(dut.clk)
+
     assert dut.interrupt_line == 1
 
     # Clear the interrupt by writing a 1 to INTFLAG
@@ -172,6 +176,8 @@ async def forest_top_test(dut):
     await RisingEdge(dut.clk)
 
     finish_txn(dut)
+
+    assert dut.interrupt_line == 1
 
     await RisingEdge(dut.clk)
 

@@ -1,0 +1,55 @@
+/// Protocol converter from an Ibex bus master
+/// to a Wishbone pipelined slave.
+///
+/// May only be used with slaves that meet the
+/// following condition:
+///
+/// * May not stall, ie, must respond in the next cycle
+///   after the request
+module IbexBus2Wishbone #(
+    param ADDR_WIDTH: u8 = 32,
+    param DATA_WIDTH: u8 = 32,
+) (
+    ibex_in: modport IbexBus::slave            ,
+    wb_out : modport memutils::Wishbone::master,
+) {
+    assign wb_out.cyc          = ibex_in.req;
+    assign wb_out.stb          = ibex_in.req;
+    assign wb_out.addr         = ibex_in.addr;
+    assign wb_out.write_enable = ibex_in.we;
+    assign wb_out.select       = ibex_in.be;
+    assign wb_out.write_data   = ibex_in.wdata;
+
+    assign ibex_in.rdata  = wb_out.read_data;
+    assign ibex_in.rvalid = wb_out.ack;
+
+    // LOCK, ERR, RTY not supported by Ibex bus, but may be
+    // assigned by other modules, such as arbiters.
+    assign wb_out.lock = 0;
+}
+
+/// Protocol converter from an Wishbone pipelined
+/// master to an Ibex Bus slave.
+module Wishbone2IbexBus #(
+    param ADDR_WIDTH: u8 = 32,
+    param DATA_WIDTH: u8 = 32,
+) (
+    wb_in   : modport memutils::Wishbone::slave,
+    ibex_out: modport IbexBus::master          ,
+) {
+    assign ibex_out.req   = wb_in.cyc && wb_in.stb && !wb_in.stall;
+    assign ibex_out.addr  = wb_in.addr;
+    assign ibex_out.we    = wb_in.write_enable;
+    assign ibex_out.be    = wb_in.select;
+    assign ibex_out.wdata = wb_in.write_data;
+
+    assign wb_in.read_data = ibex_out.rdata;
+    assign wb_in.ack       = ibex_out.rvalid;
+
+    assign wb_in.stall = !ibex_out.gnt;
+
+    // LOCK, ERR, RTY not supported by Ibex bus, but may be
+    // assigned by other modules, such as arbiters.
+    assign wb_in.err = 0;
+    assign wb_in.rty = 0;
+}

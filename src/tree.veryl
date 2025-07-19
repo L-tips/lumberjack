@@ -76,6 +76,22 @@ module TreePredictor (
     var debug_branch_taken : logic<2>;
     var debug_is_prediction: bool    ;
 
+    var prev_wb_complete: logic    ;
+    var addr            : logic<32>;
+    var next_addr       : logic<32>;
+
+    assign ram_port.addr = next_addr;
+
+    always_ff (clk, rst) {
+        if_reset {
+            prev_wb_complete = 0;
+            addr             = 0;
+        } else {
+            prev_wb_complete = ram_port.valid_request();
+            addr             = next_addr;
+        }
+    }
+
     always_comb {
         // Default: maintain current state
         next_state         = state;
@@ -87,9 +103,9 @@ module TreePredictor (
         next_fetched_node  = fetched_node;
 
         // RAM control defaults
-        ram_port.addr = node_ptr;
-        ram_port.stb  = false;
-        ram_port.cyc  = false;
+        next_addr    = addr;
+        ram_port.stb = false;
+        ram_port.cyc = false;
 
         debug_branch_taken  = 0;
         debug_is_prediction = false;
@@ -105,27 +121,23 @@ module TreePredictor (
                     next_fetch_counter = 0;
 
                     // Start RAM read request
-                    ram_port.stb  = true;
-                    ram_port.cyc  = true;
-                    ram_port.addr = first_node_addr;
+                    ram_port.stb = true;
+                    ram_port.cyc = true;
+                    next_addr    = first_node_addr;
                 }
             }
 
             State::fetching: {
                 // Continue the read transaction
+                // Continue the read transaction, only if bus isn't stalled
                 ram_port.stb = true;
                 ram_port.cyc = true;
 
-                // Wait for the bus to un-stall
-                if ram_port.stall {
-                    // TODO handle stalls and bus errors
-
-
-                    // Store incoming data at the appropriate position in fetched_node
-                } else if ram_port.ack && !ram_port.stall {
+                // Store incoming data at the appropriate position in fetched_node
+                if ram_port.ack && prev_wb_complete {
                     // Fetch next word
                     next_fetch_counter += 1;
-                    ram_port.addr      =  node_ptr + next_fetch_counter * 4;
+                    next_addr          =  node_ptr + next_fetch_counter * 4;
 
                     // Store the data returned from memory
                     // TODO: hardcoded
@@ -166,7 +178,7 @@ module TreePredictor (
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
                         next_node_ptr = node.left * NODE_SIZE;
-                        ram_port.addr = next_node_ptr;
+                        next_addr     = next_node_ptr;
 
                         next_state = State::fetching;
                     }
@@ -189,7 +201,7 @@ module TreePredictor (
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
                         next_node_ptr = node.right * NODE_SIZE;
-                        ram_port.addr = next_node_ptr;
+                        next_addr     = next_node_ptr;
 
                         next_state = State::fetching;
                     }
@@ -226,6 +238,9 @@ module TreePredictor (
     assign busy                  = busy_reg || start;
     assign ready                 = ready_reg && !start;
     assign ram_port.write_enable = false;
+
     // TODO: hardcoded
     assign ram_port.select = 4'b1111;
+    assign ram_port.write_data = 0;
+    assign ram_port.lock = false;
 }

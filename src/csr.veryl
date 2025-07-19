@@ -48,7 +48,7 @@ module CsrInterface (
     var next_enable: logic;
     var user_enable: logic;
 
-    assign enable = next_enable;
+    assign enable = enable_reg;
 
     var num_trees_reg : logic<16>;
     var next_num_trees: logic<16>;
@@ -81,7 +81,7 @@ module CsrInterface (
         }
     }
 
-    assign interrupt = next_intflag && next_inten;
+    assign interrupt = intflag_reg && inten_reg;
 
     // Write logic
     always_comb {

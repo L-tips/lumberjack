@@ -151,6 +151,22 @@ pub module Forest #(
     var votes     : VoteResult;
     var next_votes: VoteResult;
 
+    var prev_wb_complete: bool     ;
+    var addr            : logic<32>;
+    var next_addr       : logic<32>;
+
+    assign ram_bus_mux[0].addr = next_addr;
+
+    always_ff (clk, rst) {
+        if_reset {
+            prev_wb_complete = 0;
+            addr             = 0;
+        } else {
+            prev_wb_complete = ram_bus_mux[0].valid_request();
+            addr             = next_addr;
+        }
+    }
+
     always_comb {
         next_start_tree = false;
         // TODO: hardcoded
@@ -176,10 +192,10 @@ pub module Forest #(
         feature_write_port.data         = 0;
 
         // RAM control defaults
-        ram_bus_mux[0].addr   = feature_ptr;
-        ram_bus_mux[0].stb    = false;
-        ram_bus_mux[0].cyc    = false;
-        ram_bus_mux[0].select = 4'b1111;
+        next_addr          = addr;
+        ram_bus_mux[0].stb = false;
+        ram_bus_mux[0].cyc = false;
+
 
         // Allow shutting down the evaluation early by deasserting enable
         if !enable {
@@ -196,27 +212,22 @@ pub module Forest #(
                         next_fetch_counter = 0;
 
                         // Start RAM read request
-                        ram_bus_mux[0].stb  = true;
-                        ram_bus_mux[0].cyc  = true;
-                        ram_bus_mux[0].addr = first_feature_addr;
+                        ram_bus_mux[0].stb = true;
+                        ram_bus_mux[0].cyc = true;
+                        next_addr          = first_feature_addr;
                     }
                 }
 
                 State::fetch_features: {
-                    // Continue the read transaction
+                    // Continue the read transaction, only if bus isn't stalled
                     ram_bus_mux[0].stb = true;
                     ram_bus_mux[0].cyc = true;
 
-                    // Wait for the bus to un-stall
-                    if ram_bus_mux[0].stall {
-                        // TODO handle stalls and bus errors
-
-
-                        // Store incoming data in cache
-                    } else if ram_bus_mux[0].ack && !ram_bus_mux[0].stall {
+                    // Store incoming data in cache
+                    if ram_bus_mux[0].ack && prev_wb_complete {
                         // Fetch next word
-                        next_fetch_counter  += 1;
-                        ram_bus_mux[0].addr =  feature_ptr + next_fetch_counter * 4;
+                        next_fetch_counter += 1;
+                        next_addr          =  feature_ptr + next_fetch_counter * 4;
 
                         // Store the data returned from memory
                         feature_write_port.write_enable = 1;
@@ -335,4 +346,9 @@ pub module Forest #(
     assign prediction = votes.max_vote_class;
     assign num_votes  = votes.max_vote;
     /* verilator lint_on WIDTHEXPAND */
+
+    // TODO: hardcoded
+    assign ram_bus_mux[0].select = 4'b1111;
+    assign ram_bus_mux[0].write_data = 0;
+    assign ram_bus_mux[0].lock = false;
 }

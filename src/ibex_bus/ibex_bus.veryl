@@ -3,6 +3,7 @@ interface IbexBus #(
     param ADDR_WIDTH: u8 = 32,
 ) {
     var req  : logic            ;
+    var gnt  : logic            ;
     var addr : logic<ADDR_WIDTH>;
     var we   : logic            ;
     var be   : logic<4>         ;
@@ -12,7 +13,9 @@ interface IbexBus #(
     var rdata : logic<DATA_WIDTH>;
 
     modport master {
-        req  : output,
+        req: output,
+        gnt: input ,
+
         addr : output,
         we   : output,
         be   : output,
@@ -23,6 +26,15 @@ interface IbexBus #(
     }
 
     modport slave {
-        ..converse(master)
+        req: input,
+        // slaves do not see the gnt signal
+
+        addr: input,
+        we: input,
+        be: input,
+        wdata: input,
+
+        rvalid: output,
+        rdata: output,
     }
 }
