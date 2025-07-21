@@ -29,12 +29,12 @@ interface IbexBus #(
         req: input,
         // slaves do not see the gnt signal
 
-        addr: input,
-        we: input,
-        be: input,
+        addr : input,
+        we   : input,
+        be   : input,
         wdata: input,
 
         rvalid: output,
-        rdata: output,
+        rdata : output,
     }
 }

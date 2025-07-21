@@ -36,6 +36,12 @@ module ForestTop #(
     var prediction        : logic<32>;
     var num_votes         : logic<32>;
 
+    var dbg_tree_fetch_counter  : logic<3> ;
+    var dbg_tree_state          : logic<2> ;
+    var dbg_forest_fetch_counter: logic<4> ;
+    var dbg_forest_state        : logic<2> ;
+    var dbg_tree_idx            : logic<16>;
+
     inst evaluator: Forest #(
         FEATURE_SIZE    ,
         RAM_ADDR_WIDTH  ,
@@ -57,6 +63,12 @@ module ForestTop #(
         num_votes   ,
 
         ram_port  ,
+
+        dbg_tree_fetch_counter    ,
+        dbg_tree_state            ,
+        dbg_forest_fetch_counter  ,
+        dbg_forest_state          ,
+        dbg_tree_idx              ,
     );
 
     var csr_address: logic<CSR_ADDR_WIDTH>;
@@ -86,6 +98,12 @@ module ForestTop #(
         prediction  ,
         num_votes   ,
         interrupt   ,
+
+        dbg_tree_fetch_counter    ,
+        dbg_tree_state            ,
+        dbg_forest_fetch_counter  ,
+        dbg_forest_state          ,
+        dbg_tree_idx              ,
     );
 
     var prev_select: logic<4>;

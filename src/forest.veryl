@@ -29,6 +29,12 @@ pub module Forest #(
     num_votes: output logic<32>,
 
     ram_port: modport memutils::Wishbone::master,
+
+    dbg_tree_fetch_counter  : output logic<3> ,
+    dbg_tree_state          : output logic<2> ,
+    dbg_forest_fetch_counter: output logic<4> ,
+    dbg_forest_state        : output logic<2> ,
+    dbg_tree_idx            : output logic<16>,
 ) {
     enum State {
         idle,
@@ -118,6 +124,9 @@ pub module Forest #(
 
         feature_port: feature_read_port[0],
         ram_port    : ram_bus_mux[1]      ,
+
+        dbg_state        : dbg_tree_state        ,
+        dbg_fetch_counter: dbg_tree_fetch_counter,
     );
 
     // TODO: hardcoded
@@ -348,7 +357,11 @@ pub module Forest #(
     /* verilator lint_on WIDTHEXPAND */
 
     // TODO: hardcoded
-    assign ram_bus_mux[0].select = 4'b1111;
+    assign ram_bus_mux[0].select     = 4'b1111;
     assign ram_bus_mux[0].write_data = 0;
-    assign ram_bus_mux[0].lock = false;
+    assign ram_bus_mux[0].lock       = false;
+
+    assign dbg_forest_fetch_counter = fetch_counter;
+    assign dbg_forest_state         = state;
+    assign dbg_tree_idx             = tree_idx;
 }

@@ -24,6 +24,12 @@ module CsrInterface (
     prediction: input logic<32>,
     num_votes : input logic<32>,
 
+    dbg_tree_fetch_counter  : input logic<3> ,
+    dbg_tree_state          : input logic<2> ,
+    dbg_forest_fetch_counter: input logic<4> ,
+    dbg_forest_state        : input logic<2> ,
+    dbg_tree_idx            : input logic<16>,
+
 ) {
     const ADDR_WIDTH: u32 = $clog2(9);
 
@@ -39,6 +45,7 @@ module CsrInterface (
     const INTEN_SET    : logic<ADDR_WIDTH> = 9;
     const INTEN_CLR    : logic<ADDR_WIDTH> = 10;
     const INTFLAG      : logic<ADDR_WIDTH> = 11;
+    const DBG          : logic<ADDR_WIDTH> = 12;
 
     const ENABLE_BIT: u8 = 0;
     const READY_BIT : u8 = 1;
@@ -72,6 +79,15 @@ module CsrInterface (
     var intflag_reg : logic;
     var next_intflag: logic;
     var prev_ready  : logic;
+
+    let dbg: logic<32> = {
+        5'b0,
+        dbg_tree_idx,
+        dbg_forest_state,
+        dbg_forest_fetch_counter,
+        dbg_tree_state,
+        dbg_tree_fetch_counter
+    };
 
     always_ff {
         if_reset {
@@ -219,6 +235,10 @@ module CsrInterface (
         // Read INTFLAG register
         if read && address == INTFLAG {
             rdata = {31'b0, next_intflag};
+        }
+
+        if read && address == DBG {
+            rdata = dbg;
         }
     }
 

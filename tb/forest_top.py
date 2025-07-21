@@ -57,13 +57,25 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
+    # Check that first_node reads on
+    begin_read(dut, 0x10, 0b1111)
+
+    await RisingEdge(dut.clk)
+
     # Set num_features
     begin_write(dut, 0x14, 3, 0b1111)
 
     await RisingEdge(dut.clk)
 
+    assert read_data(dut) == 0x0
+    assert dut.forest.first_node_addr.value == 0x0
+
     # Set first_feature
     begin_write(dut, 0x18, 0x60, 0b1111)
+
+    await RisingEdge(dut.clk)
+
+    begin_read(dut, 0x18, 0b1111)
 
     await RisingEdge(dut.clk)
 
@@ -71,6 +83,9 @@ async def forest_top_test(dut):
     begin_write(dut, 0x0, 0x1, 0b1)
 
     await RisingEdge(dut.clk)
+
+    assert read_data(dut) == 0x60
+    assert dut.forest.first_feature_addr.value == 0x60
 
     finish_txn(dut)
 

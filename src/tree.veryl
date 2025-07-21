@@ -13,6 +13,9 @@ module TreePredictor (
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
     ram_port    : modport memutils::Wishbone::master              ,
+
+    dbg_fetch_counter: output logic<3>,
+    dbg_state        : output logic<2>,
 ) {
 
     // TODO: hardcoded
@@ -240,7 +243,10 @@ module TreePredictor (
     assign ram_port.write_enable = false;
 
     // TODO: hardcoded
-    assign ram_port.select = 4'b1111;
+    assign ram_port.select     = 4'b1111;
     assign ram_port.write_data = 0;
-    assign ram_port.lock = false;
+    assign ram_port.lock       = false;
+
+    assign dbg_fetch_counter = fetch_counter;
+    assign dbg_state         = state;
 }
