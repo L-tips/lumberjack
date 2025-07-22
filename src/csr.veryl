@@ -48,8 +48,7 @@ module CsrInterface (
     const DBG          : logic<ADDR_WIDTH> = 12;
 
     const ENABLE_BIT: u8 = 0;
-    const READY_BIT : u8 = 1;
-    const BUSY_BIT  : u8 = 2;
+    const BUSY_BIT  : u8 = 1;
 
     var enable_reg : logic;
     var next_enable: logic;
@@ -194,7 +193,7 @@ module CsrInterface (
 
         // Read CTRL register
         if read && (address == CTRL || address == CTRL_SET || address == CTRL_CLR) {
-            rdata = {29'b0, busy, ready, enable};
+            rdata = {30'b0, busy, enable};
         }
 
         // Read NUM_TREES register

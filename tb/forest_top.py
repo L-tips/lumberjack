@@ -111,7 +111,7 @@ async def forest_top_test(dut):
     assert dut.forest.num_trees.value == 2
 
     # BUSY and ENABLE should be set
-    assert read_data(dut) == 0b101
+    assert read_data(dut) == 0b11
 
     # Check that first_feature_addr is actually enable-protected
     begin_write(dut, 0x18, 0x00, 0b1111)
@@ -217,3 +217,13 @@ async def forest_top_test(dut):
 
     # Interrupt should not fire
     assert dut.interrupt_line == 0
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+    # Check that the control/status signals
+    # are what we expect, and that the HW hasn't
+    # unexpectedly changed them from under our noses
+    assert dut.forest.busy.value == 0
+    assert dut.forest.ready.value == 1
+    assert dut.forest.enable.value == 0
