@@ -2,6 +2,7 @@ module TestTree (
     clk            : input clock    ,
     rst            : input reset    ,
     start          : input bool     ,
+    forest_start_addr: input logic<32>,
     first_node_addr: input logic<32>,
 ) {
     inst feature_port: memutils::ScratchpadRamPort #( ADDR_WIDTH: 4, DATA_WIDTH: 32 );
@@ -25,7 +26,10 @@ module TestTree (
     inst tree: TreePredictor (
         clk              ,
         rst              ,
+
+        forest_start_addr,
         first_node_addr  ,
+        
         start            ,
 
         ready       ,

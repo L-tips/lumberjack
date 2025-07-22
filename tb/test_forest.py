@@ -21,7 +21,7 @@ async def forest_test(dut):
     await RisingEdge(dut.clk)
 
     dut.enable.value = 1
-    dut.first_node_addr.value = 0
+    dut.forest_start_addr.value = 0
     dut.num_trees.value = 2
 
     dut.first_feature_addr = 0x60

@@ -9,6 +9,15 @@ module TestForestTop (
     inst ram_out    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
 
+    // Translate addresses to test that we calculate the correct addrs
+    // Ie, the first node of the forest lives at address 0x10064 in the eyes
+    // of the forest accelerator.
+    inst ram_shifted: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    always_comb {
+        ram_shifted.master <> ram_out.slave;
+        ram_shifted.addr = ram_out.addr - {15'h0, 'h10064};
+    }
+
     inst arbiter: SelfArbiter #(
         RAM_ADDR_WIDTH: 32,
         RAM_DATA_WIDTH: 32,
@@ -41,7 +50,7 @@ module TestForestTop (
     ) (
         clk         ,
         rst: mem_rst,
-        wb : ram_out,
+        wb : ram_shifted,
     );
 }
 

@@ -13,7 +13,7 @@ module CsrInterface (
     // --- Output control signals ---
     enable       : output logic    ,
     num_trees    : output logic<16>,
-    first_node   : output logic<32>,
+    forest_start_addr   : output logic<32>,
     num_features : output logic<4> ,
     first_feature: output logic<32>,
     interrupt    : output logic    ,
@@ -37,7 +37,7 @@ module CsrInterface (
     const CTRL_SET     : logic<ADDR_WIDTH> = 1;
     const CTRL_CLR     : logic<ADDR_WIDTH> = 2;
     const NUM_TREES    : logic<ADDR_WIDTH> = 3;
-    const FIRST_NODE   : logic<ADDR_WIDTH> = 4;
+    const FOREST_START_ADDR   : logic<ADDR_WIDTH> = 4;
     const NUM_FEATURES : logic<ADDR_WIDTH> = 5;
     const FIRST_FEATURE: logic<ADDR_WIDTH> = 6;
     const PREDICTION   : logic<ADDR_WIDTH> = 7;
@@ -61,9 +61,9 @@ module CsrInterface (
     var next_num_trees: logic<16>;
     assign num_trees      = num_trees_reg;
 
-    var first_node_reg : logic<32>;
-    var next_first_node: logic<32>;
-    assign first_node      = first_node_reg;
+    var forest_start_addr_reg : logic<32>;
+    var next_forest_start_addr: logic<32>;
+    assign forest_start_addr      = forest_start_addr_reg;
 
     var num_features_reg : logic<4>;
     var next_num_features: logic<4>;
@@ -104,7 +104,7 @@ module CsrInterface (
         // Defaults
         next_enable        = enable_reg;
         next_num_trees     = num_trees_reg;
-        next_first_node    = first_node_reg;
+        next_forest_start_addr    = forest_start_addr_reg;
         next_num_features  = num_features_reg;
         next_first_feature = first_feature_reg;
         next_inten         = inten_reg;
@@ -136,9 +136,9 @@ module CsrInterface (
             next_num_trees = wdata[15:0];
         }
 
-        // Write to FIRST_NODE register (enable-protected)
-        if write && address == FIRST_NODE && !enable {
-            next_first_node = wdata;
+        // Write to FOREST_START_ADDR register (enable-protected)
+        if write && address == FOREST_START_ADDR && !enable {
+            next_forest_start_addr = wdata;
         }
 
         // Write to NUM_FEATURES register (enable-protected)
@@ -202,9 +202,9 @@ module CsrInterface (
             rdata = {16'h0, num_trees_reg};
         }
 
-        // Read FIRST_NODE register
-        if read && address == FIRST_NODE {
-            rdata = first_node_reg;
+        // Read FOREST_START_ADDR register
+        if read && address == FOREST_START_ADDR {
+            rdata = forest_start_addr_reg;
         }
 
         // Read NUM_FEATURES register
@@ -247,7 +247,7 @@ module CsrInterface (
         if_reset {
             enable_reg        = 0;
             num_trees_reg     = 0;
-            first_node_reg    = 0;
+            forest_start_addr_reg    = 0;
             num_features_reg  = 0;
             first_feature_reg = 0;
             inten_reg         = 0;
@@ -255,7 +255,7 @@ module CsrInterface (
         } else {
             enable_reg        = next_enable;
             num_trees_reg     = next_num_trees;
-            first_node_reg    = next_first_node;
+            forest_start_addr_reg    = next_forest_start_addr;
             num_features_reg  = next_num_features;
             first_feature_reg = next_first_feature;
             inten_reg         = next_inten;

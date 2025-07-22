@@ -4,6 +4,9 @@ from cocotb.triggers import RisingEdge
 
 import utils
 
+FOREST_START_ADDR= 0x10064
+FIRST_FEATURE_ADDR = 0x100C4
+
 def begin_write(dut, address, data, byte_enable):
     dut.control_bus.cyc.value = 1
     dut.control_bus.stb.value = 1
@@ -53,7 +56,7 @@ async def forest_top_test(dut):
     await RisingEdge(dut.clk)
 
     # Set first_node
-    begin_write(dut, 0x10, 0, 0b1111)
+    begin_write(dut, 0x10, FOREST_START_ADDR, 0b1111)
 
     await RisingEdge(dut.clk)
 
@@ -67,11 +70,11 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    assert read_data(dut) == 0x0
-    assert dut.forest.first_node_addr.value == 0x0
+    assert read_data(dut) == FOREST_START_ADDR
+    assert dut.forest.forest_start_addr.value == FOREST_START_ADDR
 
     # Set first_feature
-    begin_write(dut, 0x18, 0x60, 0b1111)
+    begin_write(dut, 0x18, FIRST_FEATURE_ADDR, 0b1111)
 
     await RisingEdge(dut.clk)
 
@@ -84,8 +87,8 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    assert read_data(dut) == 0x60
-    assert dut.forest.first_feature_addr.value == 0x60
+    assert read_data(dut) == FIRST_FEATURE_ADDR
+    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
 
     finish_txn(dut)
 
@@ -103,8 +106,8 @@ async def forest_top_test(dut):
 
     # Check that our writes have propagated correctly
     assert dut.forest.num_features.value == 3
-    assert dut.forest.first_feature_addr.value == 0x60
-    assert dut.forest.first_node_addr.value == 0x00
+    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
+    assert dut.forest.forest_start_addr.value == FOREST_START_ADDR
     assert dut.forest.num_trees.value == 2
 
     # BUSY and ENABLE should be set
@@ -120,7 +123,7 @@ async def forest_top_test(dut):
     await RisingEdge(dut.clk)
 
     # Check that first_feature hasn't changed (enable protection works)
-    assert dut.forest.first_feature_addr.value == 0x60
+    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
 
     # Enable the interrupt
     begin_write(dut, 0x24, 0b1, 0b1)
@@ -131,8 +134,7 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    while not dut.forest.ready.value == 1:
-        await RisingEdge(dut.clk)
+    await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
     await RisingEdge(dut.clk)
 
@@ -178,8 +180,7 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    while not dut.forest.ready.value == 1:
-        await RisingEdge(dut.clk)
+    await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
     await RisingEdge(dut.clk)
 
@@ -212,8 +213,7 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    while not dut.forest.ready.value == 1:
-        await RisingEdge(dut.clk)
+    await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
     # Interrupt should not fire
     assert dut.interrupt_line == 0

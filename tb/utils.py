@@ -20,3 +20,11 @@ async def init_memory(mem, hexfile):
             data = int(str_data, 16)
             mem[offset].value = data
             offset += 1
+
+async def wait_with_timeout(clk, signal, value, max_cycles):
+    count = 0
+    while signal.value != value:
+        count += 1
+        if count > max_cycles:
+            raise TimeoutError
+        await RisingEdge(clk)

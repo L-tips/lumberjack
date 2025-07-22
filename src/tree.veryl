@@ -5,6 +5,7 @@ module TreePredictor (
     start: input bool,
     // TODO: hardcoded
     first_node_addr: input logic<32>,
+    forest_start_addr: input logic<32>,
 
     ready: output bool,
     busy : output bool,
@@ -32,6 +33,12 @@ module TreePredictor (
         split: logic<32>,
         right: logic<32>,
         left : logic<32>,
+    }
+
+    enum Branch {
+        none = 0,
+        left = 1,
+        right = 2,
     }
 
     enum State {
@@ -75,7 +82,7 @@ module TreePredictor (
     var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
-    var debug_branch_taken : logic<2>;
+    var dbg_branch_taken : Branch;
     var debug_is_prediction: bool    ;
 
     var prev_wb_complete: logic    ;
@@ -109,7 +116,7 @@ module TreePredictor (
         ram_port.stb = false;
         ram_port.cyc = false;
 
-        debug_branch_taken  = 0;
+        dbg_branch_taken  = Branch::none;
         debug_is_prediction = false;
 
         // State machine
@@ -162,7 +169,7 @@ module TreePredictor (
                 // Evaluate the node and decide next action
                 if feature_port.data <= node.split {
 
-                    debug_branch_taken = 1;
+                    dbg_branch_taken = Branch::left;
 
                     if node.flags.left_predict {
                         // Leaf node reached - use prediction
@@ -178,14 +185,14 @@ module TreePredictor (
                         // Start RAM read request
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
-                        next_node_ptr = node.left * NODE_SIZE;
+                        next_node_ptr = node.left * NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
                         next_state = State::fetching;
                     }
                 } else {
 
-                    debug_branch_taken = 2;
+                    dbg_branch_taken = Branch::right;
 
                     if node.flags.right_predict {
                         // Leaf node reached - use prediction
@@ -201,7 +208,7 @@ module TreePredictor (
                         // Start RAM read request
                         ram_port.stb  = true;
                         ram_port.cyc  = true;
-                        next_node_ptr = node.right * NODE_SIZE;
+                        next_node_ptr = node.right * NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
                         next_state = State::fetching;

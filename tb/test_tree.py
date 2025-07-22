@@ -29,6 +29,7 @@ async def tree_test(dut):
 
     # ...and start tree prediction
     dut.start.value = 1
+    dut.forest_start_addr.value = 0
     dut.first_node_addr.value = 0
 
     await RisingEdge(dut.clk)
