@@ -7,9 +7,9 @@ name = "memutils"
 dependencies = []
 
 [projects.source]
-uuid = "dea42018-9b4b-5eb2-bdb8-3dd9d6c516ca"
+uuid = "297f3dcb-0599-5a31-83fb-747c848196f6"
 url = "https://github.com/jbeaurivage/memutils-veryl.git"
 path = ""
 project = "memutils"
-version = "0.3.2"
-revision = "7cb0ebf27f08c783b6f0b0c3e58199b16ea5cb5b"
+version = "0.3.3"
+revision = "ac3dc2fa1ded898b8a29414603130b0032307c73"

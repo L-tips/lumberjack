@@ -49,8 +49,14 @@ module TestForest (
         num_votes   ,
 
         ram_port: ram_bus,
+
+        dbg_tree_fetch_counter  : _,
+        dbg_tree_state          : _,
+        dbg_forest_fetch_counter: _,
+        dbg_forest_state        : _,
+        dbg_tree_idx            : _,
     );
 }
 
 #[test(test_forest, TestForest)]
-include (cocotb, "../../tb/forest_predictor.py");
+include (cocotb, "../../tb/test_forest.py");

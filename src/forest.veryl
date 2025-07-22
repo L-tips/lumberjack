@@ -191,9 +191,7 @@ pub module Forest #(
 
         // Read votes
         // TODO: hardcoded
-        /* verilator lint_off WIDTHTRUNC */
-        votes_read_port[0].address = tree_prediction;
-        /* verilator lint_on WIDTHTRUNC */
+        votes_read_port[0].address = tree_prediction[3:0];
 
         // Default: don't write features to cache
         feature_write_port.write_enable = false;
@@ -309,9 +307,8 @@ pub module Forest #(
             // vote and store it into the scratchpad.
             if tree_ready {
                 // TODO: hardcoded
-                /* verilator lint_off WIDTHTRUNC */
                 votes_write_port.write_enable = true;
-                votes_write_port.address      = tree_prediction;
+                votes_write_port.address      = tree_prediction[3:0];
                 votes_write_port.data         = votes_read_port[0].data + 1;
 
                 // Update max vote and index if needed
@@ -319,7 +316,6 @@ pub module Forest #(
                     votes.max_vote       = votes_read_port[0].data + 1;
                     votes.max_vote_class = tree_prediction;
                 }
-                /* verilator lint_on WIDTHTRUNC */
             }
         }
     }
@@ -351,10 +347,8 @@ pub module Forest #(
     }
 
     // TODO: hardcoded
-    /* verilator lint_off WIDTHEXPAND */
     assign prediction = votes.max_vote_class;
     assign num_votes  = votes.max_vote;
-    /* verilator lint_on WIDTHEXPAND */
 
     // TODO: hardcoded
     assign ram_bus_mux[0].select     = 4'b1111;

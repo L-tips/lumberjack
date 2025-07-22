@@ -123,16 +123,21 @@ async def tree_test(dut):
 
     await RisingEdge(dut.clk)
 
+    # Stall is seen on bus here
+    assert dut.tree.fetch_counter.value == 0
+    assert dut.tree.state.value == 1
+
+    await RisingEdge(dut.clk)
+
     # State should not change...
-    assert dut.tree.fetch_counter.value == 0
+    assert dut.tree.fetch_counter.value == 1
     assert dut.tree.state.value == 1
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
-    assert dut.tree.fetch_counter.value == 0
-    assert dut.tree.state.value == 1
-    
     # ...until we release STALL
     dut.ram_bus.stall.value = 0
 

@@ -34,8 +34,11 @@ module TestTree (
 
         feature_port         ,
         ram_port    : ram_bus,
+
+        dbg_fetch_counter: _,
+        dbg_state        : _,
     );
 }
 
 #[test(test_tree, TestTree)]
-include (cocotb, "../../tb/tree_predictor.py");
+include (cocotb, "../../tb/test_tree.py");

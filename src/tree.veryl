@@ -59,9 +59,8 @@ module TreePredictor (
     const NODE_SIZE: u8 = 16;
 
     // Retrieve the feature based on the split index
-    /* verilator lint_off WIDTHTRUNC */
-    assign feature_port.address = node.flags.split_idx;
-    /* verilator lint_on WIDTHTRUNC */
+    // TODO: hardcoded
+    assign feature_port.address = node.flags.split_idx[3:0];
 
     // TODO: hardcoded
     var next_node_ptr: logic<32>;
@@ -161,7 +160,6 @@ module TreePredictor (
 
             State::evaluating: {
                 // Evaluate the node and decide next action
-                /* verilator lint_off WIDTHTRUNC */
                 if feature_port.data <= node.split {
 
                     debug_branch_taken = 1;
@@ -209,7 +207,6 @@ module TreePredictor (
                         next_state = State::fetching;
                     }
                 }
-                /* verilator lint_on WIDTHTRUNC */
             }
 
             default: {
