@@ -2,8 +2,8 @@ module TestForestTop (
     clk: input clock,
     rst: input reset,
 
-    interrupt_line: output logic,
-    dbg_mark: input logic<16>,
+    interrupt_line: output logic    ,
+    dbg_mark      : input  logic<16>,
 ) {
 
     inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );

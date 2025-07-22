@@ -21,6 +21,7 @@ module CsrInterface (
     // --- Input control signals ---
     ready     : input logic    ,
     busy      : input logic    ,
+    done      : input logic    ,
     prediction: input logic<32>,
     num_votes : input logic<32>,
 
@@ -170,7 +171,7 @@ module CsrInterface (
 
         // Clear the enable bit if the forest
         // has just finished evaluating
-        if !busy && ready && !next_user_enable {
+        if done && !next_user_enable {
             next_enable = 0;
         }
 

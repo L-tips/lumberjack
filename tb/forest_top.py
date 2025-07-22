@@ -137,6 +137,7 @@ async def forest_top_test(dut):
     finish_txn(dut)
 
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
     await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
@@ -172,23 +173,27 @@ async def forest_top_test(dut):
     begin_read(dut, 0x20, 0b1111)
 
     await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+    num_votes = read_data(dut)
+    assert num_votes == 2
+
+    await RisingEdge(dut.clk)
 
     # Restart a second time
     begin_write(dut, 0x0, 0x1, 0b1)
 
     await RisingEdge(dut.clk)
 
-    num_votes = read_data(dut)
-    assert num_votes == 2
     finish_txn(dut)
 
+    await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
     await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
     await RisingEdge(dut.clk)
 
-    debug_mark(dut, 1)
     assert dut.interrupt_line == 1
 
     # Clear the interrupt by writing a 1 to INTFLAG
@@ -216,6 +221,7 @@ async def forest_top_test(dut):
 
     finish_txn(dut)
 
+    await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
     await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)

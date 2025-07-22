@@ -28,6 +28,8 @@ pub module Forest #(
     // TODO hardcoded
     num_votes: output logic<32>,
 
+    done: output bool,
+
     ram_port: modport memutils::Wishbone::master,
 
     dbg_tree_fetch_counter  : output logic<3> ,
@@ -59,7 +61,7 @@ pub module Forest #(
     let master_select: logic = state == State::evaluate_trees;
 
     // New evaluation request incoming
-    let new_request   : bool = state == State::idle && enable;
+    let start_eval    : bool = state == State::idle && enable && !done_reg;
     let fetch_complete: bool = fetch_counter == num_features - 1;
 
     inst ram_demux: memutils::WishboneDemux #(
@@ -76,6 +78,10 @@ pub module Forest #(
     var next_state        : State   ;
     var fetch_counter     : logic<4>;
     var next_fetch_counter: logic<4>;
+
+    var done_reg : bool;
+    var next_done: bool;
+    assign done      = next_done;
 
     // TODO: hardcoded
     var feature_ptr: logic<32>;
@@ -181,6 +187,7 @@ pub module Forest #(
         // TODO: hardcoded
         next_tree_idx = 0;
         next_ready    = ready;
+        next_done     = false;
 
         next_state         = state;
         next_fetch_counter = fetch_counter;
@@ -210,7 +217,7 @@ pub module Forest #(
 
             case state {
                 State::idle: {
-                    if new_request {
+                    if start_eval {
                         next_state         = State::fetch_features;
                         next_feature_ptr   = first_feature_addr;
                         next_ready         = false;
@@ -277,6 +284,7 @@ pub module Forest #(
                             next_tree_idx = 0;
                             next_ready    = true;
                             next_state    = State::idle;
+                            next_done     = true;
                         }
                     }
                 }
@@ -327,6 +335,8 @@ pub module Forest #(
             state         = State::idle;
             fetch_counter = 0;
             feature_ptr   = 0;
+
+            done_reg = false;
         } else {
             tree_idx   = next_tree_idx;
             start_tree = next_start_tree;
@@ -335,6 +345,8 @@ pub module Forest #(
             state         = next_state;
             fetch_counter = next_fetch_counter;
             feature_ptr   = next_feature_ptr;
+
+            done_reg = next_done;
 
             tree_rst = next_state != State::idle;
         }
