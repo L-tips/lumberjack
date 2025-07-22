@@ -15,8 +15,7 @@ module SelfArbiter #(
 ) {
     always_comb {
         ram_in       <> ram_out;
-        ram_in.stall =  ram_in.stall || csr_in.cyc;
-        ram_out.stb  =  ram_in.stb && !ram_in.stall;
+        ram_in.stall =  ram_out.stall || csr_in.cyc;
     }
 
 }

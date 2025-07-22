@@ -37,7 +37,7 @@ module Wishbone2IbexBus #(
     wb_in   : modport memutils::Wishbone::slave,
     ibex_out: modport IbexBus::master          ,
 ) {
-    assign ibex_out.req   = wb_in.cyc && wb_in.stb && !wb_in.stall;
+    assign ibex_out.req   = wb_in.cyc && wb_in.stb;
     assign ibex_out.addr  = wb_in.addr;
     assign ibex_out.we    = wb_in.write_enable;
     assign ibex_out.be    = wb_in.select;
