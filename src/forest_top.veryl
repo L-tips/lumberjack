@@ -27,7 +27,7 @@ module ForestTop #(
     const CSR_DATA_WIDTH: u8 = 32;
 
     var enable            : logic    ;
-    var forest_start_addr   : logic<32>;
+    var forest_start_addr : logic<32>;
     var num_trees         : logic<16>;
     var first_feature_addr: logic<32>;
     var num_features      : logic<4> ;
@@ -52,7 +52,7 @@ module ForestTop #(
 
         enable  ,
 
-        forest_start_addr     ,
+        forest_start_addr   ,
         num_trees           ,
         first_feature_addr  ,
         num_features        ,
@@ -87,11 +87,11 @@ module ForestTop #(
         wdata  : csr_wdata  ,
         rdata  : csr_rdata  ,
 
-        enable                           ,
-        num_trees                        ,
-        forest_start_addr ,
-        num_features                     ,
-        first_feature: first_feature_addr,
+        enable                               ,
+        num_trees                            ,
+        forest_start_addr                    ,
+        num_features                         ,
+        first_feature    : first_feature_addr,
 
         ready       ,
         busy        ,

@@ -5,7 +5,7 @@ module TestForest (
     enable: input logic,
 
     forest_start_addr: input logic<32>,
-    num_trees      : input logic<16>,
+    num_trees        : input logic<16>,
 
     first_feature_addr: input logic<32>,
     num_features      : input logic<4> ,
@@ -38,7 +38,7 @@ module TestForest (
         enable  ,
 
         forest_start_addr  ,
-        num_trees        ,
+        num_trees          ,
 
         first_feature_addr  ,
         num_features        ,

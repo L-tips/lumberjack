@@ -4,7 +4,7 @@ module TreePredictor (
 
     start: input bool,
     // TODO: hardcoded
-    first_node_addr: input logic<32>,
+    first_node_addr  : input logic<32>,
     forest_start_addr: input logic<32>,
 
     ready: output bool,
@@ -82,8 +82,8 @@ module TreePredictor (
     var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
-    var dbg_branch_taken : Branch;
-    var debug_is_prediction: bool    ;
+    var dbg_branch_taken   : Branch;
+    var debug_is_prediction: bool  ;
 
     var prev_wb_complete: logic    ;
     var addr            : logic<32>;
@@ -116,7 +116,7 @@ module TreePredictor (
         ram_port.stb = false;
         ram_port.cyc = false;
 
-        dbg_branch_taken  = Branch::none;
+        dbg_branch_taken    = Branch::none;
         debug_is_prediction = false;
 
         // State machine

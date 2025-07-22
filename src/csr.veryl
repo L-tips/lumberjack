@@ -11,12 +11,12 @@ module CsrInterface (
     rdata  : output logic<32>        , // Read data
 
     // --- Output control signals ---
-    enable       : output logic    ,
-    num_trees    : output logic<16>,
-    forest_start_addr   : output logic<32>,
-    num_features : output logic<4> ,
-    first_feature: output logic<32>,
-    interrupt    : output logic    ,
+    enable           : output logic    ,
+    num_trees        : output logic<16>,
+    forest_start_addr: output logic<32>,
+    num_features     : output logic<4> ,
+    first_feature    : output logic<32>,
+    interrupt        : output logic    ,
 
     // --- Input control signals ---
     ready     : input logic    ,
@@ -33,26 +33,26 @@ module CsrInterface (
 ) {
     const ADDR_WIDTH: u32 = $clog2(9);
 
-    const CTRL         : logic<ADDR_WIDTH> = 0;
-    const CTRL_SET     : logic<ADDR_WIDTH> = 1;
-    const CTRL_CLR     : logic<ADDR_WIDTH> = 2;
-    const NUM_TREES    : logic<ADDR_WIDTH> = 3;
-    const FOREST_START_ADDR   : logic<ADDR_WIDTH> = 4;
-    const NUM_FEATURES : logic<ADDR_WIDTH> = 5;
-    const FIRST_FEATURE: logic<ADDR_WIDTH> = 6;
-    const PREDICTION   : logic<ADDR_WIDTH> = 7;
-    const NUM_VOTES    : logic<ADDR_WIDTH> = 8;
-    const INTEN_SET    : logic<ADDR_WIDTH> = 9;
-    const INTEN_CLR    : logic<ADDR_WIDTH> = 10;
-    const INTFLAG      : logic<ADDR_WIDTH> = 11;
-    const DBG          : logic<ADDR_WIDTH> = 12;
+    const CTRL             : logic<ADDR_WIDTH> = 0;
+    const CTRL_SET         : logic<ADDR_WIDTH> = 1;
+    const CTRL_CLR         : logic<ADDR_WIDTH> = 2;
+    const NUM_TREES        : logic<ADDR_WIDTH> = 3;
+    const FOREST_START_ADDR: logic<ADDR_WIDTH> = 4;
+    const NUM_FEATURES     : logic<ADDR_WIDTH> = 5;
+    const FIRST_FEATURE    : logic<ADDR_WIDTH> = 6;
+    const PREDICTION       : logic<ADDR_WIDTH> = 7;
+    const NUM_VOTES        : logic<ADDR_WIDTH> = 8;
+    const INTEN_SET        : logic<ADDR_WIDTH> = 9;
+    const INTEN_CLR        : logic<ADDR_WIDTH> = 10;
+    const INTFLAG          : logic<ADDR_WIDTH> = 11;
+    const DBG              : logic<ADDR_WIDTH> = 12;
 
     const ENABLE_BIT: u8 = 0;
     const BUSY_BIT  : u8 = 1;
 
-    var enable_reg : logic;
-    var next_enable: logic;
-    var user_enable: logic;
+    var enable_reg      : logic;
+    var next_enable     : logic;
+    var next_user_enable: logic;
 
     assign enable = enable_reg;
 
@@ -101,33 +101,33 @@ module CsrInterface (
     // Write logic
     always_comb {
         // Defaults
-        next_enable        = enable_reg;
-        next_num_trees     = num_trees_reg;
-        next_forest_start_addr    = forest_start_addr_reg;
-        next_num_features  = num_features_reg;
-        next_first_feature = first_feature_reg;
-        next_inten         = inten_reg;
-        next_intflag       = intflag_reg;
-        user_enable        = 0;
+        next_enable            = enable_reg;
+        next_num_trees         = num_trees_reg;
+        next_forest_start_addr = forest_start_addr_reg;
+        next_num_features      = num_features_reg;
+        next_first_feature     = first_feature_reg;
+        next_inten             = inten_reg;
+        next_intflag           = intflag_reg;
+        next_user_enable       = 0;
 
         // Write to CTRL register
         if write && (address == CTRL) {
-            user_enable = wdata[0];
-            next_enable = user_enable;
+            next_user_enable = wdata[0];
+            next_enable      = next_user_enable;
         }
 
         // Set CTRL register bits
         if write && (address == CTRL_SET) {
             // Can only write to ENABLE bit
-            user_enable |= wdata[0];
-            next_enable =  user_enable;
+            next_user_enable |= wdata[0];
+            next_enable      =  next_user_enable;
         }
 
         // Clear CTRL register bits
         if write && (address == CTRL_CLR) {
             // Can only write to ENABLE bit
-            user_enable &= ~wdata[0];
-            next_enable =  user_enable;
+            next_user_enable &= ~wdata[0];
+            next_enable      =  next_user_enable;
         }
 
         // Write to NUM_TREES register (enable-protected)
@@ -170,7 +170,7 @@ module CsrInterface (
 
         // Clear the enable bit if the forest
         // has just finished evaluating
-        if !busy && ready && !user_enable {
+        if !busy && ready && !next_user_enable {
             next_enable = 0;
         }
 
@@ -244,21 +244,21 @@ module CsrInterface (
     // Advance state machine
     always_ff {
         if_reset {
-            enable_reg        = 0;
-            num_trees_reg     = 0;
-            forest_start_addr_reg    = 0;
-            num_features_reg  = 0;
-            first_feature_reg = 0;
-            inten_reg         = 0;
-            intflag_reg       = 0;
+            enable_reg            = 0;
+            num_trees_reg         = 0;
+            forest_start_addr_reg = 0;
+            num_features_reg      = 0;
+            first_feature_reg     = 0;
+            inten_reg             = 0;
+            intflag_reg           = 0;
         } else {
-            enable_reg        = next_enable;
-            num_trees_reg     = next_num_trees;
-            forest_start_addr_reg    = next_forest_start_addr;
-            num_features_reg  = next_num_features;
-            first_feature_reg = next_first_feature;
-            inten_reg         = next_inten;
-            intflag_reg       = next_intflag;
+            enable_reg            = next_enable;
+            num_trees_reg         = next_num_trees;
+            forest_start_addr_reg = next_forest_start_addr;
+            num_features_reg      = next_num_features;
+            first_feature_reg     = next_first_feature;
+            inten_reg             = next_inten;
+            intflag_reg           = next_intflag;
         }
     }
 }

@@ -7,7 +7,7 @@ build:
     veryl build --quiet
 
 wave file:
-    surfer {{justfile_directory()}}/target/waveform/{{file}}.fst >& /dev/null & 
+    surfer {{justfile_directory()}}/target/waveform/{{file}}.fst -s {{justfile_directory()}}/{{file}}.surf.ron >& /dev/null & 
 
 check:
     veryl check --quiet

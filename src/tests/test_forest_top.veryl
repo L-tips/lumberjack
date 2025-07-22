@@ -15,7 +15,7 @@ module TestForestTop (
     inst ram_shifted: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
     always_comb {
         ram_shifted.master <> ram_out.slave;
-        ram_shifted.addr = ram_out.addr - {15'h0, 'h10064};
+        ram_shifted.addr   =  ram_out.addr - {15'h0, 'h10064};
     }
 
     inst arbiter: SelfArbiter #(
@@ -48,8 +48,8 @@ module TestForestTop (
         DATA_WIDTH: 32  ,
         SIZE      : 4096,
     ) (
-        clk         ,
-        rst: mem_rst,
+        clk             ,
+        rst: mem_rst    ,
         wb : ram_shifted,
     );
 }
