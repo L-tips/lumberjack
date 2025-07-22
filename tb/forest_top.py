@@ -35,6 +35,9 @@ def finish_txn(dut):
     dut.control_bus.write_data.value = 0
     return dut.control_bus.read_data.value
 
+def debug_mark(dut, value):
+    dut.dbg_mark.value = value
+
 
 @cocotb.test()
 async def forest_top_test(dut):
@@ -44,6 +47,7 @@ async def forest_top_test(dut):
 
     # Init and reset
     dut.rst.value = 0
+    debug_mark(dut, 0)
     
     await utils.init_memory(dut.ram.ram.mem, "forest_2_trees_6_nodes.hex")
 
@@ -184,6 +188,7 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
+    debug_mark(dut, 1)
     assert dut.interrupt_line == 1
 
     # Clear the interrupt by writing a 1 to INTFLAG
