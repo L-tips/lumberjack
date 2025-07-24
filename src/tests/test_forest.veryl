@@ -48,7 +48,9 @@ module TestForest (
         prediction  ,
         num_votes   ,
 
-        ram_port: ram_bus,
+        dma_port: ram_bus,
+
+        done: _,
 
         dbg_tree_fetch_counter  : _,
         dbg_tree_state          : _,

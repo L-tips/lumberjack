@@ -13,7 +13,7 @@ module TreePredictor (
     prediction: output logic<32>,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
-    ram_port    : modport memutils::Wishbone::master              ,
+    dma_port    : modport memutils::Wishbone::master              ,
 
     dbg_fetch_counter: output logic<3>,
     dbg_state        : output logic<2>,
@@ -89,14 +89,14 @@ module TreePredictor (
     var addr            : logic<32>;
     var next_addr       : logic<32>;
 
-    assign ram_port.addr = next_addr;
+    assign dma_port.addr = next_addr;
 
     always_ff (clk, rst) {
         if_reset {
             prev_wb_complete = 0;
             addr             = 0;
         } else {
-            prev_wb_complete = ram_port.valid_request();
+            prev_wb_complete = dma_port.valid_request();
             addr             = next_addr;
         }
     }
@@ -113,8 +113,8 @@ module TreePredictor (
 
         // RAM control defaults
         next_addr    = addr;
-        ram_port.stb = false;
-        ram_port.cyc = false;
+        dma_port.stb = false;
+        dma_port.cyc = false;
 
         dbg_branch_taken    = Branch::none;
         debug_is_prediction = false;
@@ -130,8 +130,8 @@ module TreePredictor (
                     next_fetch_counter = 0;
 
                     // Start RAM read request
-                    ram_port.stb = true;
-                    ram_port.cyc = true;
+                    dma_port.stb = true;
+                    dma_port.cyc = true;
                     next_addr    = first_node_addr;
                 }
             }
@@ -139,24 +139,24 @@ module TreePredictor (
             State::fetching: {
                 // Continue the read transaction
                 // Continue the read transaction, only if bus isn't stalled
-                ram_port.stb = true;
-                ram_port.cyc = true;
+                dma_port.stb = true;
+                dma_port.cyc = true;
 
                 // Store incoming data at the appropriate position in fetched_node
-                if ram_port.ack && prev_wb_complete {
+                if dma_port.ack && prev_wb_complete {
                     // Fetch next word
                     next_fetch_counter += 1;
                     next_addr          =  node_ptr + next_fetch_counter * 4;
 
                     // Store the data returned from memory
                     // TODO: hardcoded
-                    next_fetched_node[fetch_counter * 32+:32] = ram_port.read_data;
+                    next_fetched_node[fetch_counter * 32+:32] = dma_port.read_data;
 
                     if fetch_counter == 3 {
                         // Release the bus for one cycle so it can
                         // potentially process other requests
-                        ram_port.stb = false;
-                        ram_port.cyc = false;
+                        dma_port.stb = false;
+                        dma_port.cyc = false;
 
                         // We've fetched all 4 words (128 bits)
                         next_state         = State::evaluating;
@@ -183,8 +183,8 @@ module TreePredictor (
                     } else {
                         // Go to left child
                         // Start RAM read request
-                        ram_port.stb  = true;
-                        ram_port.cyc  = true;
+                        dma_port.stb  = true;
+                        dma_port.cyc  = true;
                         next_node_ptr = node.left * NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
@@ -206,8 +206,8 @@ module TreePredictor (
                     } else {
                         // Go to right child
                         // Start RAM read request
-                        ram_port.stb  = true;
-                        ram_port.cyc  = true;
+                        dma_port.stb  = true;
+                        dma_port.cyc  = true;
                         next_node_ptr = node.right * NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
@@ -244,12 +244,12 @@ module TreePredictor (
 
     assign busy                  = busy_reg || start;
     assign ready                 = ready_reg && !start;
-    assign ram_port.write_enable = false;
+    assign dma_port.write_enable = false;
 
     // TODO: hardcoded
-    assign ram_port.select     = 4'b1111;
-    assign ram_port.write_data = 0;
-    assign ram_port.lock       = false;
+    assign dma_port.select     = 4'b1111;
+    assign dma_port.write_data = 0;
+    assign dma_port.lock       = false;
 
     assign dbg_fetch_counter = fetch_counter;
     assign dbg_state         = state;

@@ -1,7 +1,9 @@
 /// A simple arbiter, to be used in
-/// systems where the forest accelerator is
-/// connected to the same bus twice, both the control
-/// bus as a slave, and the memory bus as a master.
+/// systems where the forest accelerator is connected
+// to the same bus twice, both the control
+/// bus as a slave, and the DMA port as a master, with.
+/// not arbiter in between them.
+///
 /// Priority will always be given to the control bus.
 module SelfArbiter #(
     param RAM_DATA_WIDTH: u8 = 32,

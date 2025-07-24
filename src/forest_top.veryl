@@ -18,7 +18,7 @@ module ForestTop #(
 
     /// Port to RAM where the forest and features
     /// are stored
-    ram_port: modport memutils::Wishbone::master,
+    dma_port: modport memutils::Wishbone::master,
 
     /// Interrupt line
     interrupt: output logic,
@@ -64,7 +64,7 @@ module ForestTop #(
         prediction  ,
         num_votes   ,
 
-        ram_port  ,
+        dma_port  ,
 
         dbg_tree_fetch_counter    ,
         dbg_tree_state            ,

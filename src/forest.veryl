@@ -30,7 +30,7 @@ pub module Forest #(
 
     done: output bool,
 
-    ram_port: modport memutils::Wishbone::master,
+    dma_port: modport memutils::Wishbone::master,
 
     dbg_tree_fetch_counter  : output logic<3> ,
     dbg_tree_state          : output logic<2> ,
@@ -70,7 +70,7 @@ pub module Forest #(
         // NUM_SLAVES: 2 ,
     ) (
         masters      : ram_bus_mux,
-        slave        : ram_port   ,
+        slave        : dma_port   ,
         master_select             ,
     );
 
@@ -130,7 +130,7 @@ pub module Forest #(
         prediction       : tree_prediction,
 
         feature_port: feature_read_port[0],
-        ram_port    : ram_bus_mux[1]      ,
+        dma_port    : ram_bus_mux[1]      ,
 
         dbg_state        : dbg_tree_state        ,
         dbg_fetch_counter: dbg_tree_fetch_counter,

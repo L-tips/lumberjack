@@ -14,7 +14,7 @@ async def tree_test(dut):
     dut.rst.value = 0
 
     # Always return "11" as the feature
-    dut.feature_port.data.value = 11
+    dut.feature_bus.data.value = 11
 
     await RisingEdge(dut.clk)
     # Release reset
@@ -91,7 +91,7 @@ async def tree_test(dut):
 
     # Now let's try to take another branch.
     # Always return 6 as the input feature
-    dut.feature_port.data.value = 6
+    dut.feature_bus.data.value = 6
     dut.start.value = 1
 
     await RisingEdge(dut.clk)
