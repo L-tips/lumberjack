@@ -1,0 +1,39 @@
+/// Perform the lesser-or-equal operation on
+/// two 32-bit IEEE754 formatted floats.
+///
+/// Outputs: true if a <= b, false otherwise.
+module FloatLeq (
+    a: input logic<32>,
+    b: input logic<32>,
+
+    leq: output bool,
+) {
+    // NaN detection
+    let a_nan: bool = a[30:23] == 8'hff && a[22:0] != 0;
+    let b_nan: bool = b[30:23] == 8'hff && b[22:0] != 0;
+
+    // Zero detection
+    let a_zero: bool = a[30:0] == 31'h00000000;
+    let b_zero: bool = b[30:0] == 31'h00000000;
+
+    // Extract sign bits
+    let a_neg: bool = a[msb];
+    let b_neg: bool = b[msb];
+
+    var leq_raw: bool;
+    always_comb {
+        if a_neg != b_neg {
+            // If signs differ, negative is less
+            leq_raw = a_neg;
+        } else if a_neg {
+            // If both are negative, reverse the comparison
+            leq_raw = b <= a;
+        } else {
+            // If both are positive, normal comparison
+            leq_raw = a <= b; 
+        }
+    }
+
+    // Final comparison logic
+    assign leq = (!a_nan && !b_nan) && (a_zero && b_zero || leq_raw);
+}
