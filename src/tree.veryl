@@ -79,12 +79,19 @@ module TreePredictor::<L: Layout> (
 
     var branch_left: logic;
 
+    let feature_data: logic<32> = {
+        feature_port.data[7:0],
+        feature_port.data[15:8],
+        feature_port.data[23:16],
+        feature_port.data[31:24],
+    };
+
     // Compare the feature to the split, which
     // are formatted as IEEE754 32-bit floats
     inst pick_branch: FloatLeq (
-        a: feature_port.data,
-        b: node.split,
-        leq: branch_left,
+        a  : feature_data,
+        b  : node.split  ,
+        leq: branch_left ,
     );
 
     always_comb {
@@ -134,9 +141,17 @@ module TreePredictor::<L: Layout> (
                     next_fetch_counter += 1;
                     next_addr          =  node_ptr + next_fetch_counter * 4;
 
+                    // TODO: hardcoded
+                    let read_data: logic<32> = {
+                        dma_port.read_data[7:0],
+                        dma_port.read_data[15:8],
+                        dma_port.read_data[23:16],
+                        dma_port.read_data[31:24],
+                    };
+
                     // Store the data returned from memory
                     // TODO: hardcoded
-                    next_fetched_node[fetch_counter * 32+:32] = dma_port.read_data;
+                    next_fetched_node[fetch_counter * 32+:32] = read_data;
 
                     if fetch_counter == 3 {
                         // Release the bus for one cycle so it can

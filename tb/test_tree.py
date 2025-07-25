@@ -14,8 +14,8 @@ async def tree_test(dut):
     dut.rst.value = 0
 
     # Always return 11.0_f32 as the feature
-    # dut.feature_bus.data.value = 0x00003041
-    dut.feature_bus.data.value = 0x41300000
+    dut.feature_bus.data.value = 0x00003041
+    # dut.feature_bus.data.value = 0x41300000
 
     await RisingEdge(dut.clk)
     # Release reset
@@ -92,8 +92,8 @@ async def tree_test(dut):
 
     # Now let's try to take another branch.
     # Always return 6.0_f32 as the input feature
-    # dut.feature_bus.data.value = 0x0000c040
-    dut.feature_bus.data.value = 0x40c00000
+    dut.feature_bus.data.value = 0x0000c040
+    # dut.feature_bus.data.value = 0x40c00000
     dut.start.value = 1
 
     await RisingEdge(dut.clk)
