@@ -1,10 +1,8 @@
 import cocotb
 from cocotb.triggers import Timer
 import random
-import struct
 
-def float_to_bits(f):
-    return struct.unpack('>I', struct.pack('>f', f))[0]
+from utils import float_to_bits
 
 SPECIAL_VALUES = [
     float('nan'),       # NaN

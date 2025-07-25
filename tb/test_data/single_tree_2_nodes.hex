@@ -1,10 +1,12 @@
 // --- Node 0 ---
 00000000 // 0x00000000 | left: prediction: class 0
 00000001 // 0x00000004 | right: ptr: 1
-0000000A // 0x00000008 | split: 0xA = 10
+// 00002041 // 0x00000008 | split: 10.0_f32
+41200000 // 0x00000008 | split: 10.0_f32
 80000000 // 0x0000000c | left: true, right: false, split feat: 0 
 // --- Node 1 ---
 00000001 // 0x00000010 | left: prediction: class 1
 00000002 // 0x00000014 | right: prediction: class 2
-0000000A // 0x00000018 | split: 0xA = 10
+// 00002041 // 0x00000018 | split: 10.0_f32
+41200000 // 0x00000008 | split: 10.0_f32
 c0000001 // 0x0000001c | left: true, right: true, split feat: 1

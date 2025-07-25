@@ -30,7 +30,7 @@ module FloatLeq (
             leq_raw = b <= a;
         } else {
             // If both are positive, normal comparison
-            leq_raw = a <= b; 
+            leq_raw = a <= b;
         }
     }
 

@@ -77,6 +77,16 @@ module TreePredictor::<L: Layout> (
         }
     }
 
+    var branch_left: logic;
+
+    // Compare the feature to the split, which
+    // are formatted as IEEE754 32-bit floats
+    inst pick_branch: FloatLeq (
+        a: feature_port.data,
+        b: node.split,
+        leq: branch_left,
+    );
+
     always_comb {
         // Default: maintain current state
         next_state         = state;
@@ -143,7 +153,7 @@ module TreePredictor::<L: Layout> (
 
             State::evaluating: {
                 // Evaluate the node and decide next action
-                if feature_port.data <= node.split {
+                if branch_left {
 
                     dbg_branch_taken = Branch::left;
 

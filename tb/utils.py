@@ -1,11 +1,24 @@
 import cocotb
 from cocotb.triggers import RisingEdge
+import struct
 
 def binary_to_hex(bin_str):
     # Convert binary string to hexadecimal
     hex_str = hex(int(str(bin_str), 2))[2:]
     hex_str = hex_str.zfill(8)
     return hex_str.upper()
+
+def float_to_bits(f):
+    return struct.unpack('>I', struct.pack('>f', f))[0]
+
+def float_to_bits_le(f):
+    # Pack the float into 4 bytes in little-endian format
+    little_endian_bytes = struct.pack('>f', f)
+    # Unpack the bytes as an unsigned integer
+    little_endian_int = struct.unpack('<I', little_endian_bytes)[0]
+    # Convert the integer to a zero-padded 8-character hex string
+    return f"0x{little_endian_int:08x}"
+
 
 @cocotb.coroutine
 async def init_memory(mem, hexfile):
@@ -28,3 +41,5 @@ async def wait_with_timeout(clk, signal, value, max_cycles):
         if count > max_cycles:
             raise TimeoutError
         await RisingEdge(clk)
+
+    return count
