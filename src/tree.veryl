@@ -1,16 +1,14 @@
-module TreePredictor (
+module TreePredictor::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
-    start: input bool,
-    // TODO: hardcoded
-    first_node_addr  : input logic<32>,
-    forest_start_addr: input logic<32>,
+    start            : input bool      ,
+    first_node_addr  : input L::RamAddr,
+    forest_start_addr: input L::RamAddr,
 
-    ready: output bool,
-    busy : output bool,
-    // TODO: hardcoded
-    prediction: output logic<32>,
+    ready     : output bool         ,
+    busy      : output bool         ,
+    prediction: output L::Prediction,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
     dma_port    : modport memutils::Wishbone::master              ,
@@ -18,23 +16,6 @@ module TreePredictor (
     dbg_fetch_counter: output logic<3>,
     dbg_state        : output logic<2>,
 ) {
-
-    // TODO: hardcoded
-    struct Flags {
-        left_predict : logic    ,
-        right_predict: logic    ,
-        split_idx    : logic<30>,
-    }
-
-    // TODO: hardcoded
-    // Field order inverted - little-endian memory
-    struct Node {
-        flags: Flags    ,
-        split: logic<32>,
-        right: logic<32>,
-        left : logic<32>,
-    }
-
     enum Branch {
         none = 0,
         left = 1,
@@ -47,12 +28,11 @@ module TreePredictor (
         evaluating,
     }
 
-    // TODO: hardcoded
-    var node_ptr: logic<32>;
+    var node_ptr: L::RamAddr;
     // TODO: hardcoded
     var fetched_node: logic<128>;
 
-    let node: Node = fetched_node as Node;
+    let node: standard_layout::Node = fetched_node as standard_layout::Node;
 
     var state     : State;
     var next_state: State;
@@ -62,15 +42,11 @@ module TreePredictor (
 
     // Break the node down into its components
     /// Node size in bytes
-    // TODO: hardcoded
-    const NODE_SIZE: u8 = 16;
 
     // Retrieve the feature based on the split index
-    // TODO: hardcoded
-    assign feature_port.address = node.flags.split_idx[3:0];
+    assign feature_port.address = node.flags.split_idx[L::FEAT_IDX_WIDTH - 1:0];
 
-    // TODO: hardcoded
-    var next_node_ptr: logic<32>;
+    var next_node_ptr: L::RamAddr;
 
     var ready_reg : bool;
     var next_ready: bool;
@@ -78,16 +54,16 @@ module TreePredictor (
     var busy_reg : bool;
     var next_busy: bool;
 
+    var next_prediction: L::Prediction;
     // TODO: hardcoded
-    var next_prediction  : logic<32> ;
     var next_fetched_node: logic<128>;
 
     var dbg_branch_taken   : Branch;
     var debug_is_prediction: bool  ;
 
-    var prev_wb_complete: logic    ;
-    var addr            : logic<32>;
-    var next_addr       : logic<32>;
+    var prev_wb_complete: logic     ;
+    var addr            : L::RamAddr;
+    var next_addr       : L::RamAddr;
 
     assign dma_port.addr = next_addr;
 
@@ -175,7 +151,7 @@ module TreePredictor (
                         // Leaf node reached - use prediction
                         next_ready      = true;
                         next_busy       = false;
-                        next_prediction = node.left;
+                        next_prediction = node.left[L::CLASS_IDX_WIDTH - 1:0];
                         next_state      = State::idle;
 
                         debug_is_prediction = true;
@@ -185,7 +161,7 @@ module TreePredictor (
                         // Start RAM read request
                         dma_port.stb  = true;
                         dma_port.cyc  = true;
-                        next_node_ptr = node.left * NODE_SIZE + forest_start_addr;
+                        next_node_ptr = node.left * L::NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
                         next_state = State::fetching;
@@ -198,7 +174,7 @@ module TreePredictor (
                         // Leaf node reached - use prediction
                         next_ready      = true;
                         next_busy       = false;
-                        next_prediction = node.right;
+                        next_prediction = node.right[L::CLASS_IDX_WIDTH - 1:0];
                         next_state      = State::idle;
 
                         debug_is_prediction = true;
@@ -208,7 +184,7 @@ module TreePredictor (
                         // Start RAM read request
                         dma_port.stb  = true;
                         dma_port.cyc  = true;
-                        next_node_ptr = node.right * NODE_SIZE + forest_start_addr;
+                        next_node_ptr = node.right * L::NODE_SIZE + forest_start_addr;
                         next_addr     = next_node_ptr;
 
                         next_state = State::fetching;

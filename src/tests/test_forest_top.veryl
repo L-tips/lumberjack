@@ -5,34 +5,31 @@ module TestForestTop (
     interrupt_line: output logic    ,
     dbg_mark      : input  logic<16>,
 ) {
+    const RAM_SIZE: u64 = 4096;
 
-    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
-    inst ram_arbiter: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
+    inst ram_arbiter: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
 
     // For testing purposes, the RAM starts at address 10064.
-    inst ram_shifted: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst ram_shifted: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
     always_comb {
         ram_shifted.master <> ram_arbiter.slave;
-        ram_shifted.addr   =  ram_arbiter.addr - {15'h0, 'h10064};
+        ram_shifted.addr   =  ram_arbiter.addr - {1'b0 repeat (test_layout::RAM_ADDR_WIDTH - 17), 'h10064};
     }
 
     inst arbiter: SelfArbiter #(
-        RAM_ADDR_WIDTH: 32,
-        RAM_DATA_WIDTH: 32,
-        CSR_ADDR_WIDTH: 32,
-        CSR_DATA_WIDTH: 32,
+        RAM_ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        RAM_DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+        CSR_ADDR_WIDTH: 32                         ,
+        CSR_DATA_WIDTH: 32                         ,
     ) (
         csr_in : control_bus,
         ram_in : ram_bus    ,
         ram_out: ram_arbiter,
     );
 
-    inst forest: ForestTop #(
-        FEATURE_SIZE  : 4 ,
-        RAM_ADDR_WIDTH: 32,
-        RAM_DATA_WIDTH: 32,
-    ) (
+    inst forest: ForestTop::<test_layout> (
         clk                         ,
         rst                         ,
         control_port: control_bus   ,
@@ -43,9 +40,9 @@ module TestForestTop (
     // Wishbone spec mandates an active high reset
     let mem_rst: reset_async_high = rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
-        ADDR_WIDTH: 32  ,
-        DATA_WIDTH: 32  ,
-        SIZE      : 4096,
+        ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+        SIZE      : RAM_SIZE                   ,
     ) (
         clk             ,
         rst: mem_rst    ,

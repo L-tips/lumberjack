@@ -2,14 +2,7 @@
 ///
 /// Defines the interface and registers
 /// to control the hardware.
-module ForestTop #(
-    /// Feature size in bytes
-    param FEATURE_SIZE: u8 = 4,
-
-    param RAM_ADDR_WIDTH: u8 = 32,
-    param RAM_DATA_WIDTH: u8 = 32,
-
-) (
+module ForestTop::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
@@ -23,31 +16,24 @@ module ForestTop #(
     /// Interrupt line
     interrupt: output logic,
 ) {
-    const CSR_ADDR_WIDTH: u8 = 4;
-    const CSR_DATA_WIDTH: u8 = 32;
+    var enable            : logic        ;
+    var done              : bool         ;
+    var forest_start_addr : L::RamAddr   ;
+    var num_trees         : L::TreeIdx   ;
+    var first_feature_addr: L::RamAddr   ;
+    var num_features      : L::FeatureIdx;
+    var busy              : logic        ;
+    var ready             : logic        ;
+    var prediction        : L::Prediction;
+    var num_votes         : L::NumVotes  ;
 
-    var enable            : logic    ;
-    var done              : bool     ;
-    var forest_start_addr : logic<32>;
-    var num_trees         : logic<16>;
-    var first_feature_addr: logic<32>;
-    var num_features      : logic<4> ;
-    var busy              : logic    ;
-    var ready             : logic    ;
-    var prediction        : logic<32>;
-    var num_votes         : logic<32>;
+    var dbg_tree_fetch_counter  : logic        <3>;
+    var dbg_tree_state          : logic        <2>;
+    var dbg_forest_fetch_counter: L::FeatureIdx   ;
+    var dbg_forest_state        : logic        <2>;
+    var dbg_tree_idx            : L::TreeIdx      ;
 
-    var dbg_tree_fetch_counter  : logic<3> ;
-    var dbg_tree_state          : logic<2> ;
-    var dbg_forest_fetch_counter: logic<4> ;
-    var dbg_forest_state        : logic<2> ;
-    var dbg_tree_idx            : logic<16>;
-
-    inst evaluator: Forest #(
-        FEATURE_SIZE    ,
-        RAM_ADDR_WIDTH  ,
-        RAM_DATA_WIDTH  ,
-    ) (
+    inst evaluator: Forest::<L> (
         clk  ,
         rst  ,
 
@@ -73,21 +59,25 @@ module ForestTop #(
         dbg_tree_idx              ,
     );
 
-    var csr_address: logic<CSR_ADDR_WIDTH>;
-    var csr_write  : logic                ;
-    var csr_read   : logic                ;
-    var csr_wdata  : logic<CSR_DATA_WIDTH>;
-    var csr_rdata  : logic<CSR_DATA_WIDTH>;
+    // Control port is byte-addressed, but CSRs are word-addressed
+    let word_idx   : csr_types::Data    = control_port.addr >> 2;
+    let csr_address: csr_types::Address = word_idx[csr_types::ADDR_WIDTH - 1:0];
 
-    inst csr: CsrInterface (
+    var csr_wdata: csr_types::Data;
+    var csr_rdata: csr_types::Data;
+
+    let csr_write_req: logic = control_port.write_enable && control_port.valid_request();
+    let csr_read_req : logic = !control_port.write_enable && control_port.valid_request();
+
+    inst csr: CsrInterface::<L> (
         clk  ,
         rst  ,
 
-        address: csr_address,
-        write  : csr_write  ,
-        read   : csr_read   ,
-        wdata  : csr_wdata  ,
-        rdata  : csr_rdata  ,
+        address: csr_address  ,
+        write  : csr_write_req,
+        read   : csr_read_req ,
+        wdata  : csr_wdata    ,
+        rdata  : csr_rdata    ,
 
         enable                               ,
         done                                 ,
@@ -139,9 +129,4 @@ module ForestTop #(
         }
     }
 
-    assign csr_write = control_port.write_enable && control_port.valid_request();
-    assign csr_read  = !control_port.write_enable && control_port.valid_request();
-    // Control port is byte-addressed, but CSRs are word-addressed
-    let word_idx   : logic<CSR_DATA_WIDTH> = control_port.addr >> 2;
-    assign csr_address = word_idx[CSR_ADDR_WIDTH - 1:0];
 }

@@ -1,29 +1,31 @@
 module TestTree (
-    clk              : input clock    ,
-    rst              : input reset    ,
-    start            : input bool     ,
-    forest_start_addr: input logic<32>,
-    first_node_addr  : input logic<32>,
+    clk              : input clock               ,
+    rst              : input reset               ,
+    start            : input bool                ,
+    forest_start_addr: input test_layout::RamAddr,
+    first_node_addr  : input test_layout::RamAddr,
 ) {
-    inst feature_bus: memutils::ScratchpadRamPort #( ADDR_WIDTH: 4, DATA_WIDTH: 32 );
-    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    const RAM_SIZE: u64 = 4096;
+
+    inst feature_bus: memutils::ScratchpadRamPort #( ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH, DATA_WIDTH: test_layout::FEATURE_WIDTH );
+    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
 
     let mem_rst: reset_async_high = rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
-        ADDR_WIDTH: 32  ,
-        DATA_WIDTH: 32  ,
-        SIZE      : 4096,
+        ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+        SIZE      : RAM_SIZE                   ,
     ) (
         clk         ,
         rst: mem_rst,
         wb : ram_bus,
     );
 
-    var busy      : logic    ;
-    var prediction: logic<32>;
-    var ready     : logic    ;
+    var busy      : logic                  ;
+    var prediction: test_layout::Prediction;
+    var ready     : logic                  ;
 
-    inst tree: TreePredictor (
+    inst tree: TreePredictor::<test_layout> (
         clk  ,
         rst  ,
 

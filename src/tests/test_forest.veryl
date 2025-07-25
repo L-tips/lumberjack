@@ -4,34 +4,35 @@ module TestForest (
 
     enable: input logic,
 
-    forest_start_addr: input logic<32>,
-    num_trees        : input logic<16>,
+    forest_start_addr: input test_layout::RamAddr,
+    num_trees        : input test_layout::TreeIdx,
 
-    first_feature_addr: input logic<32>,
-    num_features      : input logic<4> ,
+    first_feature_addr: input test_layout::RamAddr   ,
+    num_features      : input test_layout::FeatureIdx,
 
     busy : output bool,
     ready: output bool,
 
-    prediction: output logic<32>,
-    num_votes : output logic<32>,
+    prediction: output test_layout::Prediction,
+    num_votes : output test_layout::NumVotes  ,
 ) {
+    const RAM_SIZE: u64 = 4096;
 
-    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
+    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
 
     // Wishbone spec mandates an active high reset
     let mem_rst: reset_async_high = rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
-        ADDR_WIDTH: 32  ,
-        DATA_WIDTH: 32  ,
-        SIZE      : 4096,
+        ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+        SIZE      : RAM_SIZE                   ,
     ) (
         clk         ,
         rst: mem_rst,
         wb : ram_bus,
     );
 
-    inst forest: Forest (
+    inst forest: Forest::<test_layout> (
         clk  ,
         rst  ,
 

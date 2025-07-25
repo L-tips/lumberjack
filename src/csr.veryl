@@ -1,53 +1,55 @@
+import csr_types::DATA_WIDTH;
+import csr_types::DATA_WIDTH;
+
 /// CSR interface for controlling the ForestTop module.
-module CsrInterface (
+module CsrInterface::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
     // --- CSR interface signals ---
-    address: input  logic<ADDR_WIDTH>,
-    write  : input  bool             , // Write enable
-    read   : input  bool             , // Read enable
-    wdata  : input  logic<32>        , // Write data
-    rdata  : output logic<32>        , // Read data
+    address: input  csr_types::Address,
+    write  : input  bool              , // Write enable
+    read   : input  bool              , // Read enable
+    wdata  : input  csr_types::Data   , // Write data
+    rdata  : output csr_types::Data   , // Read data
 
     // --- Output control signals ---
-    enable           : output logic    ,
-    num_trees        : output logic<16>,
-    forest_start_addr: output logic<32>,
-    num_features     : output logic<4> ,
-    first_feature    : output logic<32>,
-    interrupt        : output logic    ,
+    enable           : output logic        ,
+    num_trees        : output L::TreeIdx   ,
+    forest_start_addr: output L::RamAddr   ,
+    num_features     : output L::FeatureIdx,
+    first_feature    : output L::RamAddr   ,
+    interrupt        : output logic        ,
 
     // --- Input control signals ---
-    ready     : input logic    ,
-    busy      : input logic    ,
-    done      : input logic    ,
-    prediction: input logic<32>,
-    num_votes : input logic<32>,
+    ready     : input logic        ,
+    busy      : input logic        ,
+    done      : input logic        ,
+    prediction: input L::Prediction,
+    num_votes : input L::NumVotes  ,
 
-    dbg_tree_fetch_counter  : input logic<3> ,
-    dbg_tree_state          : input logic<2> ,
-    dbg_forest_fetch_counter: input logic<4> ,
-    dbg_forest_state        : input logic<2> ,
-    dbg_tree_idx            : input logic<16>,
+    // TODO: hardcoded
+    dbg_tree_fetch_counter  : input logic        <3>,
+    dbg_tree_state          : input logic        <2>,
+    dbg_forest_fetch_counter: input L::FeatureIdx   ,
+    dbg_forest_state        : input logic        <2>,
+    dbg_tree_idx            : input L::TreeIdx      ,
 
 ) {
-    const ADDR_WIDTH: u32 = $clog2(9);
-
-    const CTRL             : logic<ADDR_WIDTH> = 0;
-    const CTRL_SET         : logic<ADDR_WIDTH> = 1;
-    const CTRL_CLR         : logic<ADDR_WIDTH> = 2;
-    const NUM_TREES        : logic<ADDR_WIDTH> = 3;
-    const FOREST_START_ADDR: logic<ADDR_WIDTH> = 4;
-    const NUM_FEATURES     : logic<ADDR_WIDTH> = 5;
-    const FIRST_FEATURE    : logic<ADDR_WIDTH> = 6;
-    const PREDICTION       : logic<ADDR_WIDTH> = 7;
-    const NUM_VOTES        : logic<ADDR_WIDTH> = 8;
-    const INTEN_SET        : logic<ADDR_WIDTH> = 9;
-    const INTEN_CLR        : logic<ADDR_WIDTH> = 10;
-    const INTFLAG          : logic<ADDR_WIDTH> = 11;
-    const DBG              : logic<ADDR_WIDTH> = 12;
-    const CYCCNT           : logic<ADDR_WIDTH> = 13;
+    const CTRL             : csr_types::Address = 0;
+    const CTRL_SET         : csr_types::Address = 1;
+    const CTRL_CLR         : csr_types::Address = 2;
+    const NUM_TREES        : csr_types::Address = 3;
+    const FOREST_START_ADDR: csr_types::Address = 4;
+    const NUM_FEATURES     : csr_types::Address = 5;
+    const FIRST_FEATURE    : csr_types::Address = 6;
+    const PREDICTION       : csr_types::Address = 7;
+    const NUM_VOTES        : csr_types::Address = 8;
+    const INTEN_SET        : csr_types::Address = 9;
+    const INTEN_CLR        : csr_types::Address = 10;
+    const INTFLAG          : csr_types::Address = 11;
+    const DBG              : csr_types::Address = 12;
+    const CYCCNT           : csr_types::Address = 13;
 
     const ENABLE_BIT: u8 = 0;
     const BUSY_BIT  : u8 = 1;
@@ -58,20 +60,20 @@ module CsrInterface (
 
     assign enable = enable_reg;
 
-    var num_trees_reg : logic<16>;
-    var next_num_trees: logic<16>;
+    var num_trees_reg : L::TreeIdx;
+    var next_num_trees: L::TreeIdx;
     assign num_trees      = num_trees_reg;
 
-    var forest_start_addr_reg : logic<32>;
-    var next_forest_start_addr: logic<32>;
+    var forest_start_addr_reg : L::RamAddr;
+    var next_forest_start_addr: L::RamAddr;
     assign forest_start_addr      = forest_start_addr_reg;
 
-    var num_features_reg : logic<4>;
-    var next_num_features: logic<4>;
+    var num_features_reg : L::FeatureIdx;
+    var next_num_features: L::FeatureIdx;
     assign num_features      = num_features_reg;
 
-    var first_feature_reg : logic<32>;
-    var next_first_feature: logic<32>;
+    var first_feature_reg : L::RamAddr;
+    var next_first_feature: L::RamAddr;
     assign first_feature      = first_feature_reg;
 
     var inten_reg : logic;
@@ -81,8 +83,9 @@ module CsrInterface (
     var next_intflag: logic;
     var prev_ready  : logic;
 
-    let dbg: logic<32> = {
-        5'b0,
+    // TODO: hardcoded
+    let dbg: csr_types::Data = {
+        1'b0 repeat DATA_WIDTH - (7 + L::FEAT_IDX_WIDTH + L::TREE_IDX_WIDTH),
         dbg_tree_idx,
         dbg_forest_state,
         dbg_forest_fetch_counter,
@@ -90,7 +93,7 @@ module CsrInterface (
         dbg_tree_fetch_counter
     };
 
-    var cyccnt: logic<32>;
+    var cyccnt: csr_types::Data;
 
     always_ff {
         if_reset {
@@ -143,7 +146,7 @@ module CsrInterface (
 
         // Write to NUM_TREES register (enable-protected)
         if write && address == NUM_TREES && !enable {
-            next_num_trees = wdata[15:0];
+            next_num_trees = wdata[L::TREE_IDX_WIDTH - 1:0];
         }
 
         // Write to FOREST_START_ADDR register (enable-protected)
@@ -153,7 +156,7 @@ module CsrInterface (
 
         // Write to NUM_FEATURES register (enable-protected)
         if write && address == NUM_FEATURES && !enable {
-            next_num_features = wdata[3:0];
+            next_num_features = wdata[L::FEAT_IDX_WIDTH - 1:0];
         }
 
         // Write to FIRST_FEATURE register (enable-protected)
@@ -209,7 +212,7 @@ module CsrInterface (
 
         // Read NUM_TREES register
         if read && address == NUM_TREES {
-            rdata = {16'h0, num_trees_reg};
+            rdata = {1'b0 repeat (DATA_WIDTH - L::TREE_IDX_WIDTH), num_trees_reg};
         }
 
         // Read FOREST_START_ADDR register
@@ -219,7 +222,7 @@ module CsrInterface (
 
         // Read NUM_FEATURES register
         if read && address == NUM_FEATURES {
-            rdata = {28'h0, num_features_reg};
+            rdata = {1'b0 repeat (DATA_WIDTH - L::FEAT_IDX_WIDTH), num_features_reg};
         }
 
         // Read FIRST_FEATURE register
@@ -229,12 +232,12 @@ module CsrInterface (
 
         // Read PREDICTION register
         if read && address == PREDICTION {
-            rdata = prediction;
+            rdata = {1'b0 repeat (DATA_WIDTH - L::CLASS_IDX_WIDTH), prediction};
         }
 
         // Read NUM_VOTES register
         if read && address == NUM_VOTES {
-            rdata = num_votes;
+            rdata = {1'b0 repeat (DATA_WIDTH - L::TREE_IDX_WIDTH), num_votes};
         }
 
         // Read INTEN register

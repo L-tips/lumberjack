@@ -1,0 +1,50 @@
+package test_layout for Layout {
+    // ------
+    //Use deliberately weird numbers here to test the forest layout
+    const MAX_NUM_FEATURES: u32 = 258;
+    const MAX_NUM_CLASSES : u32 = 300;
+    const MAX_NUM_TREES   : u32 = 1025;
+    // ------
+
+    /// Size of a single node in bytes
+    // TODO: hardcoded
+    const NODE_SIZE: u8 = 16;
+
+    /// Width of a single feature in bits
+    const FEATURE_WIDTH: u32 = 32;
+
+    /// Width of the LEFT/RIGHT fields in bits,
+    /// which represent either node pointers or
+    /// class predictions
+    const CLASS_PTR_WIDTH: u32 = 32;
+
+    const RAM_ADDR_WIDTH: u8 = 32;
+    const RAM_DATA_WIDTH: u8 = 32;
+
+    const TREE_IDX_WIDTH : u32 = $clog2(MAX_NUM_TREES);
+    const CLASS_IDX_WIDTH: u32 = $clog2(MAX_NUM_CLASSES);
+    const FEAT_IDX_WIDTH : u32 = $clog2(MAX_NUM_FEATURES);
+
+    type RamAddr    = logic<RAM_ADDR_WIDTH> ;
+    type TreeIdx    = logic<TREE_IDX_WIDTH> ;
+    type FeatureIdx = logic<FEAT_IDX_WIDTH> ;
+    type ClassPtr   = logic<CLASS_PTR_WIDTH>;
+    type Prediction = logic<CLASS_IDX_WIDTH>;
+    type NumVotes   = logic<TREE_IDX_WIDTH> ;
+
+    // TODO: hardcoded
+    struct Flags {
+        left_predict : logic    ,
+        right_predict: logic    ,
+        split_idx    : logic<30>,
+    }
+
+    // TODO: hardcoded
+    // Field order inverted - little-endian memory
+    struct Node {
+        flags: Flags    ,
+        split: logic<32>,
+        right: logic<32>,
+        left : logic<32>,
+    }
+}

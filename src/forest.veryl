@@ -1,42 +1,29 @@
-pub module Forest #(
-    /// Feature size in bytes
-    param FEATURE_SIZE: u8 = 4,
-
-    param RAM_ADDR_WIDTH: u8 = 32,
-    param RAM_DATA_WIDTH: u8 = 32,
-
-) (
+pub module Forest::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
     enable: input logic,
 
-    // TODO: hardcoded
-    forest_start_addr: input logic<32>,
-    // TODO: hardcoded
-    num_trees: input logic<16>,
+    forest_start_addr: input L::RamAddr,
+    num_trees        : input L::TreeIdx,
 
-    // TODO: hardcoded
-    first_feature_addr: input logic<32>,
-    // TODO: hardcoded
-    num_features: input logic<4>,
+    first_feature_addr: input L::RamAddr   ,
+    num_features      : input L::FeatureIdx,
 
-    busy : output bool,
-    ready: output bool,
-    // TODO: hardcoded
-    prediction: output logic<32>,
-    // TODO hardcoded
-    num_votes: output logic<32>,
+    busy      : output bool         ,
+    ready     : output bool         ,
+    prediction: output L::Prediction,
+    num_votes : output L::NumVotes  ,
 
     done: output bool,
 
     dma_port: modport memutils::Wishbone::master,
 
-    dbg_tree_fetch_counter  : output logic<3> ,
-    dbg_tree_state          : output logic<2> ,
-    dbg_forest_fetch_counter: output logic<4> ,
-    dbg_forest_state        : output logic<2> ,
-    dbg_tree_idx            : output logic<16>,
+    dbg_tree_fetch_counter  : output logic        <3>,
+    dbg_tree_state          : output logic        <2>,
+    dbg_forest_fetch_counter: output L::FeatureIdx   ,
+    dbg_forest_state        : output logic        <2>,
+    dbg_tree_idx            : output L::TreeIdx      ,
 ) {
     enum State {
         idle,
@@ -44,16 +31,15 @@ pub module Forest #(
         evaluate_trees,
     }
 
-    // TODO: hardcoded
     struct VoteResult {
         /// The most voted class
-        max_vote_class: logic<32>,
+        max_vote_class: L::Prediction,
         /// The number of votes that has the most
         /// voted class
-        max_vote: logic<32>,
+        max_vote: L::TreeIdx,
     }
 
-    inst ram_bus_mux: memutils::Wishbone [2] #( ADDR_WIDTH: RAM_ADDR_WIDTH, DATA_WIDTH: RAM_DATA_WIDTH );
+    inst ram_bus_mux: memutils::Wishbone [2] #( ADDR_WIDTH: L::RAM_ADDR_WIDTH, DATA_WIDTH: L::RAM_DATA_WIDTH );
 
     // If we're evaluating trees, we delegate control of
     // the RAM bus to the tree evaluater. Otherwise we keep
@@ -65,8 +51,8 @@ pub module Forest #(
     let fetch_complete: bool = fetch_counter == num_features - 1;
 
     inst ram_demux: memutils::WishboneDemux #(
-        ADDR_WIDTH: 32,
-        DATA_WIDTH: 32,
+        ADDR_WIDTH: L::RAM_ADDR_WIDTH,
+        DATA_WIDTH: L::RAM_DATA_WIDTH,
         // NUM_SLAVES: 2 ,
     ) (
         masters      : ram_bus_mux,
@@ -74,28 +60,25 @@ pub module Forest #(
         master_select             ,
     );
 
-    var state             : State   ;
-    var next_state        : State   ;
-    var fetch_counter     : logic<4>;
-    var next_fetch_counter: logic<4>;
+    var state             : State        ;
+    var next_state        : State        ;
+    var fetch_counter     : L::FeatureIdx;
+    var next_fetch_counter: L::FeatureIdx;
 
     var done_reg : bool;
     var next_done: bool;
     assign done      = next_done;
 
-    // TODO: hardcoded
-    var feature_ptr: logic<32>;
-    // TODO: hardcoded
-    var next_feature_ptr: logic<32>;
+    var feature_ptr     : L::RamAddr;
+    var next_feature_ptr: L::RamAddr;
 
-    // TODO: hardcoded max number of features
-    inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
-    inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
+    inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
+    inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
 
     inst feature_cache: memutils::ScratchpadRam #(
-        READ_PORTS: 1 ,
-        DATA_WIDTH: 32,
-        DEPTH     : 16,
+        READ_PORTS: 1                  ,
+        DATA_WIDTH: L::FEATURE_WIDTH   ,
+        DEPTH     : L::MAX_NUM_FEATURES,
     ) (
         clk  ,
         rst  ,
@@ -107,10 +90,8 @@ pub module Forest #(
     var tree_ready: bool;
     var tree_busy : bool;
 
-    // TODO: hardcoded
-    let tree_node_addr: logic<32> = tree_idx * 16 + forest_start_addr;
-    // TODO: hardcoded
-    var tree_prediction: logic<32>;
+    let tree_node_addr : L::RamAddr    = tree_idx * L::NODE_SIZE + forest_start_addr;
+    var tree_prediction: L::Prediction;
 
     // Hold the votes counter and tree
     // in reset so that it holds all 0s when we start a new
@@ -118,7 +99,7 @@ pub module Forest #(
     var tree_rst  : reset_async_low;
     let tree_rst_i: reset           = tree_rst as reset;
 
-    inst tree: TreePredictor (
+    inst tree: TreePredictor::<L> (
         clk            ,
         rst: tree_rst_i,
 
@@ -136,25 +117,22 @@ pub module Forest #(
         dbg_fetch_counter: dbg_tree_fetch_counter,
     );
 
-    // TODO: hardcoded
-    var tree_idx: logic<16>;
-    // TODO: hardcoded
-    var next_tree_idx: logic<16>;
+    var tree_idx     : L::TreeIdx;
+    var next_tree_idx: L::TreeIdx;
 
     var start_tree     : bool;
     var next_start_tree: bool;
 
     var next_ready: bool;
 
-    // TODO: hardcoded max number of classes + trees
-    inst votes_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
-    inst votes_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: 32, ADDR_WIDTH: 4 );
+    inst votes_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
+    inst votes_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
 
     inst votes_ram: memutils::ScratchpadRam #(
         // Max # of trees
-        DATA_WIDTH: 32,
+        DATA_WIDTH: L::TREE_IDX_WIDTH,
         // Max number of classes
-        DEPTH: 16,
+        DEPTH: L::MAX_NUM_CLASSES,
     ) (
         clk            ,
         rst: tree_rst_i,
@@ -166,9 +144,9 @@ pub module Forest #(
     var votes     : VoteResult;
     var next_votes: VoteResult;
 
-    var prev_wb_complete: bool     ;
-    var addr            : logic<32>;
-    var next_addr       : logic<32>;
+    var prev_wb_complete: bool      ;
+    var addr            : L::RamAddr;
+    var next_addr       : L::RamAddr;
 
     assign ram_bus_mux[0].addr = next_addr;
 
@@ -197,7 +175,7 @@ pub module Forest #(
 
         // Read votes
         // TODO: hardcoded
-        votes_read_port[0].address = tree_prediction[3:0];
+        votes_read_port[0].address = tree_prediction;
 
         // Default: don't write features to cache
         feature_write_port.write_enable = false;
@@ -312,7 +290,7 @@ pub module Forest #(
             if tree_ready {
                 // TODO: hardcoded
                 votes_write_port.write_enable = true;
-                votes_write_port.address      = tree_prediction[3:0];
+                votes_write_port.address      = tree_prediction;
                 votes_write_port.data         = votes_read_port[0].data + 1;
 
                 // Update max vote and index if needed
