@@ -11,13 +11,10 @@ def binary_to_hex(bin_str):
 def float_to_bits(f):
     return struct.unpack('>I', struct.pack('>f', f))[0]
 
-def float_to_bits_le(f):
-    # Pack the float into 4 bytes in little-endian format
-    little_endian_bytes = struct.pack('>f', f)
-    # Unpack the bytes as an unsigned integer
-    little_endian_int = struct.unpack('<I', little_endian_bytes)[0]
+def float_to_hex(f):
+    as_bytes = float_to_bits(f)
     # Convert the integer to a zero-padded 8-character hex string
-    return f"0x{little_endian_int:08x}"
+    return f"0x{as_bytes:08x}"
 
 
 @cocotb.coroutine
