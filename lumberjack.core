@@ -8,12 +8,12 @@ filesets:
     files:
       - target/veryl/types.sv
       - target/veryl/csr_types.sv
+      - target/veryl/tests/common/test_layout.sv
       - target/veryl/forest_top.sv
       - target/veryl/forest.sv
       - target/veryl/tree.sv
       - target/veryl/csr.sv
       - target/veryl/float_leq.sv
-      - target/veryl/tests/common/test_layout.sv
       - target/veryl/ibex_bus/ibex_bus.sv
       - target/veryl/ibex_bus/wb2ibex_bus.sv
       - dependencies/memutils/src/wb/wishbone_if.sv
