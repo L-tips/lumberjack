@@ -66,7 +66,7 @@
          <register>
           <name>CTRL_CLR</name>
           <description>Clear individual bits of the STATUS register</description>
-          <addressOffset>0x0004</addressOffset>
+          <addressOffset>0x0008</addressOffset>
           <resetValue>0x00000000</resetValue>
           <fields>
 
@@ -82,6 +82,160 @@
               <description>Set to 1 if accelerator is busy</description>
               <bitRange>[1:1]</bitRange>
               <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>NUM_TREES</name>
+          <description>Number of trees in forest</description>
+          <addressOffset>0x000c</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>NUM</name>
+              <description>Number of trees in the forest</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>FOREST_START</name>
+          <description>Address of the first node in the forest</description>
+          <addressOffset>0x0010</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ADDR</name>
+              <description>Address of the first node in the forest</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>NUM_TREES</name>
+          <description>Number of features in forest</description>
+          <addressOffset>0x0014</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>NUM</name>
+              <description>Number of features in the forest</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>FEATURES_START</name>
+          <description>Address of the first feature to be used for prediction</description>
+          <addressOffset>0x0018</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>ADDR</name>
+              <description>Address of the first feature to be used for prediction</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>PREDICTION</name>
+          <description>Predicted class</description>
+          <addressOffset>0x001c</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>CLASS</name>
+              <description>Predicted class</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>VOTES</name>
+          <description>Number of votes for the predicted class</description>
+          <addressOffset>0x0020</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+            <field>
+              <name>NUM</name>
+              <description>Number of votes for the predicted class</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>INTEN_SET</name>
+          <description>Set individual bits of the INTEN register</description>
+          <addressOffset>0x0024</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+
+            <field>
+              <name>READY</name>
+              <description>Ready interrupt</description>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>INTEN_CLR</name>
+          <description>Clear individual bits of the INTEN register</description>
+          <addressOffset>0x0028</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+
+            <field>
+              <name>READY</name>
+              <description>Ready interrupt</description>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>INTFLAG</name>
+          <description>Interrupt flags</description>
+          <addressOffset>0x002c</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+
+            <field>
+              <name>READY</name>
+              <description>Ready interrupt</description>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>PERF</name>
+          <description>Performance stats</description>
+          <addressOffset>0x0030</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+
+            <field>
+              <name>CYCCNT</name>
+              <description>Cycle count for the last prediction</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read</access>
             </field>
           </fields>
         </register>
