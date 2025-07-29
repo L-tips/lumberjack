@@ -7,8 +7,8 @@ module TestForest (
     forest_start_addr: input test_layout::RamAddr,
     num_trees        : input test_layout::TreeIdx,
 
-    first_feature_addr: input test_layout::RamAddr   ,
-    num_features      : input test_layout::FeatureIdx,
+    features_start_addr: input test_layout::RamAddr   ,
+    num_features       : input test_layout::FeatureIdx,
 
     busy : output bool,
     ready: output bool,
@@ -41,8 +41,8 @@ module TestForest (
         forest_start_addr  ,
         num_trees          ,
 
-        first_feature_addr  ,
-        num_features        ,
+        features_start_addr  ,
+        num_features         ,
 
         ready       ,
         busy        ,
@@ -52,12 +52,6 @@ module TestForest (
         dma_port: ram_bus,
 
         done: _,
-
-        dbg_tree_fetch_counter  : _,
-        dbg_tree_state          : _,
-        dbg_forest_fetch_counter: _,
-        dbg_forest_state        : _,
-        dbg_tree_idx            : _,
     );
 }
 

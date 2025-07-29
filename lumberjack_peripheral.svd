@@ -1,5 +1,6 @@
 <peripheral>
       <name>RF_ACCELERATOR</name>
+      <description>Lumberjack Random Forest hardware accelerator</description>
       <version>1</version>
       <baseAddress>0x80005000</baseAddress>
       <size>32</size>
@@ -117,7 +118,7 @@
         </register>
 
         <register>
-          <name>NUM_TREES</name>
+          <name>NUM_FEATURES</name>
           <description>Number of features in forest</description>
           <addressOffset>0x0014</addressOffset>
           <resetValue>0x00000000</resetValue>
@@ -156,7 +157,7 @@
               <name>CLASS</name>
               <description>Predicted class</description>
               <bitRange>[31:0]</bitRange>
-              <access>read</access>
+              <access>read-only</access>
             </field>
           </fields>
         </register>
@@ -171,7 +172,7 @@
               <name>NUM</name>
               <description>Number of votes for the predicted class</description>
               <bitRange>[31:0]</bitRange>
-              <access>read</access>
+              <access>read-only</access>
             </field>
           </fields>
         </register>
@@ -235,7 +236,7 @@
               <name>CYCCNT</name>
               <description>Cycle count for the last prediction</description>
               <bitRange>[31:0]</bitRange>
-              <access>read</access>
+              <access>read-only</access>
             </field>
           </fields>
         </register>

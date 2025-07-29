@@ -7,8 +7,8 @@ pub module Forest::<L: Layout> (
     forest_start_addr: input L::RamAddr,
     num_trees        : input L::TreeIdx,
 
-    first_feature_addr: input L::RamAddr   ,
-    num_features      : input L::FeatureIdx,
+    features_start_addr: input L::RamAddr   ,
+    num_features       : input L::FeatureIdx,
 
     busy      : output bool         ,
     ready     : output bool         ,
@@ -18,12 +18,6 @@ pub module Forest::<L: Layout> (
     done: output bool,
 
     dma_port: modport memutils::Wishbone::master,
-
-    dbg_tree_fetch_counter  : output logic        <3>,
-    dbg_tree_state          : output logic        <2>,
-    dbg_forest_fetch_counter: output L::FeatureIdx   ,
-    dbg_forest_state        : output logic        <2>,
-    dbg_tree_idx            : output L::TreeIdx      ,
 ) {
     enum State {
         idle,
@@ -112,9 +106,6 @@ pub module Forest::<L: Layout> (
 
         feature_port: feature_read_port[0],
         dma_port    : ram_bus_mux[1]      ,
-
-        dbg_state        : dbg_tree_state        ,
-        dbg_fetch_counter: dbg_tree_fetch_counter,
     );
 
     var tree_idx     : L::TreeIdx;
@@ -197,14 +188,14 @@ pub module Forest::<L: Layout> (
                 State::idle: {
                     if start_eval {
                         next_state         = State::fetch_features;
-                        next_feature_ptr   = first_feature_addr;
+                        next_feature_ptr   = features_start_addr;
                         next_ready         = false;
                         next_fetch_counter = 0;
 
                         // Start RAM read request
                         ram_bus_mux[0].stb = true;
                         ram_bus_mux[0].cyc = true;
-                        next_addr          = first_feature_addr;
+                        next_addr          = features_start_addr;
                     }
                 }
 
@@ -340,8 +331,4 @@ pub module Forest::<L: Layout> (
     assign ram_bus_mux[0].select     = 4'b1111;
     assign ram_bus_mux[0].write_data = 0;
     assign ram_bus_mux[0].lock       = false;
-
-    assign dbg_forest_fetch_counter = fetch_counter;
-    assign dbg_forest_state         = state;
-    assign dbg_tree_idx             = tree_idx;
 }

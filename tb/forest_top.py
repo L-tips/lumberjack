@@ -5,7 +5,7 @@ from cocotb.triggers import RisingEdge
 import utils
 
 FOREST_START_ADDR= 0x10064
-FIRST_FEATURE_ADDR = 0x100C4
+FEATURES_START_ADDR = 0x100C4
 
 def begin_write(dut, address, data, byte_enable):
     dut.control_bus.cyc.value = 1
@@ -78,7 +78,7 @@ async def forest_top_test(dut):
     assert dut.forest.forest_start_addr.value == FOREST_START_ADDR
 
     # Set first_feature
-    begin_write(dut, 0x18, FIRST_FEATURE_ADDR, 0b1111)
+    begin_write(dut, 0x18, FEATURES_START_ADDR, 0b1111)
 
     await RisingEdge(dut.clk)
 
@@ -91,8 +91,8 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    assert read_data(dut) == FIRST_FEATURE_ADDR
-    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
+    assert read_data(dut) == FEATURES_START_ADDR
+    assert dut.forest.features_start_addr.value == FEATURES_START_ADDR
 
     finish_txn(dut)
 
@@ -110,14 +110,14 @@ async def forest_top_test(dut):
 
     # Check that our writes have propagated correctly
     assert dut.forest.num_features.value == 3
-    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
+    assert dut.forest.features_start_addr.value == FEATURES_START_ADDR
     assert dut.forest.forest_start_addr.value == FOREST_START_ADDR
     assert dut.forest.num_trees.value == 2
 
     # BUSY and ENABLE should be set
     assert read_data(dut) == 0b11
 
-    # Check that first_feature_addr is actually enable-protected
+    # Check that features_start_addr is actually enable-protected
     begin_write(dut, 0x18, 0x00, 0b1111)
 
     await RisingEdge(dut.clk)
@@ -127,7 +127,7 @@ async def forest_top_test(dut):
     await RisingEdge(dut.clk)
 
     # Check that first_feature hasn't changed (enable protection works)
-    assert dut.forest.first_feature_addr.value == FIRST_FEATURE_ADDR
+    assert dut.forest.features_start_addr.value == FEATURES_START_ADDR
 
     # Enable the interrupt
     begin_write(dut, 0x24, 0b1, 0b1)

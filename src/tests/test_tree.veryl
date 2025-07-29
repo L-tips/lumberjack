@@ -40,9 +40,6 @@ module TestTree (
 
         feature_port: feature_bus,
         dma_port    : ram_bus    ,
-
-        dbg_fetch_counter: _,
-        dbg_state        : _,
     );
 }
 

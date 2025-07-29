@@ -12,9 +12,6 @@ module TreePredictor::<L: Layout> (
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
     dma_port    : modport memutils::Wishbone::master              ,
-
-    dbg_fetch_counter: output logic<3>,
-    dbg_state        : output logic<2>,
 ) {
     enum Branch {
         none = 0,
@@ -82,9 +79,9 @@ module TreePredictor::<L: Layout> (
     // Compare the feature to the split, which
     // are formatted as IEEE754 32-bit floats
     inst pick_branch: FloatLeq (
-        a: feature_port.data,
-        b: node.split,
-        leq: branch_left,
+        a  : feature_port.data,
+        b  : node.split       ,
+        leq: branch_left      ,
     );
 
     always_comb {
@@ -236,7 +233,4 @@ module TreePredictor::<L: Layout> (
     assign dma_port.select     = 4'b1111;
     assign dma_port.write_data = 0;
     assign dma_port.lock       = false;
-
-    assign dbg_fetch_counter = fetch_counter;
-    assign dbg_state         = state;
 }

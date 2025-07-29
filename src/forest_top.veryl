@@ -16,22 +16,16 @@ module ForestTop::<L: Layout> (
     /// Interrupt line
     interrupt: output logic,
 ) {
-    var enable            : logic        ;
-    var done              : bool         ;
-    var forest_start_addr : L::RamAddr   ;
-    var num_trees         : L::TreeIdx   ;
-    var first_feature_addr: L::RamAddr   ;
-    var num_features      : L::FeatureIdx;
-    var busy              : logic        ;
-    var ready             : logic        ;
-    var prediction        : L::Prediction;
-    var num_votes         : L::NumVotes  ;
-
-    var dbg_tree_fetch_counter  : logic        <3>;
-    var dbg_tree_state          : logic        <2>;
-    var dbg_forest_fetch_counter: L::FeatureIdx   ;
-    var dbg_forest_state        : logic        <2>;
-    var dbg_tree_idx            : L::TreeIdx      ;
+    var enable             : logic        ;
+    var done               : bool         ;
+    var forest_start_addr  : L::RamAddr   ;
+    var num_trees          : L::TreeIdx   ;
+    var features_start_addr: L::RamAddr   ;
+    var num_features       : L::FeatureIdx;
+    var busy               : logic        ;
+    var ready              : logic        ;
+    var prediction         : L::Prediction;
+    var num_votes          : L::NumVotes  ;
 
     inst evaluator: Forest::<L> (
         clk  ,
@@ -40,10 +34,10 @@ module ForestTop::<L: Layout> (
         enable  ,
         done    ,
 
-        forest_start_addr   ,
-        num_trees           ,
-        first_feature_addr  ,
-        num_features        ,
+        forest_start_addr    ,
+        num_trees            ,
+        features_start_addr  ,
+        num_features         ,
 
         busy        ,
         ready       ,
@@ -51,12 +45,6 @@ module ForestTop::<L: Layout> (
         num_votes   ,
 
         dma_port  ,
-
-        dbg_tree_fetch_counter    ,
-        dbg_tree_state            ,
-        dbg_forest_fetch_counter  ,
-        dbg_forest_state          ,
-        dbg_tree_idx              ,
     );
 
     // Control port is byte-addressed, but CSRs are word-addressed
@@ -79,24 +67,18 @@ module ForestTop::<L: Layout> (
         wdata  : csr_wdata    ,
         rdata  : csr_rdata    ,
 
-        enable                               ,
-        done                                 ,
-        num_trees                            ,
-        forest_start_addr                    ,
-        num_features                         ,
-        first_feature    : first_feature_addr,
+        enable               ,
+        done                 ,
+        num_trees            ,
+        forest_start_addr    ,
+        num_features         ,
+        features_start_addr  ,
 
         ready       ,
         busy        ,
         prediction  ,
         num_votes   ,
         interrupt   ,
-
-        dbg_tree_fetch_counter    ,
-        dbg_tree_state            ,
-        dbg_forest_fetch_counter  ,
-        dbg_forest_state          ,
-        dbg_tree_idx              ,
     );
 
     var prev_select: logic<4>;

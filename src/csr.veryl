@@ -14,12 +14,12 @@ module CsrInterface::<L: Layout> (
     rdata  : output csr_types::Data   , // Read data
 
     // --- Output control signals ---
-    enable           : output logic        ,
-    num_trees        : output L::TreeIdx   ,
-    forest_start_addr: output L::RamAddr   ,
-    num_features     : output L::FeatureIdx,
-    first_feature    : output L::RamAddr   ,
-    interrupt        : output logic        ,
+    enable             : output logic        ,
+    num_trees          : output L::TreeIdx   ,
+    forest_start_addr  : output L::RamAddr   ,
+    num_features       : output L::FeatureIdx,
+    features_start_addr: output L::RamAddr   ,
+    interrupt          : output logic        ,
 
     // --- Input control signals ---
     ready     : input logic        ,
@@ -28,28 +28,20 @@ module CsrInterface::<L: Layout> (
     prediction: input L::Prediction,
     num_votes : input L::NumVotes  ,
 
-    // TODO: hardcoded
-    dbg_tree_fetch_counter  : input logic        <3>,
-    dbg_tree_state          : input logic        <2>,
-    dbg_forest_fetch_counter: input L::FeatureIdx   ,
-    dbg_forest_state        : input logic        <2>,
-    dbg_tree_idx            : input L::TreeIdx      ,
-
 ) {
-    const CTRL             : csr_types::Address = 0;
-    const CTRL_SET         : csr_types::Address = 1;
-    const CTRL_CLR         : csr_types::Address = 2;
-    const NUM_TREES        : csr_types::Address = 3;
-    const FOREST_START_ADDR: csr_types::Address = 4;
-    const NUM_FEATURES     : csr_types::Address = 5;
-    const FIRST_FEATURE    : csr_types::Address = 6;
-    const PREDICTION       : csr_types::Address = 7;
-    const NUM_VOTES        : csr_types::Address = 8;
-    const INTEN_SET        : csr_types::Address = 9;
-    const INTEN_CLR        : csr_types::Address = 10;
-    const INTFLAG          : csr_types::Address = 11;
-    const DBG              : csr_types::Address = 12;
-    const CYCCNT           : csr_types::Address = 13;
+    const CTRL               : csr_types::Address = 0;
+    const CTRL_SET           : csr_types::Address = 1;
+    const CTRL_CLR           : csr_types::Address = 2;
+    const NUM_TREES          : csr_types::Address = 3;
+    const FOREST_START_ADDR  : csr_types::Address = 4;
+    const NUM_FEATURES       : csr_types::Address = 5;
+    const FEATURES_START_ADDR: csr_types::Address = 6;
+    const PREDICTION         : csr_types::Address = 7;
+    const NUM_VOTES          : csr_types::Address = 8;
+    const INTEN_SET          : csr_types::Address = 9;
+    const INTEN_CLR          : csr_types::Address = 10;
+    const INTFLAG            : csr_types::Address = 11;
+    const PERF               : csr_types::Address = 12;
 
     const ENABLE_BIT: u8 = 0;
     const BUSY_BIT  : u8 = 1;
@@ -72,9 +64,9 @@ module CsrInterface::<L: Layout> (
     var next_num_features: L::FeatureIdx;
     assign num_features      = num_features_reg;
 
-    var first_feature_reg : L::RamAddr;
-    var next_first_feature: L::RamAddr;
-    assign first_feature      = first_feature_reg;
+    var features_start_addr_reg : L::RamAddr;
+    var next_features_start_addr: L::RamAddr;
+    assign features_start_addr      = features_start_addr_reg;
 
     var inten_reg : logic;
     var next_inten: logic;
@@ -82,16 +74,6 @@ module CsrInterface::<L: Layout> (
     var intflag_reg : logic;
     var next_intflag: logic;
     var prev_ready  : logic;
-
-    // TODO: hardcoded
-    let dbg: csr_types::Data = {
-        1'b0 repeat DATA_WIDTH - (7 + L::FEAT_IDX_WIDTH + L::TREE_IDX_WIDTH),
-        dbg_tree_idx,
-        dbg_forest_state,
-        dbg_forest_fetch_counter,
-        dbg_tree_state,
-        dbg_tree_fetch_counter
-    };
 
     var cyccnt: csr_types::Data;
 
@@ -115,14 +97,14 @@ module CsrInterface::<L: Layout> (
     // Write logic
     always_comb {
         // Defaults
-        next_enable            = enable_reg;
-        next_num_trees         = num_trees_reg;
-        next_forest_start_addr = forest_start_addr_reg;
-        next_num_features      = num_features_reg;
-        next_first_feature     = first_feature_reg;
-        next_inten             = inten_reg;
-        next_intflag           = intflag_reg;
-        next_user_enable       = 0;
+        next_enable              = enable_reg;
+        next_num_trees           = num_trees_reg;
+        next_forest_start_addr   = forest_start_addr_reg;
+        next_num_features        = num_features_reg;
+        next_features_start_addr = features_start_addr_reg;
+        next_inten               = inten_reg;
+        next_intflag             = intflag_reg;
+        next_user_enable         = 0;
 
         // Write to CTRL register
         if write && (address == CTRL) {
@@ -159,9 +141,9 @@ module CsrInterface::<L: Layout> (
             next_num_features = wdata[L::FEAT_IDX_WIDTH - 1:0];
         }
 
-        // Write to FIRST_FEATURE register (enable-protected)
-        if write && address == FIRST_FEATURE && !enable {
-            next_first_feature = wdata;
+        // Write to FEATURES_START_ADDR register (enable-protected)
+        if write && address == FEATURES_START_ADDR && !enable {
+            next_features_start_addr = wdata;
         }
 
         // Set INTEN register bits
@@ -225,9 +207,9 @@ module CsrInterface::<L: Layout> (
             rdata = {1'b0 repeat (DATA_WIDTH - L::FEAT_IDX_WIDTH), num_features_reg};
         }
 
-        // Read FIRST_FEATURE register
-        if read && address == FIRST_FEATURE {
-            rdata = first_feature_reg;
+        // Read FEATURES_START_ADDR register
+        if read && address == FEATURES_START_ADDR {
+            rdata = features_start_addr_reg;
         }
 
         // Read PREDICTION register
@@ -250,11 +232,7 @@ module CsrInterface::<L: Layout> (
             rdata = {31'b0, next_intflag};
         }
 
-        if read && address == DBG {
-            rdata = dbg;
-        }
-
-        if read && address == CYCCNT {
+        if read && address == PERF {
             rdata = cyccnt;
         }
     }
@@ -262,21 +240,21 @@ module CsrInterface::<L: Layout> (
     // Advance state machine
     always_ff {
         if_reset {
-            enable_reg            = 0;
-            num_trees_reg         = 0;
-            forest_start_addr_reg = 0;
-            num_features_reg      = 0;
-            first_feature_reg     = 0;
-            inten_reg             = 0;
-            intflag_reg           = 0;
+            enable_reg              = 0;
+            num_trees_reg           = 0;
+            forest_start_addr_reg   = 0;
+            num_features_reg        = 0;
+            features_start_addr_reg = 0;
+            inten_reg               = 0;
+            intflag_reg             = 0;
         } else {
-            enable_reg            = next_enable;
-            num_trees_reg         = next_num_trees;
-            forest_start_addr_reg = next_forest_start_addr;
-            num_features_reg      = next_num_features;
-            first_feature_reg     = next_first_feature;
-            inten_reg             = next_inten;
-            intflag_reg           = next_intflag;
+            enable_reg              = next_enable;
+            num_trees_reg           = next_num_trees;
+            forest_start_addr_reg   = next_forest_start_addr;
+            num_features_reg        = next_num_features;
+            features_start_addr_reg = next_features_start_addr;
+            inten_reg               = next_inten;
+            intflag_reg             = next_intflag;
         }
     }
 }
