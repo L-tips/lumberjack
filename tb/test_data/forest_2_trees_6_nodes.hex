@@ -22,7 +22,7 @@ c0000002 // 0x100a0 | left: true, right: true, split feat: 2
 00000002 // 0x100a4 | left: prediction: class 2
 00000005 // 0x100a8 | right: ptr: 5
 0000000A // 0x100ac | split: 0xA = 10
-40000000 // 0x100b0 | left: false, right: true, split feat: 0 
+80000000 // 0x100b0 | left: true, right: false, split feat: 0 
 // --- Node 5: Tree 1 ---
 00000001 // 0x100b4 | left: prediction: class 1
 00000002 // 0x100b8 | right: prediction: class 2
