@@ -4,6 +4,7 @@ from cocotb.triggers import RisingEdge
 
 import utils
 
+
 @cocotb.test()
 async def forest_test(dut):
     # Start a 10 ns clock
@@ -12,7 +13,7 @@ async def forest_test(dut):
 
     # Init and reset
     dut.rst.value = 0
-    
+
     await utils.init_memory(dut.ram.ram.mem, "forest_2_trees_6_nodes.hex")
 
     await RisingEdge(dut.clk)
@@ -21,10 +22,10 @@ async def forest_test(dut):
     await RisingEdge(dut.clk)
 
     dut.enable.value = 1
-    dut.forest_start_addr.value = 0
+    dut.forest_start_addr.value = 0x8
     dut.num_trees.value = 2
 
-    dut.features_start_addr = 0x60
+    dut.features_start_addr = 0x68
     dut.num_features.value = 3
 
     await RisingEdge(dut.clk)

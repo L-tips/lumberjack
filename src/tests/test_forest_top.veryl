@@ -11,11 +11,13 @@ module TestForestTop (
     inst ram_arbiter: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: 32, DATA_WIDTH: 32 );
 
-    // For testing purposes, the RAM starts at address 10064.
+    // For testing purposes, the RAM starts at address 1005c.
+    // This way we can check that the accelerator behaves correctly when the forest/features
+    // are placed at "random", but aligned, addresses.
     inst ram_shifted: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
     always_comb {
         ram_shifted.master <> ram_arbiter.slave;
-        ram_shifted.addr   =  ram_arbiter.addr - {1'b0 repeat (test_layout::RAM_ADDR_WIDTH - 17), 'h10064};
+        ram_shifted.addr   =  ram_arbiter.addr - {1'b0 repeat (test_layout::RAM_ADDR_WIDTH - 17), 'h1005c};
     }
 
     inst arbiter: SelfArbiter #(

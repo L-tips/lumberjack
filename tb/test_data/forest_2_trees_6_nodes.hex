@@ -1,3 +1,8 @@
+// HEADER
+00000002 // 0x1005c  Number of trees = 2 (4 bytes)
+00000403 // 0x10060  Number of features = 3 (1 byte)
+         //             Number of classes = 4 (1 byte)
+         //             Padding (2 bytes)
 // --- Node 0: Tree 0 ---
 00000002 // 0x10064 | left: ptr: 2
 00000000 // 0x10068 | right: prediction: class 0
