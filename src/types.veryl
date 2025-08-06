@@ -41,10 +41,10 @@ package standard_layout for Layout {
     const MAX_NUM_CLASSES: u32 = 16;
 
     /// Max number of features addressable by a node
-    const MAX_NUM_FEATURES: u32 = 128;
+    const MAX_NUM_FEATURES: u32 = 16;
 
     /// Max number of trees in a forest
-    const MAX_NUM_TREES: u32 = 128;
+    const MAX_NUM_TREES: u32 = 512;
 
     /// Size of a single node in bytes
     // TODO: hardcoded
