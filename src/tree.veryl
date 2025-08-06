@@ -8,17 +8,12 @@ module TreePredictor::<L: Layout> (
 
     ready     : output bool         ,
     busy      : output bool         ,
+    error     : output bool         ,
     prediction: output L::Prediction,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
     dma_port    : modport memutils::Wishbone::master              ,
 ) {
-    enum Branch {
-        none = 0,
-        left = 1,
-        right = 2,
-    }
-
     enum State {
         idle,
         fetching,
@@ -51,12 +46,14 @@ module TreePredictor::<L: Layout> (
     var busy_reg : bool;
     var next_busy: bool;
 
+    var err_reg : bool;
+    var next_err: bool;
+
     var next_prediction: L::Prediction;
     // TODO: hardcoded
     var next_fetched_node: logic<128>;
 
-    var dbg_branch_taken   : Branch;
-    var debug_is_prediction: bool  ;
+    var is_prediction: bool;
 
     var prev_wb_complete: logic     ;
     var addr            : L::RamAddr;
@@ -90,6 +87,7 @@ module TreePredictor::<L: Layout> (
         next_node_ptr      = node_ptr;
         next_ready         = ready_reg;
         next_busy          = busy_reg;
+        next_err           = err_reg;
         next_prediction    = prediction;
         next_fetch_counter = fetch_counter;
         next_fetched_node  = fetched_node;
@@ -99,8 +97,7 @@ module TreePredictor::<L: Layout> (
         dma_port.stb = false;
         dma_port.cyc = false;
 
-        dbg_branch_taken    = Branch::none;
-        debug_is_prediction = false;
+        is_prediction = false;
 
         // State machine
         case state {
@@ -110,6 +107,7 @@ module TreePredictor::<L: Layout> (
                     next_node_ptr      = first_node_addr;
                     next_ready         = false;
                     next_busy          = true;
+                    next_err           = false;
                     next_fetch_counter = 0;
 
                     // Start RAM read request
@@ -151,50 +149,35 @@ module TreePredictor::<L: Layout> (
             State::evaluating: {
                 // Evaluate the node and decide next action
                 if branch_left {
+                    next_prediction = node.left[L::CLASS_IDX_WIDTH - 1:0];
+                    next_node_ptr   = node.left * L::NODE_SIZE + forest_start_addr;
+                    is_prediction   = node.flags.left_predict;
+                } else {
+                    next_prediction = node.right[L::CLASS_IDX_WIDTH - 1:0];
+                    next_node_ptr   = node.right * L::NODE_SIZE + forest_start_addr;
+                    is_prediction   = node.flags.right_predict;
+                }
 
-                    dbg_branch_taken = Branch::left;
-
-                    if node.flags.left_predict {
-                        // Leaf node reached - use prediction
-                        next_ready      = true;
-                        next_busy       = false;
-                        next_prediction = node.left[L::CLASS_IDX_WIDTH - 1:0];
-                        next_state      = State::idle;
-
-                        debug_is_prediction = true;
-
-                    } else {
+                if is_prediction {
+                    // Leaf node reached - use prediction
+                    next_ready = true;
+                    next_busy  = false;
+                    next_state = State::idle;
+                } else {
+                    // Check that out tree is a DAG and that there are no
+                    // circular conditions
+                    if next_node_ptr >: node_ptr {
                         // Go to left child
                         // Start RAM read request
-                        dma_port.stb  = true;
-                        dma_port.cyc  = true;
-                        next_node_ptr = node.left * L::NODE_SIZE + forest_start_addr;
-                        next_addr     = next_node_ptr;
+                        dma_port.stb = true;
+                        dma_port.cyc = true;
+                        next_addr    = next_node_ptr;
 
                         next_state = State::fetching;
-                    }
-                } else {
-
-                    dbg_branch_taken = Branch::right;
-
-                    if node.flags.right_predict {
-                        // Leaf node reached - use prediction
-                        next_ready      = true;
-                        next_busy       = false;
-                        next_prediction = node.right[L::CLASS_IDX_WIDTH - 1:0];
-                        next_state      = State::idle;
-
-                        debug_is_prediction = true;
-
                     } else {
-                        // Go to right child
-                        // Start RAM read request
-                        dma_port.stb  = true;
-                        dma_port.cyc  = true;
-                        next_node_ptr = node.right * L::NODE_SIZE + forest_start_addr;
-                        next_addr     = next_node_ptr;
-
-                        next_state = State::fetching;
+                        next_err   = true;
+                        next_busy  = false;
+                        next_state = State::idle;
                     }
                 }
             }
@@ -210,6 +193,7 @@ module TreePredictor::<L: Layout> (
             node_ptr      = 0;
             ready_reg     = false;
             busy_reg      = false;
+            err_reg       = false;
             prediction    = 0;
             state         = State::idle;
             fetch_counter = 0;
@@ -218,6 +202,7 @@ module TreePredictor::<L: Layout> (
             node_ptr      = next_node_ptr;
             ready_reg     = next_ready;
             busy_reg      = next_busy;
+            err_reg       = next_err;
             prediction    = next_prediction;
             state         = next_state;
             fetch_counter = next_fetch_counter;
@@ -227,6 +212,7 @@ module TreePredictor::<L: Layout> (
 
     assign busy                  = busy_reg || start;
     assign ready                 = ready_reg && !start;
+    assign error                 = err_reg;
     assign dma_port.write_enable = false;
 
     // TODO: hardcoded

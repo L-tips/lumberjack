@@ -21,4 +21,5 @@ include_files = [
     "tb/utils.py",
     "tb/test_data/single_tree_2_nodes.hex",
     "tb/test_data/forest_2_trees_6_nodes.hex",
+    "tb/test_data/forest_1_tree_2_nodes_circular.hex",
 ]

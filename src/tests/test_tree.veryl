@@ -24,6 +24,7 @@ module TestTree (
     var busy      : logic                  ;
     var prediction: test_layout::Prediction;
     var ready     : logic                  ;
+    var error     : logic                  ;
 
     inst tree: TreePredictor::<test_layout> (
         clk  ,
@@ -36,6 +37,7 @@ module TestTree (
 
         ready       ,
         busy        ,
+        error       ,
         prediction  ,
 
         feature_port: feature_bus,
