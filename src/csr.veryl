@@ -24,6 +24,7 @@ module CsrInterface::<L: Layout> (
     // --- Input control signals ---
     ready     : input logic        ,
     busy      : input logic        ,
+    error     : input logic        ,
     done      : input logic        ,
     prediction: input L::Prediction,
     num_votes : input L::NumVotes  ,
@@ -68,12 +69,18 @@ module CsrInterface::<L: Layout> (
     var next_features_start_addr: L::RamAddr;
     assign features_start_addr      = features_start_addr_reg;
 
-    var inten_reg : logic;
-    var next_inten: logic;
+    struct Intflag {
+        error: logic,
+        ready: logic,
+    }
 
-    var intflag_reg : logic;
-    var next_intflag: logic;
-    var prev_ready  : logic;
+    var inten_reg : Intflag;
+    var next_inten: Intflag;
+
+    var intflag_reg : Intflag;
+    var next_intflag: Intflag;
+
+    var prev_ready: logic;
 
     var cyccnt: csr_types::Data;
 
@@ -92,7 +99,7 @@ module CsrInterface::<L: Layout> (
         }
     }
 
-    assign interrupt = intflag_reg && inten_reg;
+    assign interrupt = (intflag_reg.ready && inten_reg.ready) || (intflag_reg.error && inten_reg.error);
 
     // Write logic
     always_comb {
@@ -148,20 +155,20 @@ module CsrInterface::<L: Layout> (
 
         // Set INTEN register bits
         if write && (address == INTEN_SET) {
-            // Can only write to 0th bit
-            next_inten |= wdata[0];
+            // Can only write to first 2 bits
+            next_inten |= wdata[1:0];
         }
 
         // Clear INTEN register bits
         if write && (address == INTEN_CLR) {
-            // Can only write to 0th bit
-            next_inten &= ~wdata[0];
+            // Can only write to first 2 bits
+            next_inten &= ~wdata[1:0];
         }
 
         // Clear INTFLAG register bits
         if write && (address == INTFLAG) {
-            // Can only write to 0th bit
-            next_intflag &= ~wdata[0];
+            // Can only write to first 2 bits
+            next_intflag &= ~wdata[1:0];
         }
 
         // Clear the enable bit if the forest
@@ -173,12 +180,17 @@ module CsrInterface::<L: Layout> (
         // Clear the interrupt flag when reading
         // the prediction register
         if read && address == PREDICTION {
-            next_intflag = 0;
+            next_intflag.ready = 0;
         }
 
         // Set the interrupt flag if ready
         if ready && !prev_ready {
-            next_intflag = 1;
+            next_intflag.ready = 1;
+        }
+
+        // Set the interrupt flag if error
+        if error {
+            next_intflag.error = 1;
         }
     }
 
@@ -224,12 +236,12 @@ module CsrInterface::<L: Layout> (
 
         // Read INTEN register
         if read && (address == INTEN_SET || address == INTEN_CLR) {
-            rdata = {31'b0, next_inten};
+            rdata = {30'b0, next_inten};
         }
 
         // Read INTFLAG register
         if read && address == INTFLAG {
-            rdata = {31'b0, next_intflag};
+            rdata = {30'b0, next_intflag};
         }
 
         if read && address == PERF {

@@ -12,6 +12,7 @@ pub module Forest::<L: Layout> (
 
     busy      : output bool         ,
     ready     : output bool         ,
+    error     : output bool         ,
     prediction: output L::Prediction,
     num_votes : output L::NumVotes  ,
 
@@ -83,6 +84,7 @@ pub module Forest::<L: Layout> (
 
     var tree_ready: bool;
     var tree_busy : bool;
+    var tree_error: bool;
 
     let tree_node_addr : L::RamAddr    = tree_idx * L::NODE_SIZE + forest_start_addr;
     var tree_prediction: L::Prediction;
@@ -101,6 +103,7 @@ pub module Forest::<L: Layout> (
         forest_start_addr                 ,
         ready            : tree_ready     ,
         busy             : tree_busy      ,
+        error            : tree_error     ,
         start            : start_tree     ,
         prediction       : tree_prediction,
 
@@ -235,9 +238,13 @@ pub module Forest::<L: Layout> (
                     next_tree_idx   = tree_idx;
                     next_start_tree = false;
 
+                    if tree_error {
+                        next_state = State::idle;
+                        next_done  = true;
+                    }
                     // If the tree is not busy, this means
                     // we start a new tree prediction
-                    if !tree_busy {
+                     else if !tree_busy {
                         if tree_idx <: num_trees - 1 {
                             next_start_tree = true;
                             next_ready      = false;
@@ -325,7 +332,8 @@ pub module Forest::<L: Layout> (
     assign prediction = votes.max_vote_class;
     assign num_votes  = votes.max_vote;
 
-    assign busy = state != State::idle;
+    assign busy  = state != State::idle;
+    assign error = tree_error;
 
     // TODO: hardcoded
     assign ram_bus_mux[0].select     = 4'b1111;

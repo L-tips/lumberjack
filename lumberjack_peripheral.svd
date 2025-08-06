@@ -185,6 +185,13 @@
           <fields>
 
             <field>
+              <name>ERROR</name>
+              <description>Error interrupt</description>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
+
+            <field>
               <name>READY</name>
               <description>Ready interrupt</description>
               <bitRange>[0:0]</bitRange>
@@ -201,6 +208,13 @@
           <fields>
 
             <field>
+              <name>ERROR</name>
+              <description>Error interrupt</description>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
+
+            <field>
               <name>READY</name>
               <description>Ready interrupt</description>
               <bitRange>[0:0]</bitRange>
@@ -215,6 +229,13 @@
           <addressOffset>0x002c</addressOffset>
           <resetValue>0x00000000</resetValue>
           <fields>
+
+            <field>
+              <name>ERROR</name>
+              <description>Error interrupt</description>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
 
             <field>
               <name>READY</name>

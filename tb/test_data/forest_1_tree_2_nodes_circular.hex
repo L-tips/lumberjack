@@ -13,3 +13,5 @@
 00000001 // 0x10078 | right: ptr: 1 (this node)
 41200000 // 0x1007c | split: 10.0_f32
 00000000 // 0x10080 | left: false, right: false, split feat: 0
+// --- Features ---
+41100000 // 0x10084 | Feature 0 = 9.0_f32

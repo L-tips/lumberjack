@@ -24,6 +24,7 @@ module ForestTop::<L: Layout> (
     var num_features       : L::FeatureIdx;
     var busy               : logic        ;
     var ready              : logic        ;
+    var error              : logic        ;
     var prediction         : L::Prediction;
     var num_votes          : L::NumVotes  ;
 
@@ -41,6 +42,7 @@ module ForestTop::<L: Layout> (
 
         busy        ,
         ready       ,
+        error       ,
         prediction  ,
         num_votes   ,
 
@@ -76,6 +78,7 @@ module ForestTop::<L: Layout> (
 
         ready       ,
         busy        ,
+        error       ,
         prediction  ,
         num_votes   ,
         interrupt   ,
