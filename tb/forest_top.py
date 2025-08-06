@@ -3,6 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 import utils
+from utils import n_cycles
 
 FOREST_START_ADDR = 0x10064
 FEATURES_START_ADDR = 0x100C4
@@ -305,11 +306,20 @@ async def rejects_circular_forests(dut):
     # Interrupt should fire
     assert dut.interrupt_line == 1
 
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
+    await n_cycles(dut.clk, 4)
 
     # Check that the interrupt is still on
     # a few cycles later
     assert dut.interrupt_line == 1
+
+    # Enable
+    begin_write(dut, 0x0, 0x1, 0b1)
+
+    await RisingEdge(dut.clk)
+
+    finish_txn(dut)
+
+    await RisingEdge(dut.clk)
+
+    # Reenabling the evaluator should have cleared the interrupts
+    assert dut.interrupt_line == 0

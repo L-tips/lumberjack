@@ -192,6 +192,12 @@ module CsrInterface::<L: Layout> (
         if error {
             next_intflag.error = 1;
         }
+
+        // Clear the interrupt flags when the user reenables the evaluator
+        if next_user_enable {
+            next_intflag.ready = 0;
+            next_intflag.error = 0;
+        }
     }
 
     // Read logic
