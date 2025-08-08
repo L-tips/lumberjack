@@ -8,7 +8,6 @@ filesets:
     files:
       - target/veryl/types.sv
       - target/veryl/csr_types.sv
-      - target/veryl/tests/common/test_layout.sv
       - target/veryl/forest_top.sv
       - target/veryl/forest.sv
       - target/veryl/tree.sv
@@ -23,6 +22,5 @@ filesets:
 
 targets:
   default:
-    filesets:
-      - rtl
+    filesets: [rtl]
     toplevel: lumberjack_ForestTop
