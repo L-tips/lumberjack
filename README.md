@@ -56,6 +56,10 @@ Pipelined protocol, as described in the [Wishbone B4 specification](https://cdn.
 The core has two memory ports: one slave port, called the Control port, which exposes the CSRs to the system, as well as one master port, called the DMA port, which is
 used to fetch the forest's nodes from the system's memory.
 
+| ![Node layout](images/lumberjack_arch_v0.1.svg) |
+|:--:| 
+| *General core architecture* |
+
 # Integration
 
 ## Forest model memory format
