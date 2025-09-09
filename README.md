@@ -82,7 +82,189 @@ The RF evaluator uses a variation of the memory representation described in \[1\
 
 An example integration to the [Ibex core](https://github.com/lowRISC/ibex) can be found here: https://github.com/L-tips/ibex-demo-system/tree/lumberjack-peripheral. Note that we offer protocol converters between the native Ibex memory Wishbone pipelined interconnects in the `src/ibex_bus` directory. For integration on simple systems which do not include a multi-master memory bus arbiter, we also offer a self-arbiter module (`src/self_arbiter.veryl`), which can be used to manage bus access between the Control and DMA ports. The self-arbiter always gives priority to the Control port.
 
-## Registers
+The core can be imported as a native Veryl library (preferred), or as a FuseSOC core. If using FuseSOC, an intermediate, manual (for now) build step is necessary to compile the Veryl source into generated SystemVerilog.
+
+## Software integration
+
+We offer an SVD specification of the CSR map, which can be used to automatically generate software bindings. See `lumberjack_peripheral.svd`.
+
+## Register map
+
+| Offset | Name          | Description                                 | Access      | Reset Value  |
+|--------|--------------|---------------------------------------------|-------------|--------------|
+| 0x0000 | CTRL         | Control and status                          | RW / RO     | 0x0000_0000  |
+| 0x0004 | CTRL_SET     | Set individual bits of CTRL                 | RW / RO     | 0x0000_0000  |
+| 0x0008 | CTRL_CLR     | Clear individual bits of CTRL               | RW / RO     | 0x0000_0000  |
+| 0x000C | NUM_TREES    | Number of trees in forest                   | RW          | 0x0000_0000  |
+| 0x0010 | FOREST_START | Address of first node in the forest         | RW          | 0x0000_0000  |
+| 0x0014 | NUM_FEATURES | Number of features in forest                | RW          | 0x0000_0000  |
+| 0x0018 | FEATURES_START | Address of first feature for prediction   | RW          | 0x0000_0000  |
+| 0x001C | PREDICTION   | Predicted class                             | RO          | 0x0000_0000  |
+| 0x0020 | VOTES        | Number of votes for predicted class         | RO          | 0x0000_0000  |
+| 0x0024 | INTEN_SET    | Set bits of interrupt enable register       | RW          | 0x0000_0000  |
+| 0x0028 | INTEN_CLR    | Clear bits of interrupt enable register     | RW          | 0x0000_0000  |
+| 0x002C | INTFLAG      | Interrupt flags                             | RW          | 0x0000_0000  |
+| 0x0030 | PERF         | Performance statistics                      | RO          | 0x0000_0000  |
+
+## Register Details
+
+### CTRL (0x0000) – Control and status
+```
+31                  2   1     0
++--------------------+------+----+
+|        Reserved    | BUSY | EN |
++--------------------+------+----+
+```
+- **0 EN (RW):** Accelerator enable  
+  - 0: Accelerator disabled  
+  - 1: Accelerator enabled  
+- **1 BUSY (RO):** Accelerator busy status  
+  - 0: Accelerator idle  
+  - 1: Accelerator busy  
+
+---
+
+### CTRL_SET (0x0004) – Set bits in CTRL
+```
+31                  2   1     0
++--------------------+---- -+----+
+|        Reserved    | BUSY | EN |
++--------------------+---- -+----+
+```
+- **0 EN (RW):** Writing 1 sets the Accelerator Enable bit (enables accelerator). Writing 0 has no effect.
+- **1 BUSY (RO):** Accelerator busy status (read-only)
+
+---
+
+### CTRL_CLR (0x0008) – Clear bits in CTRL
+```
+31                  2   1     0
++--------------------+---- -+----+
+|        Reserved    | BUSY | EN |
++--------------------+---- -+----+
+```
+- **0 EN (RW):** Writing 1 clears the Accelerator Enable bit (disables accelerator). Writing 0 has no effect
+- **1 BUSY (RO):** Accelerator busy status (read-only)
+
+---
+
+### NUM_TREES (0x000C)
+```
+31                             0
++--------------------------------+
+|              NUM               |
++--------------------------------+
+```
+- **[31:0] NUM (RW):** Number of trees in forest
+
+---
+
+### FOREST_START (0x0010)
+```
+31                             0
++--------------------------------+
+|             ADDR               |
++--------------------------------+
+```
+- **[31:0] ADDR (RW):** Address of the first node in the forest
+
+---
+
+### NUM_FEATURES (0x0014)
+```
+31                             0
++--------------------------------+
+|              NUM               |
++--------------------------------+
+```
+- **[31:0] NUM (RW):** Number of features in the forest
+
+---
+
+### FEATURES_START (0x0018)
+```
+31                             0
++--------------------------------+
+|             ADDR               |
++--------------------------------+
+```
+- **[31:0] ADDR (RW):** Address of the first feature used for prediction
+
+---
+
+### PREDICTION (0x001C)
+```
+31                             0
++--------------------------------+
+|             CLASS              |
++--------------------------------+
+```
+- **[31:0] CLASS (RO):** Predicted class
+
+---
+
+### VOTES (0x0020)
+```
+31                             0
++--------------------------------+
+|              NUM               |
++--------------------------------+
+```
+- **[31:0] NUM (RO):** Votes for the predicted class
+
+---
+
+### INTEN_SET (0x0024)
+```
+31                 2   1     0
++-------------------+-----+-----+
+|     Reserved      | ERR | RDY |
++-------------------+-----+-----+
+```
+- **0 READY (RW):** Writing 1 sets the Ready Interrupt Enable bit (enables the interrupt). Writing 0 has no effect.
+- **1 ERROR (RW):** Writing 1 sets the Error Interrupt Enable bit (enables the interrupt). Writing 0 has no effect.
+
+---
+
+### INTEN_CLR (0x0028)
+```
+31                 2   1     0
++-------------------+-----+-----+
+|     Reserved      | ERR | RDY |
++-------------------+-----+-----+
+```
+- **0 READY (RW):** Writing 1 clears the Ready Interrupt Enable bit (disables the interrupt). Writing 0 has no effect.
+- **1 ERROR (RW):** Writing 1 clears the Error Interrupt Enable bit (disables the interrupt). Writing 0 has no effect.
+
+---
+
+### INTFLAG (0x002C)
+```
+31                 2   1     0
++-------------------+-----+-----+
+|     Reserved      | ERR | RDY |
++-------------------+-----+-----+
+```
+- **0 READY (RW):** Ready interrupt flag. This flag is set when a classification is completed.
+  This flag is cleared when reading the PREDICTION register.
+  Writing a zero to this bit has no effect.
+  Writing a one to this bit will clear the flag.
+- **1 ERROR (RW):** Error interrupt flag. This flag is set when any error is detected.
+  Writing a zero to this bit has no effect.
+  Writing a one to this bit will clear the flag.
+
+---
+
+### PERF (0x0030)
+```
+31                             0
++--------------------------------+
+|            CYCCNT              |
++--------------------------------+
+```
+- **[31:0] CYCCNT (RO):** Cycle count for the last prediction.
+
+
 
 ## Optimization
 
