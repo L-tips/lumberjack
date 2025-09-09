@@ -1,12 +1,13 @@
 # Lumberjack
 
 ## A hardware acceleration framework for random forests
+The Lumberjack core is a hardware module designed to efficiently evaluate random forest machine learning models. It is implemented in Veryl [Veryl](https://veryl-lang.org) and intended for integration into SoCs, FPGAs, or ASICs. The accelerator offloads the computationally intensive task of traversing decision trees and aggregating their predictions, providing fast and deterministic inference for embedded and real-time applications.
 
 # Getting started
 
 ## Dependencies
 
-This project is written in [Veryl](https://veryl-lang.org). It is a modern hardware description language, which compiles down to SystemVerilog.
+This project is written in [Veryl](https://veryl-lang.org), which is a modern hardware description language that compiles down to SystemVerilog.
 
 ### Building
 
@@ -49,26 +50,99 @@ Alternatively, you can use the pre-built Docker image that includes the toolchai
 
 # Design and Architecture
 
-The random forest (RF) evaluator is comprised of three main blocks: the tree evaluator, which evaluates a single tree in the forest, the forest evaluator, which schedules
-the tree evaluator, and the interface block, which presents control and status registers (CSRs) via a standard, memory-mapped interface. It natively supports the Wishbone
-Pipelined protocol, as described in the [Wishbone B4 specification](https://cdn.opencores.org/downloads/wbspec_b4.pdf).
-
-The core has two memory ports: one slave port, called the Control port, which exposes the CSRs to the system, as well as one master port, called the DMA port, which is
-used to fetch the forest's nodes from the system's memory.
+The random forest (RF) evaluator is comprised of three main blocks: the tree evaluator, which evaluates a single tree in the forest, the forest evaluator, which orchestrates the tree evaluator, and the interface block, which presents control and status registers (CSRs) via a standard, memory-mapped interface. It natively supports the Wishbone Pipelined protocol, as described in the [Wishbone B4 specification](https://cdn.opencores.org/downloads/wbspec_b4.pdf).
 
 | ![Node layout](images/lumberjack_arch_v0.1.svg) |
 |:--:| 
 | *General core architecture* |
 
+**Top-Level Module: `ForestTop`**
+
+### Interface signals
+* Clock and reset signals.
+* Wishbone bus slave (control port) for accessing control and status registers.
+* Wishbone bus master (DMA port) for accessing RAM (forest and feature data).
+* Interrupt output for signaling completion or error.
+
+### Submodules
+* **CSR Interface (`csr.veryl`):** Handles configuration, status, and control via registers.
+* **Forest Engine (`forest.veryl`):** Orchestrates the evaluation of all trees in the forest, and aggregates the results.
+* **Tree Predictor (`tree.veryl`):** Evaluates a single decision tree.
+* **Floating Point Comparator (`float_leq.veryl`):** Compares feature values to split thresholds using the 32-bit IEEE754 format.
+* **(Optional) Bus Adapters (`ibex_bus/`):** Adapts Wishbone to Ibex bus if needed.
+* **(Optional) Self Arbiter (`self_arbiter.veryl`):** Manages bus access between control and DMA ports if the system memory interface doesn't
+  handle multiple masters internally.
+
+### Operating Principle
+
+* **Initialization:** the host processor configures the accelerator via the CSR interface:
+  * Loads the forest structure and feature data into RAM.
+  * Sets the number of trees, feature count, and start addresses.
+  * Enables the accelerator by setting the ENABLE bit in the control register.
+
+* **Feature Fetch:** upon receiving the ENABLE signal, the accelerator:
+  * Reads the feature vector from RAM using DMA.
+  * Caches the features for fast access during tree evaluation.
+
+* **Tree Evaluation:** the forest module iterates over each tree in the forest:
+  * For each tree, the tree module traverses nodes starting from the root.
+  * At each node, the feature value is compared to the split threshold using the FloatLeq comparator.
+  * The result determines whether to follow the left or right branch.
+  * Traversal continues until a leaf node (prediction) is reached.
+
+* **Voting and Aggregation**
+  * Each tree produces a class prediction.
+  * The accelerator aggregates votes from all trees into a scratchpad RAM.
+  * The class with the highest vote count is selected as the final prediction.
+
+* **Completion and Interrupt:** when all trees have been evaluated:
+  * The final prediction and vote counts are written to status registers.
+  * The READY signal is asserted.
+  * An interrupt is generated to notify the host processor.
+
+* **Host Interaction**
+  * The host reads the prediction and status via the CSR interface.
+  * The accelerator can be reconfigured or reset for subsequent inferences.
+
+### Key Features
+* RAM is accessed via DMA.
+* Number of trees, features, and memory addresses are adjustable at compile-time.
+* All 32-bit IEEE754 float cases for number comparison are handled, including NaN, ±Inf, and ±0.0.
+* Interrupts for completion or error signaling.
+* (Optional) Bus arbitrator ensures safe access to shared memory resources when the host doesn't provide one.
+
+### Data Flow
+1. Configuration: Host writes to CSRs.
+1. Feature Fetch: Accelerator reads features from RAM.
+1. Tree Traversal: Each tree is evaluated using feature data.
+1. Voting: Predictions are aggregated.
+1. Result: Prediction and votes are written to CSRs; interrupt is raised.
+
+### Error Handling
+* Illegal forest structure detection: Emits errors if an illegal forest structure is detected.
+  In practice, the evaluator checks that each node only points to nodes with a higher index than itself.
+* (**TODO**) NaN/Inf Detection: The comparator detects and handles special float values.
+* (**TODO**) Bus Errors: Errors on RAM access are flagged in status registers.
+
+### Performance
+The integrated cycle counter can be used for debugging or benchmarking.
+
+### Example Workflow
+1. Load Forest and Features: Host writes forest and feature data to RAM.
+1. Configure Accelerator: Host sets CSRs (number of trees, addresses, etc.).
+1. Start Evaluation: Host sets ENABLE bit.
+1. Wait for Interrupt: Host waits for completion interrupt.
+1. Read Results: Host reads prediction and vote counts from CSRs.
+
 # Integration
 
-## Forest model memory format
+## Random Forest memory format
 
 The RF evaluator uses a variation of the memory representation described in \[1\]. The `forest-optimizer` tool ([available on Github](https://github.com/L-tips/embedded-random-forest/)) can be used to convert random forests to the format expected by this core.
 
-**TODO**: Full forest layout, including header
-
-**TODO**: Header layout
+* **Forest Header:** Contains metadata (number of trees and feature count).
+* **Node Layout:** Each node encodes split feature, threshold, branch pointers, and prediction flags.
+* **Feature Vector:** Stored as a contiguous array of 32-bit floats in memory.
 
 | ![Node layout](images/node_layout.svg) |
 |:--:| 
