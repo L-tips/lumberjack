@@ -43,9 +43,9 @@ The waveform outputs are available in `target/waveform`.
 if using Windows, we recommend using [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Dependencies should preferably be installed with your
 distribution's package manager.
 
-## Docker image
+## WIP: Docker image
 
-Alternatively, you can use the pre-built Docker image that includes the toolchain needed to build/simulate the project (WIP -- not yet available).
+Alternatively, you can use the pre-built Docker image that includes the toolchain needed to build/simulate the project (not yet available).
 
 # Design and Architecture
 
@@ -78,12 +78,15 @@ The RF evaluator uses a variation of the memory representation described in \[1\
 |:--:| 
 | *Layout of the IDX field (bits)* |
 
+## Integrating Lumberjack to an existing design
+
+An example integration to the [Ibex core](https://github.com/lowRISC/ibex) can be found here: https://github.com/L-tips/ibex-demo-system/tree/lumberjack-peripheral. Note that we offer protocol converters between the native Ibex memory Wishbone pipelined interconnects in the `src/ibex_bus` directory. For integration on simple systems which do not include a multi-master memory bus arbiter, we also offer a self-arbiter module (`src/self_arbiter.veryl`), which can be used to manage bus access between the Control and DMA ports. The self-arbiter always gives priority to the Control port.
+
 ## Registers
 
 ## Optimization
 
-Note that this project is still a work-in-progress, and is expected to evolve over time. Breaking changes may (will) occur to the interfaces exposed by the core, the expected
-forest memory representation, and more.
+Note that this project is still a work-in-progress, and is expected to evolve over time. As the project evolves and is optimized further breaking changes may (read: will) occur to the interfaces exposed by the core, the expected forest memory representation, and more.
 
 # References
 
