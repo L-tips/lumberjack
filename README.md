@@ -1,7 +1,7 @@
 # Lumberjack
 
 ## A hardware acceleration framework for random forests
-The Lumberjack core is a hardware module designed to efficiently evaluate random forest machine learning models. It is implemented in Veryl [Veryl](https://veryl-lang.org) and intended for integration into SoCs, FPGAs, or ASICs. The accelerator offloads the computationally intensive task of traversing decision trees and aggregating their predictions, providing fast and deterministic inference for embedded and real-time applications.
+The Lumberjack core is a hardware module designed to efficiently evaluate random forest machine learning models. It is implemented in [Veryl](https://veryl-lang.org) and intended for integration into SoCs, FPGAs, or ASICs. The accelerator offloads the computationally intensive task of traversing decision trees and aggregating their predictions, providing fast and deterministic inference for embedded and real-time applications.
 
 # Getting started
 
