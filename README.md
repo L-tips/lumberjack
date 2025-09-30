@@ -111,13 +111,6 @@ The random forest (RF) evaluator is comprised of three main blocks: the tree eva
 * Interrupts for completion or error signaling.
 * (Optional) Bus arbitrator ensures safe access to shared memory resources when the host doesn't provide one.
 
-### Data Flow
-1. Configuration: Host writes to CSRs.
-1. Feature Fetch: Accelerator reads features from RAM.
-1. Tree Traversal: Each tree is evaluated using feature data.
-1. Voting: Predictions are aggregated.
-1. Result: Prediction and votes are written to CSRs; interrupt is raised.
-
 ### Error Handling
 * Illegal forest structure detection: Emits errors if an illegal forest structure is detected.
   In practice, the evaluator checks that each node only points to nodes with a higher index than itself.
