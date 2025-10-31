@@ -16,11 +16,11 @@ fmt:
     veryl fmt --quiet
 
 test TEST *extra_args:
-    veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
+    uv run veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
         {{justfile_directory()}}/src/*.veryl \
         {{justfile_directory()}}/src/ibex_bus/*.veryl \
         {{justfile_directory()}}/src/tests/common/*.veryl \
         --wave --quiet {{extra_args}}
 
 test-all *extra_args:
-    veryl test --wave --quiet {{extra_args}}
+    uv run veryl test --wave --quiet {{extra_args}}
