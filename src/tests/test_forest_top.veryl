@@ -26,7 +26,7 @@ module TestForestTop (
         CSR_ADDR_WIDTH: 32                         ,
         CSR_DATA_WIDTH: 32                         ,
     ) (
-        csr_in : control_bus,
+        csr_in_cyc: control_bus.cyc,
         ram_in : ram_bus    ,
         ram_out: ram_arbiter,
     );
@@ -40,7 +40,9 @@ module TestForestTop (
     );
 
     // Wishbone spec mandates an active high reset
-    let mem_rst: reset_async_high = rst as reset_async_high;
+    // TODO: we're manually converting between rst polarity
+    // because veryl's reset type casting is broken
+    let mem_rst: reset_async_high = !rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
         ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
         DATA_WIDTH: test_layout::RAM_DATA_WIDTH,

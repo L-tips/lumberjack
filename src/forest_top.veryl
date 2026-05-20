@@ -17,7 +17,7 @@ module ForestTop::<L: Layout> (
     interrupt: output logic,
 ) {
     var enable             : logic        ;
-    var done               : bool         ;
+    var done               : lbool        ;
     var forest_start_addr  : L::RamAddr   ;
     var num_trees          : L::TreeIdx   ;
     var features_start_addr: L::RamAddr   ;
@@ -100,7 +100,7 @@ module ForestTop::<L: Layout> (
         csr_wdata              = 0;
         control_port.read_data = 0;
 
-        for i: u32 in 0..4 {
+        for i in 0..4 {
             if control_port.select[i] && control_port.valid_request() {
                 if control_port.write_enable {
                     csr_wdata[(i * 8)+:8] = control_port.write_data[(i * 8)+:8];

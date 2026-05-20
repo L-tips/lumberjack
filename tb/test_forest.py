@@ -8,7 +8,7 @@ import utils
 @cocotb.test()
 async def forest_test(dut):
     # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     await RisingEdge(dut.clk)
 
     # Init and reset
@@ -25,7 +25,7 @@ async def forest_test(dut):
     dut.forest_start_addr.value = 0x8
     dut.num_trees.value = 2
 
-    dut.features_start_addr = 0x68
+    dut.features_start_addr.value = 0x68
     dut.num_features.value = 3
 
     await RisingEdge(dut.clk)

@@ -20,7 +20,6 @@ def float_to_hex(f):
     return f"0x{as_bytes:08x}"
 
 
-@cocotb.coroutine
 async def init_memory(mem, hexfile):
     with open(hexfile, "r", encoding="UTF-8") as file:
         hexfile = file.read()

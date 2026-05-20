@@ -8,8 +8,8 @@ module CsrInterface::<L: Layout> (
 
     // --- CSR interface signals ---
     address: input  csr_types::Address,
-    write  : input  bool              , // Write enable
-    read   : input  bool              , // Read enable
+    write  : input  lbool              , // Write enable
+    read   : input  lbool              , // Read enable
     wdata  : input  csr_types::Data   , // Write data
     rdata  : output csr_types::Data   , // Read data
 

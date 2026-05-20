@@ -6,21 +6,21 @@ module FloatLeq (
     a: input logic<32>,
     b: input logic<32>,
 
-    leq: output bool,
+    leq: output lbool,
 ) {
     // NaN detection
-    let a_nan: bool = a[30:23] == 8'hff && a[22:0] != 0;
-    let b_nan: bool = b[30:23] == 8'hff && b[22:0] != 0;
+    let a_nan: lbool = a[30:23] == 8'hff && a[22:0] != 0;
+    let b_nan: lbool = b[30:23] == 8'hff && b[22:0] != 0;
 
     // Zero detection
-    let a_zero: bool = a[30:0] == 31'h00000000;
-    let b_zero: bool = b[30:0] == 31'h00000000;
+    let a_zero: lbool = a[30:0] == 31'h00000000;
+    let b_zero: lbool = b[30:0] == 31'h00000000;
 
     // Extract sign bits
-    let a_neg: bool = a[msb];
-    let b_neg: bool = b[msb];
+    let a_neg: lbool = a[msb];
+    let b_neg: lbool = b[msb];
 
-    var leq_raw: bool;
+    var leq_raw: lbool;
     always_comb {
         if a_neg != b_neg {
             // If signs differ, negative is less

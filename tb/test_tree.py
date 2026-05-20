@@ -31,7 +31,7 @@ async def reset(dut, mem_file):
 @cocotb.test()
 async def tree_test(dut):
     # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
     await reset(dut, "single_tree_2_nodes.hex")
 
@@ -90,11 +90,11 @@ async def tree_test(dut):
     # According to the tree and the input
     # feature, predicted class should
     # be 2
-    assert dut.prediction == 2
+    assert dut.prediction.value == 2
 
     # Make sure the mem bus is released
-    assert dut.ram_bus.cyc == 0
-    assert dut.ram_bus.stb == 0
+    assert dut.ram_bus.cyc.value == 0
+    assert dut.ram_bus.stb.value == 0
 
     # Now let's try to take another branch.
     # Always return 6.0_f32 as the input feature
@@ -115,7 +115,7 @@ async def tree_test(dut):
     assert dut.ready.value == 1
     assert dut.busy.value == 0
     # Predicted class should be 0
-    assert dut.prediction == 0
+    assert dut.prediction.value == 0
 
     # Let's test the behavior when
     # we stall the bus.
@@ -173,7 +173,7 @@ async def tree_test(dut):
 @cocotb.test()
 async def rejects_circular_trees(dut):
     # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
     await reset(dut, "forest_1_tree_2_nodes_circular.hex")
 

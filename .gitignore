@@ -6,5 +6,7 @@ dependencies/
 # Surfer states
 *.surf.ron
 
+.vscode/
+
 .venv
 .python-version

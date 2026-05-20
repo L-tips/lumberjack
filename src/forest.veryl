@@ -10,13 +10,13 @@ pub module Forest::<L: Layout> (
     features_start_addr: input L::RamAddr   ,
     num_features       : input L::FeatureIdx,
 
-    busy      : output bool         ,
-    ready     : output bool         ,
-    error     : output bool         ,
+    busy      : output lbool        ,
+    ready     : output lbool        ,
+    error     : output lbool        ,
     prediction: output L::Prediction,
     num_votes : output L::NumVotes  ,
 
-    done: output bool,
+    done: output lbool,
 
     dma_port: modport memutils::Wishbone::master,
 ) {
@@ -36,14 +36,26 @@ pub module Forest::<L: Layout> (
 
     inst ram_bus_mux: memutils::Wishbone [2] #( ADDR_WIDTH: L::RAM_ADDR_WIDTH, DATA_WIDTH: L::RAM_DATA_WIDTH );
 
+    var state             : State        ;
+    var next_state        : State        ;
+    var fetch_counter     : L::FeatureIdx;
+    var next_fetch_counter: L::FeatureIdx;
+
+    var done_reg : lbool;
+    var next_done: lbool;
+    assign done      = next_done;
+
+    var feature_ptr     : L::RamAddr;
+    var next_feature_ptr: L::RamAddr;
+
     // If we're evaluating trees, we delegate control of
     // the RAM bus to the tree evaluater. Otherwise we keep
     // control so we can use it to fetch features.
     let master_select: logic = state == State::evaluate_trees;
 
     // New evaluation request incoming
-    let start_eval    : bool = state == State::idle && enable && !done_reg;
-    let fetch_complete: bool = fetch_counter == num_features - 1;
+    let start_eval    : lbool = state == State::idle && enable && !done_reg;
+    let fetch_complete: lbool = fetch_counter == num_features - 1;
 
     inst ram_demux: memutils::WishboneDemux #(
         ADDR_WIDTH: L::RAM_ADDR_WIDTH,
@@ -54,18 +66,6 @@ pub module Forest::<L: Layout> (
         slave        : dma_port   ,
         master_select             ,
     );
-
-    var state             : State        ;
-    var next_state        : State        ;
-    var fetch_counter     : L::FeatureIdx;
-    var next_fetch_counter: L::FeatureIdx;
-
-    var done_reg : bool;
-    var next_done: bool;
-    assign done      = next_done;
-
-    var feature_ptr     : L::RamAddr;
-    var next_feature_ptr: L::RamAddr;
 
     inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
     inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
@@ -82,9 +82,17 @@ pub module Forest::<L: Layout> (
         read : feature_read_port ,
     );
 
-    var tree_ready: bool;
-    var tree_busy : bool;
-    var tree_error: bool;
+    var tree_ready: lbool;
+    var tree_busy : lbool;
+    var tree_error: lbool;
+
+    var tree_idx     : L::TreeIdx;
+    var next_tree_idx: L::TreeIdx;
+
+    var start_tree     : lbool;
+    var next_start_tree: lbool;
+
+    var next_ready: lbool;
 
     let tree_node_addr : L::RamAddr    = tree_idx * L::NODE_SIZE + forest_start_addr;
     var tree_prediction: L::Prediction;
@@ -111,14 +119,6 @@ pub module Forest::<L: Layout> (
         dma_port    : ram_bus_mux[1]      ,
     );
 
-    var tree_idx     : L::TreeIdx;
-    var next_tree_idx: L::TreeIdx;
-
-    var start_tree     : bool;
-    var next_start_tree: bool;
-
-    var next_ready: bool;
-
     inst votes_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
     inst votes_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
 
@@ -138,7 +138,7 @@ pub module Forest::<L: Layout> (
     var votes     : VoteResult;
     var next_votes: VoteResult;
 
-    var prev_wb_complete: bool      ;
+    var prev_wb_complete: lbool     ;
     var addr            : L::RamAddr;
     var next_addr       : L::RamAddr;
 

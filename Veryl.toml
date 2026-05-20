@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["Justin Beaurivage <code@beaurivage.io>"]
 
 [dependencies]
-memutils = { version = "0.3.0", git = "https://github.com/jbeaurivage/memutils-veryl.git" }
-# memutils = { version = "0.3.0", path = "../memutils-veryl" }
+# memutils = { version = "0.4.0", git = "https://github.com/jbeaurivage/memutils-veryl.git" }
+memutils = { version = "0.4.0", path = "../memutils-veryl" }
 
 [build]
 clock_type = "posedge"
@@ -16,7 +16,8 @@ target = { type = "directory", path = "target/veryl" }
 
 [test]
 waveform_target = { type = "directory", path = "target/waveform" }
-waveform_format = "fst"
+# waveform_format = "fst"
+waveform_format = "vcd"
 include_files = [
     "tb/utils.py",
     "tb/test_data/single_tree_2_nodes.hex",

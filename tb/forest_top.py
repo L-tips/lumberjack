@@ -48,7 +48,7 @@ def debug_mark(dut, value):
 @cocotb.test()
 async def forest_top_test(dut):
     # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     await RisingEdge(dut.clk)
 
     # Init and reset
@@ -200,7 +200,7 @@ async def forest_top_test(dut):
 
     await RisingEdge(dut.clk)
 
-    assert dut.interrupt_line == 1
+    assert dut.interrupt_line.value == 1
 
     # Clear the interrupt by writing a 1 to INTFLAG
     begin_write(dut, 0x2C, 0b01, 0b1)
@@ -209,11 +209,11 @@ async def forest_top_test(dut):
 
     finish_txn(dut)
 
-    assert dut.interrupt_line == 1
+    assert dut.interrupt_line.value == 1
 
     await RisingEdge(dut.clk)
 
-    assert dut.interrupt_line == 0
+    assert dut.interrupt_line.value == 0
 
     # Disable the interrupt
     begin_write(dut, 0x28, 0b01, 0b1)
@@ -233,7 +233,7 @@ async def forest_top_test(dut):
     await utils.wait_with_timeout(dut.clk, dut.forest.ready, 1, 50)
 
     # Interrupt should not fire
-    assert dut.interrupt_line == 0
+    assert dut.interrupt_line.value == 0
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -249,7 +249,7 @@ async def forest_top_test(dut):
 @cocotb.test()
 async def rejects_circular_forests(dut):
     # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     await RisingEdge(dut.clk)
 
     # Init and reset
@@ -304,13 +304,13 @@ async def rejects_circular_forests(dut):
 
     await RisingEdge(dut.clk)
     # Interrupt should fire
-    assert dut.interrupt_line == 1
+    assert dut.interrupt_line.value == 1
 
     await n_cycles(dut.clk, 4)
 
     # Check that the interrupt is still on
     # a few cycles later
-    assert dut.interrupt_line == 1
+    assert dut.interrupt_line.value == 1
 
     # Enable
     begin_write(dut, 0x0, 0x1, 0b1)
@@ -322,4 +322,4 @@ async def rejects_circular_forests(dut):
     await RisingEdge(dut.clk)
 
     # Reenabling the evaluator should have cleared the interrupts
-    assert dut.interrupt_line == 0
+    assert dut.interrupt_line.value == 0

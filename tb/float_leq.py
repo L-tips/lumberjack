@@ -21,7 +21,7 @@ SPECIAL_VALUES = [
 # Test that an unknown instruction reverts to default
 @cocotb.test()
 async def test_sorting(dut):
-    await Timer(1, units="ns")
+    await Timer(1, unit="ns")
     
     # Generate random pairs of floats across the full range of f32
     random_pairs = [(random.uniform(-3.4028235e38, 3.4028235e38), random.uniform(-3.4028235e38, 3.4028235e38)) for _ in range(990)]
@@ -44,7 +44,7 @@ async def test_sorting(dut):
         dut.a.value = float_a_bits
         dut.b.value = float_b_bits
 
-        await Timer(1, units="ns")
+        await Timer(1, unit="ns")
 
         expected_result = pair[0] <= pair[1]
         assert dut.leq.value == expected_result, f"Mismatch: {pair[0]} <= {pair[1]} (expected {expected_result}, got {dut.leq.value})"

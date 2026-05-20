@@ -10,8 +10,8 @@ module TestForest (
     features_start_addr: input test_layout::RamAddr   ,
     num_features       : input test_layout::FeatureIdx,
 
-    busy : output bool,
-    ready: output bool,
+    busy : output lbool,
+    ready: output lbool,
 
     prediction: output test_layout::Prediction,
     num_votes : output test_layout::NumVotes  ,
@@ -21,7 +21,10 @@ module TestForest (
     inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
 
     // Wishbone spec mandates an active high reset
-    let mem_rst: reset_async_high = rst as reset_async_high;
+    // TODO: we're manually converting between rst polarity
+    // because veryl's reset type casting is broken
+    let mem_rst: reset_async_high = !rst as reset_async_high;
+    
     inst ram: memutils::WishboneRam #(
         ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
         DATA_WIDTH: test_layout::RAM_DATA_WIDTH,

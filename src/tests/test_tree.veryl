@@ -1,7 +1,7 @@
 module TestTree (
     clk              : input clock               ,
     rst              : input reset               ,
-    start            : input bool                ,
+    start            : input lbool               ,
     forest_start_addr: input test_layout::RamAddr,
     first_node_addr  : input test_layout::RamAddr,
 ) {
@@ -10,7 +10,9 @@ module TestTree (
     inst feature_bus: memutils::ScratchpadRamPort #( ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH, DATA_WIDTH: test_layout::FEATURE_WIDTH );
     inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
 
-    let mem_rst: reset_async_high = rst as reset_async_high;
+    // TODO: we're manually converting between rst polarity
+    // because veryl's reset type casting is broken
+    let mem_rst: reset_async_high = !rst as reset_async_high;
     inst ram: memutils::WishboneRam #(
         ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
         DATA_WIDTH: test_layout::RAM_DATA_WIDTH,

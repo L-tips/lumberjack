@@ -2,13 +2,13 @@ module TreePredictor::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
-    start            : input bool      ,
+    start            : input lbool      ,
     first_node_addr  : input L::RamAddr,
     forest_start_addr: input L::RamAddr,
 
-    ready     : output bool         ,
-    busy      : output bool         ,
-    error     : output bool         ,
+    ready     : output lbool         ,
+    busy      : output lbool         ,
+    error     : output lbool         ,
     prediction: output L::Prediction,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
@@ -40,20 +40,20 @@ module TreePredictor::<L: Layout> (
 
     var next_node_ptr: L::RamAddr;
 
-    var ready_reg : bool;
-    var next_ready: bool;
+    var ready_reg : lbool;
+    var next_ready: lbool;
 
-    var busy_reg : bool;
-    var next_busy: bool;
+    var busy_reg : lbool;
+    var next_busy: lbool;
 
-    var err_reg : bool;
-    var next_err: bool;
+    var err_reg : lbool;
+    var next_err: lbool;
 
     var next_prediction: L::Prediction;
     // TODO: hardcoded
     var next_fetched_node: logic<128>;
 
-    var is_prediction: bool;
+    var is_prediction: lbool;
 
     var prev_wb_complete: logic     ;
     var addr            : L::RamAddr;

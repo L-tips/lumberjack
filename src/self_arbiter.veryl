@@ -1,8 +1,8 @@
 /// A simple arbiter, to be used in
 /// systems where the forest accelerator is connected
 // to the same bus twice, both the control
-/// bus as a slave, and the DMA port as a master, with.
-/// not arbiter in between them.
+/// bus as a slave, and the DMA port as a master, with
+/// no arbiter in between them.
 ///
 /// Priority will always be given to the control bus.
 module SelfArbiter #(
@@ -11,13 +11,13 @@ module SelfArbiter #(
     param CSR_DATA_WIDTH: u8 = 32,
     param CSR_ADDR_WIDTH: u8 = 32,
 ) (
-    csr_in : modport memutils::Wishbone::slave ,
+    csr_in_cyc : input lbool ,
     ram_out: modport memutils::Wishbone::master,
     ram_in : modport memutils::Wishbone::slave ,
 ) {
     always_comb {
         ram_in       <> ram_out;
-        ram_in.stall =  ram_out.stall || csr_in.cyc;
+        ram_in.stall =  ram_out.stall || csr_in_cyc;
     }
 
 }
