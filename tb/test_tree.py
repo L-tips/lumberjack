@@ -36,7 +36,7 @@ async def tree_test(dut):
     await reset(dut, "single_tree_2_nodes.hex")
 
     # Always return 11.0_f32 as the feature
-    dut.feature_bus.data.value = 0x41300000
+    dut.feature_bus.data.value = 0x4130
 
     await RisingEdge(dut.clk)
 
@@ -50,11 +50,11 @@ async def tree_test(dut):
     dut.start.value = 0
     assert dut.tree.busy.value == 1
 
-    # Takes 4 cycles to fetch the full node
-    await n_cycles(dut.clk, 4)
+    # Takes 2 cycles to fetch the full node
+    await n_cycles(dut.clk, 2)
 
     assert dut.tree.state.value == 1
-    assert dut.tree.fetch_counter.value == 3
+    assert dut.tree.fetch_counter.value == 1
 
     # Plus another cycle to evaluate the node
     await RisingEdge(dut.clk)
@@ -62,7 +62,7 @@ async def tree_test(dut):
     assert dut.tree.state.value == 2
     # We're taking the right branch, which is
     # a node pointer
-    assert dut.tree.next_node_ptr.value == 0x10
+    assert dut.tree.next_node_ptr.value == 0x8
     # Which means we're going to be evaluating
     # another node
     assert dut.tree.next_ready.value == 0
@@ -76,7 +76,7 @@ async def tree_test(dut):
 
     # Again, takes a total of 5 cycles to evaluate
     # the node (4 fetch + 1 execute)
-    await n_cycles(dut.clk, 4)
+    await n_cycles(dut.clk, 2)
 
     assert dut.tree.state.value == 2
     assert dut.tree.busy.value == 1
@@ -99,7 +99,7 @@ async def tree_test(dut):
     # Now let's try to take another branch.
     # Always return 6.0_f32 as the input feature
     # dut.feature_bus.data.value = 0x0000c040
-    dut.feature_bus.data.value = 0x40C00000
+    dut.feature_bus.data.value = 0x40C0
     dut.start.value = 1
 
     await RisingEdge(dut.clk)
@@ -108,9 +108,9 @@ async def tree_test(dut):
 
     # The first node is directly a prediction.
     # Entire prediction sequence should complete
-    # in a total of 6 cycles after START has been
+    # in a total of 4 cycles after START has been
     # set.
-    await n_cycles(dut.clk, 6)
+    await n_cycles(dut.clk, 4)
 
     assert dut.ready.value == 1
     assert dut.busy.value == 0
@@ -149,7 +149,7 @@ async def tree_test(dut):
     assert dut.tree.state.value == 1
 
     # Let's wait for the prediction to complete
-    await n_cycles(dut.clk, 4)
+    await n_cycles(dut.clk, 2)
 
     assert dut.ready.value == 1
     assert dut.busy.value == 0
@@ -159,7 +159,7 @@ async def tree_test(dut):
     # Prediction should never show ready.
 
     dut.start.value = 1
-    await n_cycles(dut.clk, 7)
+    await n_cycles(dut.clk, 5)
 
     # Even though the state is idle,
     assert dut.tree.state.value == 0
@@ -178,7 +178,7 @@ async def rejects_circular_trees(dut):
     await reset(dut, "forest_1_tree_2_nodes_circular.hex")
 
     # Always return 9.0_f32 as the feature
-    dut.feature_bus.data.value = 0x41100000
+    dut.feature_bus.data.value = 0x4110
     dut.forest_start_addr.value = 0x8
     dut.first_node_addr.value = 0x8
 
@@ -190,11 +190,11 @@ async def rejects_circular_trees(dut):
     dut.start.value = 0
     assert dut.tree.busy.value == 1
 
-    # Takes 4 cycles to fetch the full node
-    await n_cycles(dut.clk, 4)
+    # Takes 2 cycles to fetch the full node
+    await n_cycles(dut.clk, 2)
 
     assert dut.tree.state.value == 1
-    assert dut.tree.fetch_counter.value == 3
+    assert dut.tree.fetch_counter.value == 1
 
     # Plus another cycle to evaluate the node
     await RisingEdge(dut.clk)
@@ -205,9 +205,9 @@ async def rejects_circular_trees(dut):
     assert dut.tree.state.value == 1
     assert dut.tree.fetch_counter.value == 0
 
-    # Again, takes a total of 5 cycles to evaluate
-    # the node (4 fetch + 1 execute)
-    await n_cycles(dut.clk, 4)
+    # Again, takes a total of 3 cycles to evaluate
+    # the node (2 fetch + 1 execute)
+    await n_cycles(dut.clk, 2)
 
     assert dut.tree.state.value == 2
     assert dut.tree.busy.value == 1

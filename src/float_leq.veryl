@@ -1,20 +1,20 @@
 /// Perform the lesser-or-equal operation on
-/// two 32-bit IEEE754 formatted floats.
+/// two bfloat16 IEEE754 formatted floats.
 ///
 /// Outputs: true if a <= b, false otherwise.
 module FloatLeq (
-    a: input logic<32>,
-    b: input logic<32>,
+    a: input logic<16>,
+    b: input logic<16>,
 
     leq: output lbool,
 ) {
     // NaN detection
-    let a_nan: lbool = a[30:23] == 8'hff && a[22:0] != 0;
-    let b_nan: lbool = b[30:23] == 8'hff && b[22:0] != 0;
+    let a_nan: lbool = a[msb - 1:msb - 8] == 8'hff && a[6:0] != 0;
+    let b_nan: lbool = b[msb - 1:msb - 8] == 8'hff && b[6:0] != 0;
 
     // Zero detection
-    let a_zero: lbool = a[30:0] == 31'h00000000;
-    let b_zero: lbool = b[30:0] == 31'h00000000;
+    let a_zero: lbool = a[msb - 1:0] == 15'h0;
+    let b_zero: lbool = b[msb - 1:0] == 15'h0;
 
     // Extract sign bits
     let a_neg: lbool = a[msb];

@@ -1,7 +1,8 @@
 import cocotb
 from cocotb.triggers import RisingEdge
 import struct
-
+import numpy as np
+import ml_dtypes
 
 def binary_to_hex(bin_str):
     # Convert binary string to hexadecimal
@@ -12,6 +13,11 @@ def binary_to_hex(bin_str):
 
 def float_to_bits(f):
     return struct.unpack(">I", struct.pack(">f", f))[0]
+
+# Convert a native python float into a bitwise representation of the bfloat16 format
+def float_to_bf16_bits(f):
+    x = np.array(f, dtype = ml_dtypes.bfloat16)
+    return int(x.view(np.uint16))
 
 
 def float_to_hex(f):

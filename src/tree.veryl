@@ -2,13 +2,13 @@ module TreePredictor::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
-    start            : input lbool      ,
+    start            : input lbool     ,
     first_node_addr  : input L::RamAddr,
     forest_start_addr: input L::RamAddr,
 
-    ready     : output lbool         ,
-    busy      : output lbool         ,
-    error     : output lbool         ,
+    ready     : output lbool        ,
+    busy      : output lbool        ,
+    error     : output lbool        ,
     prediction: output L::Prediction,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
@@ -22,15 +22,15 @@ module TreePredictor::<L: Layout> (
 
     var node_ptr: L::RamAddr;
     // TODO: hardcoded
-    var fetched_node: logic<128>;
+    var fetched_node: logic<64>;
 
     let node: standard_layout::Node = fetched_node as standard_layout::Node;
 
     var state     : State;
     var next_state: State;
     // TODO: hardcoded
-    var fetch_counter     : logic<3>;
-    var next_fetch_counter: logic<3>;
+    var fetch_counter     : logic<1>;
+    var next_fetch_counter: logic<1>;
 
     // Break the node down into its components
     /// Node size in bytes
@@ -51,7 +51,7 @@ module TreePredictor::<L: Layout> (
 
     var next_prediction: L::Prediction;
     // TODO: hardcoded
-    var next_fetched_node: logic<128>;
+    var next_fetched_node: logic<64>;
 
     var is_prediction: lbool;
 
@@ -74,7 +74,7 @@ module TreePredictor::<L: Layout> (
     var branch_left: logic;
 
     // Compare the feature to the split, which
-    // are formatted as IEEE754 32-bit floats
+    // are formatted as IEEE754 bfloat16
     inst pick_branch: FloatLeq (
         a  : feature_port.data,
         b  : node.split       ,
@@ -133,7 +133,7 @@ module TreePredictor::<L: Layout> (
                     // TODO: hardcoded
                     next_fetched_node[fetch_counter * 32+:32] = dma_port.read_data;
 
-                    if fetch_counter == 3 {
+                    if fetch_counter == 1 {
                         // Release the bus for one cycle so it can
                         // potentially process other requests
                         dma_port.stb = false;
