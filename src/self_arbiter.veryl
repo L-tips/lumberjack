@@ -11,9 +11,9 @@ module SelfArbiter #(
     param CSR_DATA_WIDTH: u8 = 32,
     param CSR_ADDR_WIDTH: u8 = 32,
 ) (
-    csr_in_cyc : input lbool ,
-    ram_out: modport memutils::Wishbone::master,
-    ram_in : modport memutils::Wishbone::slave ,
+    csr_in_cyc: input   lbool                     ,
+    ram_out   : modport memutils::Wishbone::master,
+    ram_in    : modport memutils::Wishbone::slave ,
 ) {
     always_comb {
         ram_in       <> ram_out;

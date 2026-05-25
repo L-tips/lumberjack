@@ -18,13 +18,16 @@ module TestForest (
 ) {
     const RAM_SIZE: u64 = 4096;
 
-    inst ram_bus: memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
+    inst ram_bus: memutils::Wishbone #(
+        ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+    );
 
     // Wishbone spec mandates an active high reset
     // TODO: we're manually converting between rst polarity
     // because veryl's reset type casting is broken
     let mem_rst: reset_async_high = !rst as reset_async_high;
-    
+
     inst ram: memutils::WishboneRam #(
         ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
         DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
@@ -36,25 +39,19 @@ module TestForest (
     );
 
     inst forest: Forest::<test_layout> (
-        clk  ,
-        rst  ,
-
-        enable  ,
-
-        forest_start_addr  ,
-        num_trees          ,
-
-        features_start_addr  ,
-        num_features         ,
-
-        ready       ,
-        busy        ,
-        prediction  ,
-        num_votes   ,
-
-        dma_port: ram_bus,
-
-        done: _,
+        clk                         ,
+        rst                         ,
+        enable                      ,
+        forest_start_addr           ,
+        num_trees                   ,
+        features_start_addr         ,
+        num_features                ,
+        ready                       ,
+        busy                        ,
+        prediction                  ,
+        num_votes                   ,
+        dma_port           : ram_bus,
+        done               : _      ,
     );
 }
 

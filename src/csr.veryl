@@ -8,8 +8,8 @@ module CsrInterface::<L: Layout> (
 
     // --- CSR interface signals ---
     address: input  csr_types::Address,
-    write  : input  lbool              , // Write enable
-    read   : input  lbool              , // Read enable
+    write  : input  lbool             , // Write enable
+    read   : input  lbool             , // Read enable
     wdata  : input  csr_types::Data   , // Write data
     rdata  : output csr_types::Data   , // Read data
 
@@ -55,19 +55,19 @@ module CsrInterface::<L: Layout> (
 
     var num_trees_reg : L::TreeIdx;
     var next_num_trees: L::TreeIdx;
-    assign num_trees      = num_trees_reg;
+    assign num_trees = num_trees_reg;
 
     var forest_start_addr_reg : L::RamAddr;
     var next_forest_start_addr: L::RamAddr;
-    assign forest_start_addr      = forest_start_addr_reg;
+    assign forest_start_addr = forest_start_addr_reg;
 
     var num_features_reg : L::FeatureIdx;
     var next_num_features: L::FeatureIdx;
-    assign num_features      = num_features_reg;
+    assign num_features = num_features_reg;
 
     var features_start_addr_reg : L::RamAddr;
     var next_features_start_addr: L::RamAddr;
-    assign features_start_addr      = features_start_addr_reg;
+    assign features_start_addr = features_start_addr_reg;
 
     struct Intflag {
         error: logic,

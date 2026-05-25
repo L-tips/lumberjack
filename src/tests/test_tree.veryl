@@ -7,8 +7,14 @@ module TestTree (
 ) {
     const RAM_SIZE: u64 = 4096;
 
-    inst feature_bus: memutils::ScratchpadRamPort #( ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH, DATA_WIDTH: test_layout::FEATURE_WIDTH );
-    inst ram_bus    : memutils::Wishbone #( ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH, DATA_WIDTH: test_layout::RAM_DATA_WIDTH );
+    inst feature_bus: memutils::ScratchpadRamPort #(
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+    );
+    inst ram_bus: memutils::Wishbone #(
+        ADDR_WIDTH: test_layout::RAM_ADDR_WIDTH,
+        DATA_WIDTH: test_layout::RAM_DATA_WIDTH,
+    );
 
     // TODO: we're manually converting between rst polarity
     // because veryl's reset type casting is broken
@@ -29,21 +35,17 @@ module TestTree (
     var error     : logic                  ;
 
     inst tree: TreePredictor::<test_layout> (
-        clk  ,
-        rst  ,
-
-        forest_start_addr  ,
-        first_node_addr    ,
-
-        start  ,
-
-        ready       ,
-        busy        ,
-        error       ,
-        prediction  ,
-
-        feature_port: feature_bus,
-        dma_port    : ram_bus    ,
+        clk                           ,
+        rst                           ,
+        forest_start_addr             ,
+        first_node_addr               ,
+        start                         ,
+        ready                         ,
+        busy                          ,
+        error                         ,
+        prediction                    ,
+        feature_port     : feature_bus,
+        dma_port         : ram_bus    ,
     );
 }
 

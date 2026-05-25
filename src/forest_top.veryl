@@ -29,24 +29,20 @@ module ForestTop::<L: Layout> (
     var num_votes          : L::NumVotes  ;
 
     inst evaluator: Forest::<L> (
-        clk  ,
-        rst  ,
-
-        enable  ,
-        done    ,
-
+        clk                  ,
+        rst                  ,
+        enable               ,
+        done                 ,
         forest_start_addr    ,
         num_trees            ,
         features_start_addr  ,
         num_features         ,
-
-        busy        ,
-        ready       ,
-        error       ,
-        prediction  ,
-        num_votes   ,
-
-        dma_port  ,
+        busy                 ,
+        ready                ,
+        error                ,
+        prediction           ,
+        num_votes            ,
+        dma_port             ,
     );
 
     // Control port is byte-addressed, but CSRs are word-addressed
@@ -60,28 +56,25 @@ module ForestTop::<L: Layout> (
     let csr_read_req : logic = !control_port.write_enable && control_port.valid_request();
 
     inst csr: CsrInterface::<L> (
-        clk  ,
-        rst  ,
-
-        address: csr_address  ,
-        write  : csr_write_req,
-        read   : csr_read_req ,
-        wdata  : csr_wdata    ,
-        rdata  : csr_rdata    ,
-
-        enable               ,
-        done                 ,
-        num_trees            ,
-        forest_start_addr    ,
-        num_features         ,
-        features_start_addr  ,
-
-        ready       ,
-        busy        ,
-        error       ,
-        prediction  ,
-        num_votes   ,
-        interrupt   ,
+        clk                               ,
+        rst                               ,
+        address            : csr_address  ,
+        write              : csr_write_req,
+        read               : csr_read_req ,
+        wdata              : csr_wdata    ,
+        rdata              : csr_rdata    ,
+        enable                            ,
+        done                              ,
+        num_trees                         ,
+        forest_start_addr                 ,
+        num_features                      ,
+        features_start_addr               ,
+        ready                             ,
+        busy                              ,
+        error                             ,
+        prediction                        ,
+        num_votes                         ,
+        interrupt                         ,
     );
 
     var prev_select: logic<4>;

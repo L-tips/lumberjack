@@ -17,11 +17,5 @@ module ForestTop_std (
     /// Interrupt line
     interrupt: output logic,
 ) {
-    inst top: ForestTop::<standard_layout> (
-        clk           ,
-        rst           ,
-        control_port  ,
-        dma_port      ,
-        interrupt     ,
-    );
+    inst top: ForestTop::<standard_layout> ( clk, rst, control_port, dma_port, interrupt );
 }
