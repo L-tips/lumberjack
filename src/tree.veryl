@@ -22,7 +22,7 @@ module TreePredictor::<L: Layout> (
 
     var node_ptr: L::RamAddr;
     // TODO: hardcoded
-    var fetched_node: logic<64>;
+    var fetched_node: logic<L::NODE_SIZE * 8>;
 
     let node: standard_layout::Node = fetched_node as standard_layout::Node;
 
@@ -51,7 +51,7 @@ module TreePredictor::<L: Layout> (
 
     var next_prediction: L::Prediction;
     // TODO: hardcoded
-    var next_fetched_node: logic<64>;
+    var next_fetched_node: logic<L::NODE_SIZE * 8>;
 
     var is_prediction: lbool;
 
@@ -75,11 +75,7 @@ module TreePredictor::<L: Layout> (
 
     // Compare the feature to the split, which
     // are formatted as IEEE754 bfloat16
-    inst pick_branch: FloatLeq (
-        a  : feature_port.data,
-        b  : node.split       ,
-        leq: branch_left      ,
-    );
+    inst pick_branch: FloatLeq ( a: feature_port.data, b: node.split, leq: branch_left );
 
     always_comb {
         // Default: maintain current state

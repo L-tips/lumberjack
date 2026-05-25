@@ -18,6 +18,7 @@ fmt:
 test TEST *extra_args:
     uv run veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
         {{justfile_directory()}}/src/*.veryl \
+        {{justfile_directory()}}/src/tree/*.veryl \
         {{justfile_directory()}}/src/ibex_bus/*.veryl \
         {{justfile_directory()}}/src/tests/common/*.veryl \
         --wave --quiet {{extra_args}}

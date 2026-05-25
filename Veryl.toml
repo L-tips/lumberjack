@@ -14,10 +14,13 @@ reset_type = "async_low"
 sources = ["src"]
 target = { type = "directory", path = "target/veryl" }
 
+[format]
+vertical_align = true
+
 [test]
 waveform_target = { type = "directory", path = "target/waveform" }
-# waveform_format = "fst"
-waveform_format = "vcd"
+waveform_format = "fst"
+# waveform_format = "vcd"
 include_files = [
     "tb/utils.py",
     "tb/test_data/single_tree_2_nodes.hex",

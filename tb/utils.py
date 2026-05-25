@@ -39,6 +39,19 @@ async def init_memory(mem, hexfile):
             mem[offset].value = data
             offset += 1
 
+async def init_memory_64(dut, mem, hexfile):
+    with open(hexfile, "r", encoding="UTF-8") as file:
+        hexfile = file.read()
+
+    offset = 0
+    for raw_data in hexfile.splitlines():
+        str_data = raw_data.split("/")[0].strip()
+        # Skip empty lines
+        if str_data != "":
+            data = int(str_data, 16)
+            mem[offset].value = data
+            offset += 1
+
 
 async def wait_with_timeout(clk, signal, value, max_cycles):
     count = 0

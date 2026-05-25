@@ -1,0 +1,34 @@
+module TestTreeV2 #(
+    const TREE_CACHE_SIZE      : u32 = 1024                   ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+) (
+    clk           : input clock                       ,
+    rst           : input reset                       ,
+    start         : input lbool                       ,
+    first_node_idx: input logic<TREE_CACHE_ADDR_WIDTH>,
+) {
+    inst feature_bus: memutils::ScratchpadRamPort #(
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+    );
+
+    var busy      : lbool                  ;
+    var prediction: test_layout::Prediction;
+    var ready     : lbool                  ;
+    var error     : lbool                  ;
+
+    inst tree: TreeV2::<test_layout> (
+        clk                        ,
+        rst                        ,
+        first_node_idx             ,
+        start                      ,
+        ready                      ,
+        busy                       ,
+        error                      ,
+        prediction                 ,
+        feature_port  : feature_bus,
+    );
+}
+
+#[test(test_tree_v2, TestTreeV2)]
+include (cocotb, "../../tb/test_tree_v2.py");

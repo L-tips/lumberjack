@@ -43,7 +43,7 @@ pub module Forest::<L: Layout> (
 
     var done_reg : lbool;
     var next_done: lbool;
-    assign done      = next_done;
+    assign done = next_done;
 
     var feature_ptr     : L::RamAddr;
     var next_feature_ptr: L::RamAddr;
@@ -60,24 +60,28 @@ pub module Forest::<L: Layout> (
     inst ram_demux: memutils::WishboneDemux #(
         ADDR_WIDTH: L::RAM_ADDR_WIDTH,
         DATA_WIDTH: L::RAM_DATA_WIDTH,
-        // NUM_SLAVES: 2 ,
     ) (
         masters      : ram_bus_mux,
         slave        : dma_port   ,
         master_select             ,
     );
 
-    inst feature_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
-    inst feature_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::FEATURE_WIDTH, ADDR_WIDTH: L::FEAT_IDX_WIDTH );
+    inst feature_write_port: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: L::FEATURE_WIDTH ,
+        ADDR_WIDTH: L::FEAT_IDX_WIDTH,
+    );
+    inst feature_read_port: memutils::ScratchpadRamPort [1] #(
+        DATA_WIDTH: L::FEATURE_WIDTH ,
+        ADDR_WIDTH: L::FEAT_IDX_WIDTH,
+    );
 
     inst feature_cache: memutils::ScratchpadRam #(
         READ_PORTS: 1                  ,
         DATA_WIDTH: L::FEATURE_WIDTH   ,
         DEPTH     : L::MAX_NUM_FEATURES,
     ) (
-        clk  ,
-        rst  ,
-
+        clk                      ,
+        rst                      ,
         write: feature_write_port,
         read : feature_read_port ,
     );
@@ -104,23 +108,27 @@ pub module Forest::<L: Layout> (
     let tree_rst_i: reset           = tree_rst as reset;
 
     inst tree: TreePredictor::<L> (
-        clk            ,
-        rst: tree_rst_i,
-
-        first_node_addr  : tree_node_addr ,
-        forest_start_addr                 ,
-        ready            : tree_ready     ,
-        busy             : tree_busy      ,
-        error            : tree_error     ,
-        start            : start_tree     ,
-        prediction       : tree_prediction,
-
-        feature_port: feature_read_port[0],
-        dma_port    : ram_bus_mux[1]      ,
+        clk                                    ,
+        rst              : tree_rst_i          ,
+        first_node_addr  : tree_node_addr      ,
+        forest_start_addr                      ,
+        ready            : tree_ready          ,
+        busy             : tree_busy           ,
+        error            : tree_error          ,
+        start            : start_tree          ,
+        prediction       : tree_prediction     ,
+        feature_port     : feature_read_port[0],
+        dma_port         : ram_bus_mux[1]      ,
     );
 
-    inst votes_write_port: memutils::ScratchpadRamPort #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
-    inst votes_read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH: L::TREE_IDX_WIDTH, ADDR_WIDTH: L::CLASS_IDX_WIDTH );
+    inst votes_write_port: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: L::TREE_IDX_WIDTH ,
+        ADDR_WIDTH: L::CLASS_IDX_WIDTH,
+    );
+    inst votes_read_port: memutils::ScratchpadRamPort [1] #(
+        DATA_WIDTH: L::TREE_IDX_WIDTH ,
+        ADDR_WIDTH: L::CLASS_IDX_WIDTH,
+    );
 
     inst votes_ram: memutils::ScratchpadRam #(
         // Max # of trees
@@ -128,9 +136,8 @@ pub module Forest::<L: Layout> (
         // Max number of classes
         DEPTH: L::MAX_NUM_CLASSES,
     ) (
-        clk            ,
-        rst: tree_rst_i,
-
+        clk                    ,
+        rst  : tree_rst_i      ,
         write: votes_write_port,
         read : votes_read_port ,
     );

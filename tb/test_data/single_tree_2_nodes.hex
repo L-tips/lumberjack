@@ -1,6 +1,6 @@
 // --- Node 0 ---
-00010000 // 0x00000000 | left: prediction: class 0 / right: ptr: 1
-80004120 // 0x00000004 | split: 10.0_f32 / left: true, right: false, split feat: 0 
+// (little endian) left: true, right: false, split feat: 0 | split: 10.0_bf16 = 0x4120  | right: ptr=1 | left: class=0
+8000412000010000 // 0x0
 // --- Node 1 ---
-00020001 // 0x00000008 | left: prediction: class 1 / right: prediction: class 2
-c0014120 // 0x0000000c | split: 10.0_f32 / left: true, right: true, split feat: 1
+// left: true, right: true, split feat: 1 | split: 10.0_bf16 = 0x4120 | right: class=2 | left: class=1
+c001412000020001 // 0x8

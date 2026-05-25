@@ -1,0 +1,160 @@
+module TreeV2::<L: Layout> #(
+    /// Use superscalar architecture
+    param USE_SUPERSCALAR: bbool = true,
+
+    /// Size of the tree cache in 64 bit dwords
+    param TREE_CACHE_SIZE      : u64 = 1024                   ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+) (
+    clk: input clock,
+    rst: input reset,
+
+    /// Strobe signalling the start of an evaluation
+    start: input lbool,
+    /// Tree index within the cache, aka the address of the first node in the tree
+    first_node_idx: input logic<TREE_CACHE_ADDR_WIDTH>,
+
+    ready     : output lbool        ,
+    busy      : output lbool        ,
+    error     : output lbool        ,
+    prediction: output L::Prediction,
+
+    feature_port: modport memutils::ScratchpadRamPort::read_master,
+) {
+    type NodePtr = logic<TREE_CACHE_ADDR_WIDTH>;
+
+    inst tree_cache_bus: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
+    // RAM with 64b wide data so we can fetch a node in a single cycle
+    inst tree_cache: memutils::SinglePortBlockRam #(
+        NUM_COL  : 8              ,
+        COL_WIDTH: 8              ,
+        RAM_DEPTH: TREE_CACHE_SIZE,
+    ) (
+        clk                 ,
+        rst                 ,
+        port: tree_cache_bus,
+    );
+
+    var node_ptr     : NodePtr;
+    var next_node_ptr: NodePtr;
+    // Node indices are index-addressed, which maps directly to a dword index
+    // in the RAM. Moreover, a node with a pointer to another node stores the
+    // ABSOLUTE index of the next node relative to this storage block. For example:
+    //
+    // 0: [tree 0, node 0 (points to x)]
+    // 1: [tree 1, node 2 (points to tree 1, node 1 = idx 2)] -|
+    // 2: [tree 1, node 1] <--------------
+    assign tree_cache_bus.address = next_node_ptr;
+
+    var eval_is_prediction: lbool        ;
+    var eval_prediction   : L::Prediction;
+    var eval_next_ptr     : NodePtr      ;
+    var eval_error        : lbool        ;
+
+    inst evaluator: NodeEvaluator::<L> #(
+        TREE_CACHE_ADDR_WIDTH  ,
+    ) (
+        node                                ,
+        current_node_ptr: node_ptr          ,
+        is_prediction   : eval_is_prediction,
+        prediction      : eval_prediction   ,
+        next_node_ptr   : eval_next_ptr     ,
+        error           : eval_error        ,
+        feature_port                        ,
+    );
+
+    enum State {
+        idle,
+        evaluating,
+    }
+
+    let node: standard_layout::Node = tree_cache_bus.read_data as standard_layout::Node;
+
+    var state     : State;
+    var next_state: State;
+
+    var ready_reg : lbool;
+    var next_ready: lbool;
+
+    var busy_reg : lbool;
+    var next_busy: lbool;
+
+    var err_reg : lbool;
+    var next_err: lbool;
+
+    var next_prediction: L::Prediction;
+
+    always_comb {
+        // Default: maintain current state
+        next_state      = state;
+        next_node_ptr   = node_ptr;
+        next_ready      = ready_reg;
+        next_busy       = busy_reg;
+        next_err        = err_reg;
+        next_prediction = prediction;
+
+        tree_cache_bus.enable            = false;
+        tree_cache_bus.byte_write_enable = 0;
+        tree_cache_bus.write_data        = 0;
+
+        // State machine
+        case state {
+            State::evaluating: {
+                // Leaf node reached - use prediction
+                if eval_is_prediction {
+                    next_ready      = true;
+                    next_busy       = false;
+                    next_state      = State::idle;
+                    next_prediction = eval_prediction[L::CLASS_IDX_WIDTH - 1:0];
+                } else {
+                    // Continue on with another read
+                    tree_cache_bus.enable = true;
+                    next_node_ptr         = eval_next_ptr[TREE_CACHE_ADDR_WIDTH - 1:0];
+                    next_err              = eval_error;
+                    if next_err {
+                        next_busy  = false;
+                        next_state = State::idle;
+                    }
+                }
+            }
+
+            // Default is idle
+            default: {
+                if start {
+                    next_state    = State::evaluating;
+                    next_node_ptr = first_node_idx;
+                    next_ready    = false;
+                    next_busy     = true;
+                    next_err      = false;
+
+                    // Start to read 1st node from tree cache
+                    tree_cache_bus.enable     = true;
+                    tree_cache_bus.write_data = 0;
+                }
+            }
+        }
+    }
+
+    always_ff {
+        if_reset {
+            node_ptr   = 0;
+            ready_reg  = false;
+            busy_reg   = false;
+            err_reg    = false;
+            prediction = 0;
+            state      = State::idle;
+        } else {
+            node_ptr   = next_node_ptr;
+            ready_reg  = next_ready;
+            busy_reg   = next_busy;
+            err_reg    = next_err;
+            prediction = next_prediction;
+            state      = next_state;
+        }
+    }
+
+    assign busy  = busy_reg || start;
+    assign ready = ready_reg && !start;
+    assign error = err_reg;
+}
