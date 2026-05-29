@@ -48,7 +48,7 @@ async def tree_test(dut):
     await init_memory(dut, "single_tree_2_nodes.hex")
 
     # Always return 11.0_f32 as the feature
-    dut.feature_bus.data.value = 0x4130
+    dut.feature_buses[0].data.value = 0x4130
 
     # ...and start tree prediction
     dut.start.value = 1
@@ -105,8 +105,8 @@ async def tree_test(dut):
 
     # Now let's try to take another branch.
     # Always return 6.0_f32 as the input feature
-    # dut.feature_bus.data.value = 0x0000c040
-    dut.feature_bus.data.value = 0x40C0
+    # dut.feature_buses[0].data.value = 0x0000c040
+    dut.feature_buses[0].data.value = 0x40C0
     dut.start.value = 1
 
     await RisingEdge(dut.clk)
@@ -147,7 +147,7 @@ async def rejects_circular_trees(dut):
     await init_memory(dut, "forest_1_tree_2_nodes_circular.hex")
 
     # Always return 9.0_f32 as the feature
-    dut.feature_bus.data.value = 0x4110
+    dut.feature_buses[0].data.value = 0x4110
     dut.first_node_idx.value = 0x01
 
     # ...and start tree prediction

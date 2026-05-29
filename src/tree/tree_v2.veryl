@@ -3,8 +3,9 @@ module TreeV2::<L: Layout> #(
     param USE_SUPERSCALAR: bbool = true,
 
     /// Size of the tree cache in 64 bit dwords
-    param TREE_CACHE_SIZE      : u64 = 1024                   ,
-    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+    param TREE_CACHE_SIZE      : u64 = 1024                      ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE)   ,
+    const FEAT_PORTS_PER_TREE  : u32 = if USE_SUPERSCALAR ? 2 : 1,
 ) (
     clk: input clock,
     rst: input reset,
@@ -19,8 +20,8 @@ module TreeV2::<L: Layout> #(
     error     : output lbool        ,
     prediction: output L::Prediction,
 
-    feature_port: modport memutils::ScratchpadRamPort::read_master,
-    ram_port    : modport memutils::BramPort::slave               ,
+    feature_ports: modport memutils::ScratchpadRamPort::read_master [FEAT_PORTS_PER_TREE],
+    ram_port     : modport memutils::BramPort::slave                                     ,
 ) {
     type NodePtr = logic<TREE_CACHE_ADDR_WIDTH>;
 
@@ -92,7 +93,7 @@ module TreeV2::<L: Layout> #(
         prediction      : eval_prediction   ,
         next_node_ptr   : eval_next_ptr     ,
         error           : eval_error        ,
-        feature_port                        ,
+        feature_port    : feature_ports[0]  ,
     );
 
     let node: standard_layout::Node = tree_cache_bus.read_data as standard_layout::Node;

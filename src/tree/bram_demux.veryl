@@ -24,11 +24,11 @@ module BramDemux #(
 
     always_comb {
         if master_select == 0 {
-            slave <> master_0;
-            master_1.read_data = 0;
+            slave              <> master_0;
+            master_1.read_data =  0;
         } else {
-            slave <> master_1;
-            master_0.read_data = 0;
+            slave              <> master_1;
+            master_0.read_data =  0;
         }
     }
     // connect master <> slaves[slave_select];

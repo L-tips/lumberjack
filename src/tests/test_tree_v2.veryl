@@ -7,7 +7,10 @@ module TestTreeV2 #(
     start         : input lbool                       ,
     first_node_idx: input logic<TREE_CACHE_ADDR_WIDTH>,
 ) {
-    inst feature_bus: memutils::ScratchpadRamPort #(
+    const USE_SUPERSCALAR: bbool = false;
+    const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
+
+    inst feature_buses: memutils::ScratchpadRamPort [FEATURE_PORTS] #(
         ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
         DATA_WIDTH: test_layout::FEATURE_WIDTH ,
     );
@@ -19,7 +22,9 @@ module TestTreeV2 #(
     var ready     : lbool                  ;
     var error     : lbool                  ;
 
-    inst tree: TreeV2::<test_layout> (
+    inst tree: TreeV2::<test_layout> #(
+        USE_SUPERSCALAR  ,
+    ) (
         clk                        ,
         rst                        ,
         first_node_idx             ,
@@ -28,7 +33,7 @@ module TestTreeV2 #(
         busy                       ,
         error                      ,
         prediction                 ,
-        feature_port  : feature_bus,
+        feature_ports : feature_buses,
         ram_port                   ,
     );
 }
