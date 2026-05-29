@@ -3,10 +3,10 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 import utils
-from utils import n_cycles
+from utils import n_cycles, read_hex
 
 
-async def reset(dut, mem_file):
+async def reset(dut):
     await RisingEdge(dut.clk)
 
     # Init and reset
@@ -21,10 +21,20 @@ async def reset(dut, mem_file):
 
     await RisingEdge(dut.clk)
 
-    # Initialize memory
-    await utils.init_memory_64(dut, dut.tree.tree_cache.mem, mem_file)
+async def init_memory(dut, mem_file):
+    mem_data = read_hex(mem_file)
+    mem_data = utils.into_64b_chunks_le(mem_data)
 
-    await RisingEdge(dut.clk)
+    dut.ram_port.enable.value = True
+    dut.ram_port.byte_write_enable.value = 0b11111111
+
+    for addr, data in enumerate(mem_data):
+        dut.ram_port.address.value = addr
+        dut.ram_port.write_data.value = data
+        await RisingEdge(dut.clk)
+
+    dut.ram_port.enable.value = False
+    dut.ram_port.byte_write_enable.value = 0
 
 
 @cocotb.test()
@@ -32,12 +42,13 @@ async def tree_test(dut):
     # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
-    await reset(dut, "single_tree_2_nodes.hex")
+    await reset(dut)
+    # Start by writing the data into the tree cache
+    # through the external RAM port
+    await init_memory(dut, "single_tree_2_nodes.hex")
 
     # Always return 11.0_f32 as the feature
     dut.feature_bus.data.value = 0x4130
-
-    await RisingEdge(dut.clk)
 
     # ...and start tree prediction
     dut.start.value = 1
@@ -48,8 +59,14 @@ async def tree_test(dut):
     dut.start.value = 0
     assert dut.tree.busy.value == 1
 
+    # Test that we can't write data to the RAM while it's busy
+    dut.ram_port.byte_write_enable.value = 0b11111111
+
     # Takes 1 cycle to fetch + evaluate the full node
     await n_cycles(dut.clk, 1)
+
+    # Writes should not be enabled
+    assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
 
     # We're taking the right branch, which is
     # a node pointer
@@ -64,6 +81,14 @@ async def tree_test(dut):
     await RisingEdge(dut.clk)
 
     assert dut.tree.state.value == 1
+
+    # Writes should still not be enabled until no longer busy
+    assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
+    # Even though the RAM port is trying to write
+    assert dut.ram_port.byte_write_enable.value == 0b11111111
+
+    # Make sure we don't overwrite the RAM when busy goes low
+    dut.ram_port.byte_write_enable.value = 0
 
     # Again, takes a total of 1 cycle to fetch + evaluate
     # the node
@@ -118,7 +143,8 @@ async def rejects_circular_trees(dut):
     # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
-    await reset(dut, "forest_1_tree_2_nodes_circular.hex")
+    await reset(dut)
+    await init_memory(dut, "forest_1_tree_2_nodes_circular.hex")
 
     # Always return 9.0_f32 as the feature
     dut.feature_bus.data.value = 0x4110

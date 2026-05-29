@@ -12,6 +12,8 @@ module TestTreeV2 #(
         DATA_WIDTH: test_layout::FEATURE_WIDTH ,
     );
 
+    inst ram_port: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
     var busy      : lbool                  ;
     var prediction: test_layout::Prediction;
     var ready     : lbool                  ;
@@ -27,6 +29,7 @@ module TestTreeV2 #(
         error                      ,
         prediction                 ,
         feature_port  : feature_bus,
+        ram_port                   ,
     );
 }
 

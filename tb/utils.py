@@ -39,18 +39,56 @@ async def init_memory(mem, hexfile):
             mem[offset].value = data
             offset += 1
 
-async def init_memory_64(dut, mem, hexfile):
+"""Chunk data into the correct width and initialize memory. Assumes the data is stored in little-endian format."""
+def init_mem_le(mem, hexfile):
+    word_bits = _get_num_bits(mem)
+    word_bytes = (word_bits + 7) // 8
+
+    byte_list = read_hex(hexfile)
+    offset = 0
+
+    for i in range(0, len(byte_list), word_bytes):
+        chunk = byte_list[i:i + word_bytes]
+        if len(chunk) < word_bytes:
+            chunk = chunk + [0] * (word_bytes - len(chunk))
+
+        value = int.from_bytes(bytes(chunk), byteorder="little", signed=False)
+        mem[offset].value = value
+        offset += 1
+
+def into_64b_chunks_le(data_bytes):
+    BYTES_IN_WORD = 8
+    mem_64 = []
+    for i in range(0, len(data_bytes), BYTES_IN_WORD):
+        chunk = data_bytes[i:i+BYTES_IN_WORD]
+        if len(chunk) < 8:
+            chunk = chunk + [0]*(BYTES_IN_WORD - len(chunk))
+        value = int.from_bytes(bytes(chunk), byteorder="little", signed=False)
+        mem_64.append(value)
+
+    return mem_64
+
+"""Read data from a .hex file into an array of byte-sized ints"""
+def read_hex(hexfile):
+    mem = []
     with open(hexfile, "r", encoding="UTF-8") as file:
         hexfile = file.read()
 
-    offset = 0
     for raw_data in hexfile.splitlines():
-        str_data = raw_data.split("/")[0].strip()
-        # Skip empty lines
+        # Strip comments
+        str_data = raw_data.split("//")[0].strip()
+        # Remove whitespace between byte chunks
+        str_data = ''.join(str_data.split())
         if str_data != "":
-            data = int(str_data, 16)
-            mem[offset].value = data
-            offset += 1
+            if len(str_data) % 2 != 0:
+                raise ValueError(f"Invalid hex line length: {str_data}")
+            for i in range(0, len(str_data), 2):
+                mem.append(int(str_data[i:i + 2], 16))
+
+    return mem
+
+def _get_num_bits(mem):
+    return len(mem[0])
 
 
 async def wait_with_timeout(clk, signal, value, max_cycles):

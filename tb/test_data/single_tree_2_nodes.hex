@@ -1,6 +1,7 @@
-// --- Node 0 ---
-// (little endian) left: true, right: false, split feat: 0 | split: 10.0_bf16 = 0x4120  | right: ptr=1 | left: class=0
-8000412000010000 // 0x0
-// --- Node 1 ---
-// left: true, right: true, split feat: 1 | split: 10.0_bf16 = 0x4120 | right: class=2 | left: class=1
-c001412000020001 // 0x8
+// NOTE: memory is in little-endian format
+// --- Node 0 --- 0x0-0x7
+// | left: class=0 | right: ptr=1 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=false, split feat=0 |
+00 00 01 00 20 41 00 80
+// --- Node 1 --- 0x8-0xf
+// | left: class=1 | right: class=2 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=true, split feat=1 |
+01 00 02 00 20 41 01 c0

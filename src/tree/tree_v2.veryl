@@ -20,10 +20,41 @@ module TreeV2::<L: Layout> #(
     prediction: output L::Prediction,
 
     feature_port: modport memutils::ScratchpadRamPort::read_master,
+    ram_port    : modport memutils::BramPort::slave               ,
 ) {
     type NodePtr = logic<TREE_CACHE_ADDR_WIDTH>;
 
-    inst tree_cache_bus: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+    enum State {
+        idle,
+        evaluating,
+    }
+
+    var state     : State;
+    var next_state: State;
+
+    var ready_reg : lbool;
+    var next_ready: lbool;
+
+    var busy_reg : lbool;
+    var next_busy: lbool;
+
+    var err_reg : lbool;
+    var next_err: lbool;
+
+    var next_prediction: L::Prediction;
+
+    inst tree_cache_bus        : memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+    inst tree_cache_bus_demuxed: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
+    inst cache_demux: BramDemux #(
+        ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH,
+        DATA_WIDTH: 8 * 8,
+    ) (
+        master_0     : tree_cache_bus        ,
+        master_1     : ram_port              ,
+        slave        : tree_cache_bus_demuxed,
+        master_select: !busy                 ,
+    );
 
     // RAM with 64b wide data so we can fetch a node in a single cycle
     inst tree_cache: memutils::SinglePortBlockRam #(
@@ -31,9 +62,9 @@ module TreeV2::<L: Layout> #(
         COL_WIDTH: 8              ,
         RAM_DEPTH: TREE_CACHE_SIZE,
     ) (
-        clk                 ,
-        rst                 ,
-        port: tree_cache_bus,
+        clk                         ,
+        rst                         ,
+        port: tree_cache_bus_demuxed,
     );
 
     var node_ptr     : NodePtr;
@@ -64,26 +95,7 @@ module TreeV2::<L: Layout> #(
         feature_port                        ,
     );
 
-    enum State {
-        idle,
-        evaluating,
-    }
-
     let node: standard_layout::Node = tree_cache_bus.read_data as standard_layout::Node;
-
-    var state     : State;
-    var next_state: State;
-
-    var ready_reg : lbool;
-    var next_ready: lbool;
-
-    var busy_reg : lbool;
-    var next_busy: lbool;
-
-    var err_reg : lbool;
-    var next_err: lbool;
-
-    var next_prediction: L::Prediction;
 
     always_comb {
         // Default: maintain current state

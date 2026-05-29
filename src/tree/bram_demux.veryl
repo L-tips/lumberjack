@@ -1,0 +1,35 @@
+
+/// BRAM demultiplexer
+///
+/// Multiplexes from a configurable number of BRAM masters
+/// to a single slave. This module is fully combinatorial.
+///
+/// Note that no arbitration is performed here, and it should
+/// be handled elsewhere.
+/// TODO: for now we support only 2 buses. Would prefer a bus array-based solution.
+module BramDemux #(
+    param ADDR_WIDTH: u32 = 32,
+    param DATA_WIDTH: u32 = 32,
+    // param NUM_SLAVES: u32 = 2 ,
+
+    const SELECT_BITS: u8 = 1,
+    // const SELECT_BITS: u8 = $clog2(NUM_SLAVES);
+) (
+    slave   : modport memutils::BramPort::master,
+    master_0: modport memutils::BramPort::slave ,
+    master_1: modport memutils::BramPort::slave ,
+
+    master_select: input logic<SELECT_BITS>,
+) {
+
+    always_comb {
+        if master_select == 0 {
+            slave <> master_0;
+            master_1.read_data = 0;
+        } else {
+            slave <> master_1;
+            master_0.read_data = 0;
+        }
+    }
+    // connect master <> slaves[slave_select];
+}
