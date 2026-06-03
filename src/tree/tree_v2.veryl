@@ -10,6 +10,8 @@ module TreeV2::<L: Layout> #(
     clk: input clock,
     rst: input reset,
 
+    rst_cache: input reset,
+
     /// Strobe signalling the start of an evaluation
     start: input lbool,
     /// Tree index within the cache, aka the address of the first node in the tree
@@ -64,7 +66,7 @@ module TreeV2::<L: Layout> #(
         RAM_DEPTH: TREE_CACHE_SIZE,
     ) (
         clk                         ,
-        rst                         ,
+        rst : rst_cache             ,
         port: tree_cache_bus_demuxed,
     );
 
@@ -149,7 +151,7 @@ module TreeV2::<L: Layout> #(
         }
     }
 
-    always_ff {
+    always_ff (clk, rst) {
         if_reset {
             node_ptr   = 0;
             ready_reg  = false;

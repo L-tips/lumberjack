@@ -25,16 +25,17 @@ module TestTreeV2 #(
     inst tree: TreeV2::<test_layout> #(
         USE_SUPERSCALAR  ,
     ) (
-        clk                        ,
-        rst                        ,
-        first_node_idx             ,
-        start                      ,
-        ready                      ,
-        busy                       ,
-        error                      ,
-        prediction                 ,
+        clk                          ,
+        rst                          ,
+        rst_cache     : rst          ,
+        first_node_idx               ,
+        start                        ,
+        ready                        ,
+        busy                         ,
+        error                        ,
+        prediction                   ,
         feature_ports : feature_buses,
-        ram_port                   ,
+        ram_port                     ,
     );
 }
 
