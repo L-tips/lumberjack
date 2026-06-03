@@ -1,0 +1,204 @@
+pub module Forest::<L: Layout> #(
+    param TREE_INSTANCES: u32 = 1,
+    /// Use superscalar architecture
+    param USE_SUPERSCALAR: bbool = true,
+
+    /// Size of the tree caches in 64 bit dwords
+    param TREE_CACHE_SIZE      : u64 = 1024                   ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+
+    /// Number of read ports the feature cache can support
+    param READ_PORTS_PER_CACHE: u8 = 4,
+) (
+    clk      : input clock,
+    rst      : input reset,
+    rst_cache: input reset,
+
+    enable: input logic,
+
+    num_trees   : input L::TreeIdx   ,
+    num_features: input L::FeatureIdx,
+
+    busy      : output lbool        ,
+    ready     : output lbool        ,
+    error     : output lbool        ,
+    prediction: output L::Prediction,
+    num_votes : output L::NumVotes  ,
+
+    done: output lbool,
+
+    feature_write_port: modport memutils::ScratchpadRamPort::write_slave,
+    ctrl_port         : modport memutils::BramPort::slave               ,
+) {
+    const READ_PORTS_PER_CACHE_U32: u32 = {24'h0, READ_PORTS_PER_CACHE};
+    const PORTS_PER_TREE          : u32 = if USE_SUPERSCALAR ? 2 : 1;
+    // Our caches have 4 read ports. Superscalar evaluators need 2 ports each, otherwise 1 port.
+    const TREE_INSTANCES_PER_CACHE: u32 = {24'h0, READ_PORTS_PER_CACHE} / PORTS_PER_TREE;
+    // Ceiling div
+    const NUM_CACHES: u32 = (TREE_INSTANCES + TREE_INSTANCES_PER_CACHE - 1) / TREE_INSTANCES_PER_CACHE;
+
+    // All read ports are (unfortunately) stored in a flat array.
+    inst feature_read_port: memutils::ScratchpadRamPort [NUM_CACHES * READ_PORTS_PER_CACHE_U32] #(
+        DATA_WIDTH: L::FEATURE_WIDTH ,
+        ADDR_WIDTH: L::FEAT_IDX_WIDTH,
+    );
+
+    for i in 0..NUM_CACHES :inst_caches {
+        inst feature_cache: memutils::ScratchpadRam #(
+            READ_PORTS: READ_PORTS_PER_CACHE,
+            DATA_WIDTH: L::FEATURE_WIDTH    ,
+            DEPTH     : L::MAX_NUM_FEATURES ,
+        ) (
+            clk                      ,
+            rst                      ,
+            write: feature_write_port,
+            // Each cache gets its appropriate slice of read ports
+            read: feature_read_port[i * READ_PORTS_PER_CACHE_U32:READ_PORTS_PER_CACHE_U32 * (i + 1) - 1],
+        );
+    }
+
+    inst tree_ram_ports: memutils::BramPort [TREE_INSTANCES] #(
+        NUM_COL   : 8                    ,
+        COL_WIDTH : 8                    ,
+        ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH,
+    );
+
+    var cells_ready: logic<TREE_INSTANCES>;
+    var cells_busy : logic<TREE_INSTANCES>;
+    var cells_error: logic<TREE_INSTANCES>;
+
+    // var next_done: lbool;
+    // assign done = next_done;
+
+    // All cells done with their last vote acked
+    var done_reg       : lbool;
+    let all_cells_ready: lbool = &cells_ready;
+    let any_cells_busy : lbool = |cells_busy;
+
+    // Start a new evaluation when enabled and not already running or done
+    var start_eval_reg: lbool;
+    let start_eval    : lbool = start_eval_reg;
+
+    // New evaluation request incoming
+    // let start_eval: lbool = state == State::idle && enable && !done_reg;
+
+    let rst_votes: reset = ~start_eval & rst;
+
+    // Base trees per cell and remainder
+    let trees_per_cell_base: L::TreeIdx = num_trees / TREE_INSTANCES as L::TreeIdx;
+    let trees_remainder    : L::TreeIdx = num_trees % TREE_INSTANCES as L::TreeIdx;
+
+    var vote_ack  : logic<TREE_INSTANCES>;
+    var vote_valid: logic<TREE_INSTANCES>;
+
+    var vote_classes: L::Prediction [TREE_INSTANCES];
+
+    var votes: forest_types::VoteResult::<L>;
+
+    inst vote_arbiter: VotesArbiter::<L> #(
+        NUM_REQUESTERS: TREE_INSTANCES            ,
+        ADDR_WIDTH    : $clog2(L::MAX_NUM_CLASSES),
+    ) (
+        clk                  ,
+        rst    : rst_votes   ,
+        valid  : vote_valid  ,
+        classes: vote_classes,
+        ack    : vote_ack    ,
+        votes                ,
+    );
+
+    for i in 0..TREE_INSTANCES :inst_tree_cells {
+        const cache_idx: u32 = i / TREE_INSTANCES_PER_CACHE;
+        const slot_idx : u32 = i % TREE_INSTANCES_PER_CACHE;
+        const base_port: u32 = cache_idx * READ_PORTS_PER_CACHE_U32 + slot_idx * PORTS_PER_TREE;
+
+        // Cell i gets base + 1 if i < remainder, else base
+        let num_trees_in_cell: L::TreeIdx = trees_per_cell_base + (if i as L::TreeIdx <: trees_remainder ? 1 : 0);
+
+        var start_cell: lbool;
+
+        var cell_busy      : lbool        ;
+        var cell_ready     : lbool        ;
+        var cell_error     : lbool        ;
+        var cell_prediction: L::Prediction;
+
+        // TODO: hardcoded
+        var tree_header_addr: logic<12>              ;
+        var tree_header_data: logic<L::NODE_SIZE * 8>;
+
+        inst orchestrator: CellOrchestrator::<L> (
+            clk                               ,
+            rst                               ,
+            num_trees_in_cell                 ,
+            start_forest     : start_eval     ,
+            cell_busy                         ,
+            cell_ready                        ,
+            cell_error                        ,
+            cell_prediction                   ,
+            start_cell                        ,
+            tree_header_addr                  ,
+            tree_header_data                  ,
+            ready_o          : cells_ready[i] ,
+            busy_o           : cells_busy[i]  ,
+            error_o          : cells_error[i] ,
+            vote_valid       : vote_valid[i]  ,
+            vote_class       : vote_classes[i],
+            vote_ack         : vote_ack[i]    ,
+        );
+
+        inst tree: TreeCell::<L> #(
+            USE_SUPERSCALAR  ,
+            TREE_CACHE_SIZE  ,
+        ) (
+            clk                                                                          ,
+            rst             : rst                                                        ,
+            rst_cache                                                                    ,
+            tree_header_addr                                                             ,
+            tree_header_data                                                             ,
+            ready           : cell_ready                                                 ,
+            busy            : cell_busy                                                  ,
+            error           : cell_error                                                 ,
+            start           : start_cell                                                 ,
+            prediction      : cell_prediction                                            ,
+            feature_ports   : feature_read_port[base_port:base_port + PORTS_PER_TREE - 1],
+            ram_port        : tree_ram_ports[i]                                          ,
+        );
+    }
+
+    assign prediction = votes.max_vote_class;
+    assign num_votes  = votes.max_vote;
+
+    // assign busy  = |cells_busy;
+    // assign ready = &cells_ready;
+    // assign error = |cells_error;
+
+    // always_ff {
+    //     if_reset {
+    //         ready = false;
+    //     } else {
+    //         ready = next_ready;
+    //     }
+    // }
+
+    assign busy  = any_cells_busy || all_cells_ready && !done_reg;
+    assign ready = done_reg;
+    assign done  = done_reg;
+    assign error = |cells_error;
+
+    always_ff (clk, rst) {
+        if_reset {
+            done_reg       = false;
+            start_eval_reg = false;
+        } else {
+            start_eval_reg = enable && !any_cells_busy && !done_reg;
+
+            if all_cells_ready {
+                done_reg = true;
+            }
+            if start_eval {
+                done_reg = false;
+            }
+        }
+    }
+
+}

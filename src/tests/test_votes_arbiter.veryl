@@ -1,0 +1,2 @@
+#[test(test_votes_arbiter, VotesArbiter)]
+include (cocotb, "../../tb/test_votes_arbiter.py");

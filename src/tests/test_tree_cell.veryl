@@ -1,0 +1,45 @@
+module TestTreeCell #(
+    const TREE_CACHE_SIZE      : u32 = 1024                   ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+) (
+    clk             : input  clock                            ,
+    rst             : input  reset                            ,
+    start           : input  lbool                            ,
+    tree_header_addr: input  logic<TREE_CACHE_ADDR_WIDTH>     ,
+    tree_header_data: output logic<test_layout::NODE_SIZE * 8>,
+) {
+    const USE_SUPERSCALAR: bbool = false;
+    const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
+
+    inst feature_buses: memutils::ScratchpadRamPort [FEATURE_PORTS] #(
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+    );
+
+    inst ram_port: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
+    var busy      : lbool                  ;
+    var prediction: test_layout::Prediction;
+    var ready     : lbool                  ;
+    var error     : lbool                  ;
+
+    inst tree: TreeCell::<test_layout> #(
+        USE_SUPERSCALAR  ,
+    ) (
+        clk                            ,
+        rst                            ,
+        rst_cache       : rst          ,
+        tree_header_addr               ,
+        tree_header_data               ,
+        start                          ,
+        ready                          ,
+        busy                           ,
+        error                          ,
+        prediction                     ,
+        feature_ports   : feature_buses,
+        ram_port                       ,
+    );
+}
+
+#[test(test_tree_cell, TestTreeCell)]
+include (cocotb, "../../tb/test_tree_cell.py");

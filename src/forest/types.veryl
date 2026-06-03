@@ -1,0 +1,9 @@
+package forest_types {
+    struct VoteResult::<L: Layout> {
+        /// The most voted class
+        max_vote_class: L::Prediction,
+        /// The number of votes that has the most
+        /// voted class
+        max_vote: L::TreeIdx,
+    }
+}

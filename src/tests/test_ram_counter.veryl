@@ -1,0 +1,2 @@
+#[test(test_ram_counter, RamCounter)]
+include (cocotb, "../../tb/test_ram_counter.py");

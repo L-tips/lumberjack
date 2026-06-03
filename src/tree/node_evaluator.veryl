@@ -2,12 +2,12 @@ module NodeEvaluator::<L: Layout> #(
     param TREE_CACHE_ADDR_WIDTH: u32 = 0,
 ) (
     node            : input   standard_layout::Node                                          ,
-    current_node_ptr: input   logic                                   <TREE_CACHE_ADDR_WIDTH>,
+    current_node_idx: input   logic                                   <TREE_CACHE_ADDR_WIDTH>,
     feature_port    : modport memutils::ScratchpadRamPort::read_master                       ,
 
     is_prediction: output lbool                               ,
     prediction   : output L::Prediction                       ,
-    next_node_ptr: output logic        <TREE_CACHE_ADDR_WIDTH>,
+    next_node_idx: output logic        <TREE_CACHE_ADDR_WIDTH>,
     error        : output lbool                               ,
 ) {
 
@@ -21,11 +21,11 @@ module NodeEvaluator::<L: Layout> #(
 
     // Check that out tree is a DAG and that there are no
     // circular conditions
-    assign error = !is_prediction && next_node_ptr <= current_node_ptr;
+    assign error = !is_prediction && next_node_idx <= current_node_idx;
     // assign error = false;
 
     var next_ptr: logic<L::CLASS_PTR_WIDTH>;
-    assign next_node_ptr = next_ptr[TREE_CACHE_ADDR_WIDTH - 1:0];
+    assign next_node_idx = next_ptr[TREE_CACHE_ADDR_WIDTH - 1:0];
 
     always_comb {
         // Evaluate the node and decide next action

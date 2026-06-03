@@ -13,7 +13,7 @@ async def reset(dut):
     dut.rst.value = 0
 
     dut.start.value = 0
-    dut.first_node_idx.value = 0
+    dut.tree_header_addr.value = 0
 
     await RisingEdge(dut.clk)
     # Release reset
@@ -34,8 +34,8 @@ async def init_memory(dut, mem_file):
         await RisingEdge(dut.clk)
 
     dut.ram_port.enable.value = False
+    dut.ram_port.write_data.value = 0
     dut.ram_port.byte_write_enable.value = 0
-
 
 @cocotb.test()
 async def tree_test(dut):
@@ -52,25 +52,28 @@ async def tree_test(dut):
 
     # ...and start tree prediction
     dut.start.value = 1
-    dut.first_node_idx.value = 0
+    dut.tree_header_addr.value = 0
 
     await RisingEdge(dut.clk)
 
     dut.start.value = 0
     assert dut.tree.busy.value == 1
+    # State = read_header
+    print(dut.tree.state.value)
+    # assert dut.tree.state.value == 1
 
     # Test that we can't write data to the RAM while it's busy
     dut.ram_port.byte_write_enable.value = 0b11111111
 
-    # Takes 1 cycle to fetch + evaluate the full node
-    await n_cycles(dut.clk, 1)
+    # Takes 2 cycles to fetch header + evaluate the full node
+    await n_cycles(dut.clk, 2)
 
     # Writes should not be enabled
     assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
 
     # We're taking the right branch, which is
     # a node pointer
-    assert dut.tree.next_node_ptr.value == 0x1
+    assert dut.tree.next_read_addr.value == 0x2
 
     # Which means we're going to be evaluating
     # another node
@@ -80,7 +83,7 @@ async def tree_test(dut):
     # Now we're fetching the next node
     await RisingEdge(dut.clk)
 
-    assert dut.tree.state.value == 1
+    assert dut.tree.state.value == 2
 
     # Writes should still not be enabled until no longer busy
     assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
@@ -115,9 +118,9 @@ async def tree_test(dut):
 
     # The first node is directly a prediction.
     # Entire prediction sequence should complete
-    # in a total of 2 cycles after START has been
+    # in a total of 3 cycles after START has been
     # set.
-    await n_cycles(dut.clk, 2)
+    await n_cycles(dut.clk, 3)
 
     assert dut.ready.value == 1
     assert dut.busy.value == 0
@@ -127,7 +130,7 @@ async def tree_test(dut):
     # Intentionally don't reset start to 0.
     # Prediction should never show ready.
     dut.start.value = 1
-    await n_cycles(dut.clk, 5)
+    await n_cycles(dut.clk, 7)
 
     # Even though the state is idle,
     assert dut.tree.state.value == 0
@@ -148,7 +151,7 @@ async def rejects_circular_trees(dut):
 
     # Always return 9.0_f32 as the feature
     dut.feature_buses[0].data.value = 0x4110
-    dut.first_node_idx.value = 0x01
+    dut.tree_header_addr.value = 0x01
 
     # ...and start tree prediction
     dut.start.value = 1
@@ -158,15 +161,15 @@ async def rejects_circular_trees(dut):
     dut.start.value = 0
     assert dut.tree.busy.value == 1
 
-    # Takes 1 cycle to fetch+evaluate the full node
-    await n_cycles(dut.clk, 1)
+    # Takes 2 cycle to fetch header+evaluate the full node
+    await n_cycles(dut.clk, 2)
 
-    assert dut.tree.state.value == 1
+    assert dut.tree.state.value == 2
 
     # Now we're fetching + evaluating the next node
     await RisingEdge(dut.clk)
 
-    assert dut.tree.state.value == 1
+    assert dut.tree.state.value == 2
 
     # Again, takes a total of 1 cycle to evaluate
     # the node

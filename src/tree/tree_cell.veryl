@@ -1,9 +1,9 @@
-module TreeV2::<L: Layout> #(
+module TreeCell::<L: Layout> #(
     /// Use superscalar architecture
     param USE_SUPERSCALAR: bbool = true,
-
     /// Size of the tree cache in 64 bit dwords
-    param TREE_CACHE_SIZE      : u64 = 1024                      ,
+    param TREE_CACHE_SIZE: u64 = 1024,
+
     const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE)   ,
     const FEAT_PORTS_PER_TREE  : u32 = if USE_SUPERSCALAR ? 2 : 1,
 ) (
@@ -15,7 +15,10 @@ module TreeV2::<L: Layout> #(
     /// Strobe signalling the start of an evaluation
     start: input lbool,
     /// Tree index within the cache, aka the address of the first node in the tree
-    first_node_idx: input logic<TREE_CACHE_ADDR_WIDTH>,
+    tree_header_addr: input logic<TREE_CACHE_ADDR_WIDTH>,
+
+    /// Data inside the evaluated tree's header
+    tree_header_data: output logic<L::NODE_SIZE * 8>,
 
     ready     : output lbool        ,
     busy      : output lbool        ,
@@ -29,6 +32,7 @@ module TreeV2::<L: Layout> #(
 
     enum State {
         idle,
+        read_header,
         evaluating,
     }
 
@@ -51,7 +55,7 @@ module TreeV2::<L: Layout> #(
 
     inst cache_demux: BramDemux #(
         ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH,
-        DATA_WIDTH: 8 * 8,
+        DATA_WIDTH: L::NODE_SIZE * 8,
     ) (
         master_0     : tree_cache_bus        ,
         master_1     : ram_port              ,
@@ -61,7 +65,7 @@ module TreeV2::<L: Layout> #(
 
     // RAM with 64b wide data so we can fetch a node in a single cycle
     inst tree_cache: memutils::SinglePortBlockRam #(
-        NUM_COL  : 8              ,
+        NUM_COL  : L::NODE_SIZE   ,
         COL_WIDTH: 8              ,
         RAM_DEPTH: TREE_CACHE_SIZE,
     ) (
@@ -70,8 +74,13 @@ module TreeV2::<L: Layout> #(
         port: tree_cache_bus_demuxed,
     );
 
-    var node_ptr     : NodePtr;
-    var next_node_ptr: NodePtr;
+    var read_addr     : NodePtr;
+    var next_read_addr: NodePtr;
+
+    let current_node_idx: NodePtr = read_addr - tree_header_addr;
+
+    // TODO: hardcoded?
+    var next_tree_header_data: logic<L::NODE_SIZE * 8>;
     // Node indices are index-addressed, which maps directly to a dword index
     // in the RAM. Moreover, a node with a pointer to another node stores the
     // ABSOLUTE index of the next node relative to this storage block. For example:
@@ -79,21 +88,21 @@ module TreeV2::<L: Layout> #(
     // 0: [tree 0, node 0 (points to x)]
     // 1: [tree 1, node 2 (points to tree 1, node 1 = idx 2)] -|
     // 2: [tree 1, node 1] <--------------
-    assign tree_cache_bus.address = next_node_ptr;
+    assign tree_cache_bus.address = next_read_addr;
 
     var eval_is_prediction: lbool        ;
     var eval_prediction   : L::Prediction;
-    var eval_next_ptr     : NodePtr      ;
+    var eval_next_idx     : NodePtr      ;
     var eval_error        : lbool        ;
 
     inst evaluator: NodeEvaluator::<L> #(
         TREE_CACHE_ADDR_WIDTH  ,
     ) (
         node                                ,
-        current_node_ptr: node_ptr          ,
+        current_node_idx: current_node_idx  ,
         is_prediction   : eval_is_prediction,
         prediction      : eval_prediction   ,
-        next_node_ptr   : eval_next_ptr     ,
+        next_node_idx   : eval_next_idx     ,
         error           : eval_error        ,
         feature_port    : feature_ports[0]  ,
     );
@@ -102,12 +111,13 @@ module TreeV2::<L: Layout> #(
 
     always_comb {
         // Default: maintain current state
-        next_state      = state;
-        next_node_ptr   = node_ptr;
-        next_ready      = ready_reg;
-        next_busy       = busy_reg;
-        next_err        = err_reg;
-        next_prediction = prediction;
+        next_state            = state;
+        next_read_addr        = read_addr;
+        next_ready            = ready_reg;
+        next_busy             = busy_reg;
+        next_err              = err_reg;
+        next_prediction       = prediction;
+        next_tree_header_data = tree_header_data;
 
         tree_cache_bus.enable            = false;
         tree_cache_bus.byte_write_enable = 0;
@@ -115,6 +125,13 @@ module TreeV2::<L: Layout> #(
 
         // State machine
         case state {
+            State::read_header: {
+                tree_cache_bus.enable =  true;
+                next_read_addr        += 1;
+                next_tree_header_data =  tree_cache_bus.read_data;
+                next_state            =  State::evaluating;
+            }
+
             State::evaluating: {
                 // Leaf node reached - use prediction
                 if eval_is_prediction {
@@ -125,7 +142,7 @@ module TreeV2::<L: Layout> #(
                 } else {
                     // Continue on with another read
                     tree_cache_bus.enable = true;
-                    next_node_ptr         = eval_next_ptr[TREE_CACHE_ADDR_WIDTH - 1:0];
+                    next_read_addr        = eval_next_idx[TREE_CACHE_ADDR_WIDTH - 1:0] + tree_header_addr;
                     next_err              = eval_error;
                     if next_err {
                         next_busy  = false;
@@ -137,11 +154,11 @@ module TreeV2::<L: Layout> #(
             // Default is idle
             default: {
                 if start {
-                    next_state    = State::evaluating;
-                    next_node_ptr = first_node_idx;
-                    next_ready    = false;
-                    next_busy     = true;
-                    next_err      = false;
+                    next_state     = State::read_header;
+                    next_read_addr = tree_header_addr;
+                    next_ready     = false;
+                    next_busy      = true;
+                    next_err       = false;
 
                     // Start to read 1st node from tree cache
                     tree_cache_bus.enable     = true;
@@ -153,19 +170,21 @@ module TreeV2::<L: Layout> #(
 
     always_ff (clk, rst) {
         if_reset {
-            node_ptr   = 0;
-            ready_reg  = false;
-            busy_reg   = false;
-            err_reg    = false;
-            prediction = 0;
-            state      = State::idle;
+            read_addr        = 0;
+            ready_reg        = false;
+            busy_reg         = false;
+            err_reg          = false;
+            prediction       = 0;
+            state            = State::idle;
+            tree_header_data = 0;
         } else {
-            node_ptr   = next_node_ptr;
-            ready_reg  = next_ready;
-            busy_reg   = next_busy;
-            err_reg    = next_err;
-            prediction = next_prediction;
-            state      = next_state;
+            read_addr        = next_read_addr;
+            ready_reg        = next_ready;
+            busy_reg         = next_busy;
+            err_reg          = next_err;
+            prediction       = next_prediction;
+            state            = next_state;
+            tree_header_data = next_tree_header_data;
         }
     }
 

@@ -1,0 +1,123 @@
+module CellOrchestrator::<L: Layout> #() (
+    clk: input clock,
+    rst: input reset,
+
+    num_trees_in_cell: input L::TreeIdx,
+    start_forest     : input lbool     ,
+
+    cell_busy      : input lbool        ,
+    cell_ready     : input lbool        ,
+    cell_error     : input lbool        ,
+    cell_prediction: input L::Prediction,
+
+    vote_valid: output lbool        ,
+    vote_ack  : input  lbool        ,
+    vote_class: output L::Prediction,
+
+    busy_o : output lbool,
+    ready_o: output lbool,
+    error_o: output lbool,
+
+    start_cell: output lbool,
+    // TODO: hardcoded
+    tree_header_addr: output logic<12>,
+    // TODO: hardcoded?
+    tree_header_data: input logic<L::NODE_SIZE * 8>,
+
+) {
+    // TODO: hardcoded
+    var tree_idx             : logic<12>;
+    var next_tree_idx        : logic<12>;
+    var next_tree_header_addr: logic<12>;
+
+    var next_start_cell: lbool;
+    var prev_cell_ready: lbool;
+
+    // Converts the potentially latched cell_ready signal into a strobe
+    let cell_prediction_arrived: lbool = cell_ready && !prev_cell_ready;
+
+    var vote_valid_reg : lbool        ;
+    var next_vote_valid: lbool        ;
+    var vote_class_reg : L::Prediction;
+    var next_vote_class: L::Prediction;
+
+    assign vote_valid = cell_prediction_arrived || vote_valid_reg;
+    assign vote_class = if cell_prediction_arrived ? cell_prediction : vote_class_reg;
+
+    let vote_pending: lbool = vote_valid && !vote_ack;
+
+    // Cell is stalled if a vote is pending and not being acked this cycle
+    let stall_cell: lbool = vote_valid_reg && !vote_ack;
+
+    assign busy_o  = cell_busy || next_start_cell || vote_pending;
+    assign ready_o = cell_ready && !next_start_cell && !vote_pending;
+    assign error_o = cell_error;
+
+    always_comb {
+        next_tree_idx         = tree_idx;
+        next_tree_header_addr = tree_header_addr;
+        next_start_cell       = false;
+
+        next_vote_valid = vote_valid_reg;
+        next_vote_class = vote_class_reg;
+
+        if start_forest {
+            next_tree_idx         = 0;
+            next_tree_header_addr = 0;
+            next_start_cell       = true;
+        }
+
+        if start_cell {
+            next_start_cell = false;
+        }
+
+        if cell_error {
+            next_start_cell = false;
+        } else if cell_prediction_arrived {
+
+            if !vote_ack {
+                // Vote arrived but not yet acked, buffer it
+                next_vote_valid = true;
+                next_vote_class = cell_prediction;
+            }
+            // else: acked same cycle it arrived, no need to buffer
+
+            // Latch the vote if a prediction just arrived
+            next_vote_valid = true;
+            next_vote_class = cell_prediction;
+
+            // Only advance to next tree if vote buffer is clear or being
+            // cleared this cycle, so we don't overwrite an unserviced vote
+            if !stall_cell && next_tree_idx <: num_trees_in_cell - 1 {
+                next_tree_idx += 1;
+                // TODO: hardcoded
+                next_tree_header_addr = tree_header_data[11:0];
+                next_start_cell       = true;
+            }
+        }
+
+        // Clear vote_valid when acked
+        if vote_ack {
+            next_vote_valid = false;
+        }
+    }
+
+    always_ff (clk, rst) {
+        if_reset {
+            tree_idx         = 0;
+            tree_header_addr = 0;
+            // tree_rst   = false;
+            start_cell      = false;
+            vote_valid_reg  = false;
+            vote_class_reg  = 0;
+            prev_cell_ready = false;
+        } else {
+            tree_idx         = next_tree_idx;
+            tree_header_addr = next_tree_header_addr;
+            start_cell       = next_start_cell;
+            vote_valid_reg   = next_vote_valid;
+            vote_class_reg   = next_vote_class;
+            prev_cell_ready  = cell_ready;
+        }
+    }
+}

@@ -1,38 +1,41 @@
 // HEADER
-00000002 // 0x1005c  Number of trees = 2 (4 bytes)
+02000000 // 0x1005c  Number of trees = 2 (4 bytes)
 00000403 // 0x10060  Number of features = 3 (1 byte)
          //             Number of classes = 4 (1 byte)
          //             Padding (2 bytes)
-// --- Node 0: Tree 0 ---
-00000002 // 0x10064 | left: ptr: 2
-00000000 // 0x10068 | right: prediction: class 0
-41200000 // 0x1006c | split: 10.0_f32
-40000000 // 0x10070 | left: false, right: true, split feat: 0 
-// --- Node 1: Tree 1 ---
-00000004 // 0x10074 | left: ptr: 4
-00000005 // 0x10078 | right: ptr: 5
-41200000 // 0x1007c | split: 10.0_f32
-00000001 // 0x10080 | left: false, right: false, split feat: 1
-// --- Node 2: Tree 0 ---
-00000001 // 0x10084 | left: prediction: class 1
-00000003 // 0x10088 | right: ptr: 3
-41200000 // 0x1008c | split: 10.0_f32
-80000002 // 0x10090 | left: true, right: false, split feat: 2
-// --- Node 3: Tree 0 ---
-00000002 // 0x10094 | left: prediction: class 2
-00000003 // 0x10098 | right: prediction: class 3
-41200000 // 0x1009c | split: 10.0_f32
-c0000002 // 0x100a0 | left: true, right: true, split feat: 2
-// --- Node 4: Tree 1 ---
-00000002 // 0x100a4 | left: prediction: class 2
-00000005 // 0x100a8 | right: ptr: 5
-41200000 // 0x100ac | split: 10.0_f32
-80000000 // 0x100b0 | left: true, right: false, split feat: 0 
-// --- Node 5: Tree 1 ---
-00000001 // 0x100b4 | left: prediction: class 1
-00000002 // 0x100b8 | right: prediction: class 2
-41200000 // 0x100bc | split: 10.0_f32
-c0000002 // 0x100c0 | left: true, right: true, split feat: 2
+
+// --- Tree 0, header ---
+// Pointer to next tree = 0x4
+0400 0000 0000 0000
+
+// --- Tree 0, Node 0 ---
+// | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
+0200 0000 2041 0040
+
+// --- Tree 0, Node 1 ---
+// | left: class=1 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
+0100 0300 2041 0080
+
+// --- Tree 0, Node 2 ---
+// | left: class=2 | right: class=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=2 |
+0200 0300 2041 02c0
+
+// --- Tree 1, header, idx 0 ---
+// Last tree in block
+0000 0000 0000 0000
+
+// --- Tree 1, Node 0, idx 1 ---
+// | left: ptr=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |
+0200 0300 2041 0100
+
+// --- Tree 1, Node 1, idx 2 ---
+// | left: class=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
+0200 0300 2041 0080
+
+// --- Tree 1, Node 2, idx 3 ---
+// | left: class=1 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, righ=true, split feat=2 |
+0100 0200 2041 02c0
+
 // --- Features ---
 41100000 // 0x100c4 | Feature 0 = 9.0_f32
 41300000 // 0x100c8 | Feature 1 = 11.0_f32

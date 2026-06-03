@@ -3,11 +3,14 @@
 // Junk data to simulate tree 1 starting at an offset from addr 0
 ef be ad de be ba fe ca // 0x0-0x7
 
+// --- Tree 0: header, including tree length ---
+0200 0000 0000 0000
+
 // --- Node 0: Tree 1 ---
 // | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
-02 00 00 00 20 41 00 40 // 0x8-0xf
+0200 0000 2041 0040 // 0x8-0xf
 
 // --- Node 1: Tree 1 ---
 // | left: ptr=1 (go backwards) | right: ptr=2 (this node) | split: 10.0_bf16=0x4120 |
 // | flags: left=false, right=false, split feat=0
-01 00 02 00 20 41 00 00 // 0x10-0x17
+0100 0200 2041 0000 // 0x10-0x17

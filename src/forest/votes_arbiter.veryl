@@ -1,0 +1,91 @@
+/// Arbiter keeping track of votes, granting write permissions in a round robin manner.
+module VotesArbiter::<L: Layout> #(
+    param NUM_REQUESTERS: u32 = 32,
+    param ADDR_WIDTH    : u32 = 32,
+) (
+    clk: input clock,
+    rst: input reset,
+
+    valid  : input  logic<NUM_REQUESTERS>                 ,
+    classes: input  logic<ADDR_WIDTH>     [NUM_REQUESTERS],
+    ack    : output logic<NUM_REQUESTERS>                 ,
+
+    votes: output forest_types::VoteResult::<L>,
+) {
+    var increment     : lbool            ;
+    var increment_addr: logic<ADDR_WIDTH>;
+
+    let read_addr: logic     <ADDR_WIDTH> = increment_addr;
+    var read_data: L::TreeIdx            ;
+
+    var priority_mask     : logic<NUM_REQUESTERS>;
+    var next_priority_mask: logic<NUM_REQUESTERS>;
+
+    let masked_request  : logic<NUM_REQUESTERS> = valid & priority_mask;
+    let unmasked_request: logic<NUM_REQUESTERS> = valid;
+
+    let grant: logic<NUM_REQUESTERS> = if |masked_request ?
+        masked_request & (~masked_request + 1)
+    :
+        unmasked_request & (~unmasked_request + 1)
+    ;
+
+    assign ack = grant;
+
+    always_comb {
+        next_priority_mask = priority_mask;
+        increment          = false;
+        increment_addr     = 0;
+
+        if |grant {
+            increment = true;
+
+            for i in 0..NUM_REQUESTERS {
+                if grant[i] {
+                    increment_addr     = classes[i];
+                    next_priority_mask = ~((1 << (i + 1)) - 1);
+                    if next_priority_mask == 0 {
+                        next_priority_mask = '1;
+                    }
+                }
+            }
+        }
+    }
+
+    always_ff (clk, rst) {
+        if_reset {
+            priority_mask = '1;
+        } else {
+            priority_mask = next_priority_mask;
+        }
+    }
+
+    // Voting logic
+    always_ff {
+        if_reset {
+            votes.max_vote       = 0;
+            votes.max_vote_class = 0;
+        } else {
+            if increment {
+                if read_data + 1 >: votes.max_vote {
+                    votes.max_vote       = read_data + 1;
+                    votes.max_vote_class = increment_addr;
+                }
+            }
+        }
+    }
+
+    inst votes_ram: RamCounter #(
+        // Max # of trees
+        DATA_WIDTH: L::TREE_IDX_WIDTH,
+        // Max number of classes
+        DEPTH: L::MAX_NUM_CLASSES,
+    ) (
+        clk                         ,
+        rst                         ,
+        inc_en      : increment     ,
+        inc_address : increment_addr,
+        read_address: read_addr     ,
+        read_data   : read_data     ,
+    );
+}
