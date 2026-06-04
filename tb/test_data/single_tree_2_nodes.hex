@@ -1,7 +1,7 @@
 // NOTE: memory is in little-endian format
 
 // --- Tree 0: header, including tree length ---
-0200 0000 0000 0000
+0300 0000 0000 0000
 
 // --- Node 0 --- 0x0-0x7
 // | left: class=0 | right: ptr=2 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=false, split feat=0 |

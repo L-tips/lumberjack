@@ -55,7 +55,7 @@ async def forest_test(dut):
     await reset(dut)
 
     # Write forest to tree evaluator cells
-    await fill_tree_cache(dut, 0, "forest_2_trees_6_nodes.hex", range(1,9))
+    await fill_tree_cache(dut, 0, "forest_2_trees_6_nodes.hex", range(1,5))
     await fill_tree_cache(dut, 1, "forest_2_trees_6_nodes.hex", range(5,9))
 
     # Write features to forest's caches

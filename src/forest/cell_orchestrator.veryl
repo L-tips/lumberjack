@@ -90,8 +90,9 @@ module CellOrchestrator::<L: Layout> #() (
             // cleared this cycle, so we don't overwrite an unserviced vote
             if !stall_cell && next_tree_idx <: num_trees_in_cell - 1 {
                 next_tree_idx += 1;
+                // Tree header contains the tree's length
                 // TODO: hardcoded
-                next_tree_header_addr = tree_header_data[11:0];
+                next_tree_header_addr = tree_header_addr + tree_header_data[11:0];
                 next_start_cell       = true;
             }
         }

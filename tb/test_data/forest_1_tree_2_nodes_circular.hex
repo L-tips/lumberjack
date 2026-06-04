@@ -4,7 +4,7 @@
 ef be ad de be ba fe ca // 0x0-0x7
 
 // --- Tree 0: header, including tree length ---
-0200 0000 0000 0000
+0300 0000 0000 0000
 
 // --- Node 0: Tree 1 ---
 // | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
