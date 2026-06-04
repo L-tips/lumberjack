@@ -54,7 +54,7 @@ async def forest_test(dut):
     
 
     test_cases = [
-        ("forest_2t_6n_aligned.hex", range(1,6), range(6,11)),
+        ("forest_2t_6n_aligned.hex", range(2,8), range(8,13)),
         ("forest_2t_6n_misaligned.hex", range(1,5), range(5,9)),
     ]
     

@@ -5,7 +5,9 @@ pub module Forest::<L: Layout> #(
     /// Use superscalar architecture
     param USE_SUPERSCALAR: bbool = true,
 
-    /// Number of read ports the feature cache can support
+    /// Number of read ports the feature cache can support.
+    /// When USE_SUPERSCALAR=true, this parameter must be larger
+    /// or equal to 2.
     param READ_PORTS_PER_CACHE: u8 = 4,
 
     /// Size of the tree caches in 64 bit dwords
@@ -33,10 +35,10 @@ pub module Forest::<L: Layout> #(
     feature_write_port: modport memutils::ScratchpadRamPort::write_slave,
     ctrl_port         : modport memutils::BramPort::slave               ,
 ) {
-    const READ_PORTS_PER_CACHE_U32: u32 = {24'h0, READ_PORTS_PER_CACHE};
+    const READ_PORTS_PER_CACHE_U32: u32 = READ_PORTS_PER_CACHE as u32;
     const PORTS_PER_TREE          : u32 = if USE_SUPERSCALAR ? 2 : 1;
     // Our caches have 4 read ports. Superscalar evaluators need 2 ports each, otherwise 1 port.
-    const CELL_INSTANCES_PER_CACHE: u32 = {24'h0, READ_PORTS_PER_CACHE} / PORTS_PER_TREE;
+    const CELL_INSTANCES_PER_CACHE: u32 = READ_PORTS_PER_CACHE_U32 / PORTS_PER_TREE;
     // Ceiling div
     const NUM_CACHES: u32 = (CELL_INSTANCES + CELL_INSTANCES_PER_CACHE - 1) / CELL_INSTANCES_PER_CACHE;
 
@@ -50,6 +52,7 @@ pub module Forest::<L: Layout> #(
     );
 
     for i in 0..NUM_CACHES :inst_caches {
+        const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
             READ_PORTS: READ_PORTS_PER_CACHE,
             DATA_WIDTH: L::FEATURE_WIDTH    ,
@@ -59,7 +62,7 @@ pub module Forest::<L: Layout> #(
             rst                      ,
             write: feature_write_port,
             // Each cache gets its appropriate slice of read ports
-            read: feature_read_port[i * READ_PORTS_PER_CACHE_U32:READ_PORTS_PER_CACHE_U32 * (i + 1) - 1],
+            read: feature_read_port[BASE_PORT+:READ_PORTS_PER_CACHE_U32],
         );
     }
 
@@ -73,7 +76,7 @@ pub module Forest::<L: Layout> #(
     var cells_busy : logic<CELL_INSTANCES>;
     var cells_error: logic<CELL_INSTANCES>;
 
-    // All cells done with their last vote acked
+    // All cells done and their last vote acked
     var done_reg       : lbool;
     let all_cells_ready: lbool = &cells_ready;
     let any_cells_busy : lbool = |cells_busy;
@@ -152,18 +155,18 @@ pub module Forest::<L: Layout> #(
             USE_SUPERSCALAR  ,
             TREE_CACHE_SIZE  ,
         ) (
-            clk                                                                          ,
-            rst             : rst                                                        ,
-            rst_cache                                                                    ,
-            tree_header_addr                                                             ,
-            tree_header_data                                                             ,
-            ready           : cell_ready                                                 ,
-            busy            : cell_busy                                                  ,
-            error           : cell_error                                                 ,
-            start           : start_cell                                                 ,
-            prediction      : cell_prediction                                            ,
-            feature_ports   : feature_read_port[BASE_PORT:BASE_PORT + PORTS_PER_TREE - 1],
-            ram_port        : tree_ram_ports[i]                                          ,
+            clk                                                           ,
+            rst             : rst                                         ,
+            rst_cache                                                     ,
+            tree_header_addr                                              ,
+            tree_header_data                                              ,
+            ready           : cell_ready                                  ,
+            busy            : cell_busy                                   ,
+            error           : cell_error                                  ,
+            start           : start_cell                                  ,
+            prediction      : cell_prediction                             ,
+            feature_ports   : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
+            ram_port        : tree_ram_ports[i]                           ,
         );
     }
 

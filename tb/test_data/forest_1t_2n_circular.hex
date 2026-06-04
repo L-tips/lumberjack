@@ -1,7 +1,7 @@
 // NOTE: memory is in little-endian format
 // Node 0: Tree 0
-// Junk data to simulate tree 1 starting at an offset from addr 0
-ef be ad de be ba fe ca // 0x0-0x7
+// Junk data to simulate tree 1 starting at an offset from addr 0 (and therefore misaligned)
+ef be ad de be ba fe ca
 
 // --- Tree 0: header ---
 // Tree length=3, first node ptr=1

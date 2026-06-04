@@ -4,6 +4,9 @@
          //             Number of classes = 4 (1 byte)
          //             Padding (2 bytes)
 
+// Padding (8 bytes)
+00000000 00000000
+
 // --- Tree 0, header ---
 // Tree length=4 first node ptr=2
 04000000 02000000
@@ -22,6 +25,9 @@
 // --- Tree 0, Node 2 ---
 // | left: class=2 | right: class=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=2 |
 0200 0300 2041 02c0
+
+// Padding
+00000000 00000000
 
 // --- Tree 1, header, idx 0 ---
 // Tree length=4, first node ptr=2

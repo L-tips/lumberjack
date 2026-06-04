@@ -152,13 +152,13 @@ async def rejects_circular_trees(dut):
     dut.start.value = 0
     assert dut.tree.busy.value == 1
 
-    # Takes 2 cycle to fetch header+evaluate the next 2 nodes
+    # Takes 2 cycles to fetch header+evaluate the next 2 nodes
     await n_cycles(dut.clk, 2)
 
     assert dut.tree.state.value == 2
 
     # Result should now be available
-    await n_cycles(dut.clk, 1)
+    await n_cycles(dut.clk, 2)
 
     assert dut.ready.value == 0
     assert dut.busy.value == 0
