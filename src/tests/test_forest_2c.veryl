@@ -1,0 +1,51 @@
+module TestForest_2Cells (
+    clk: input clock,
+    rst: input reset,
+
+    enable: input logic,
+
+    num_trees   : input test_layout::TreeIdx   ,
+    num_features: input test_layout::FeatureIdx,
+
+    busy : output lbool,
+    ready: output lbool,
+    error: output lbool,
+
+    prediction: output test_layout::Prediction,
+    num_votes : output test_layout::NumVotes  ,
+) {
+    const TREE_CACHE_SIZE      : u64 = 4096;
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE);
+
+    inst feature_write_bus: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+    );
+
+    inst ctrl_bus: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
+    inst forest: Forest::<test_layout> #(
+        TREE_CACHE_SIZE            ,
+        CELL_INSTANCES      : 2    ,
+        USE_SUPERSCALAR     : false,
+        READ_PORTS_PER_CACHE: 1    ,
+    ) (
+        clk                                  ,
+        rst                                  ,
+        rst_cache         : rst              ,
+        enable                               ,
+        num_trees                            ,
+        num_features                         ,
+        busy                                 ,
+        ready                                ,
+        error                                ,
+        prediction                           ,
+        num_votes                            ,
+        done              : _                ,
+        feature_write_port: feature_write_bus,
+        ctrl_port         : ctrl_bus         ,
+    );
+}
+
+#[test(test_forest_2c, TestForest_2Cells)]
+include (cocotb, "../../tb/test_forest_2c.py");

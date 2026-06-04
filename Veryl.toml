@@ -23,7 +23,9 @@ waveform_format = "fst"
 # waveform_format = "vcd"
 include_files = [
     "tb/utils.py",
-    "tb/test_data/single_tree_2_nodes.hex",
-    "tb/test_data/forest_2_trees_6_nodes.hex",
-    "tb/test_data/forest_1_tree_2_nodes_circular.hex",
+    "tb/test_data/forest_1t_2n_circular.hex",
+    "tb/test_data/forest_2t_6n_aligned.hex",
+    "tb/test_data/forest_2t_6n_misaligned.hex",
+    "tb/test_data/single_tree_2n_aligned.hex",
+    "tb/test_data/single_tree_2n_misaligned.hex",
 ]

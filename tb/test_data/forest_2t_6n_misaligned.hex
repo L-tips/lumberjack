@@ -5,8 +5,8 @@
          //             Padding (2 bytes)
 
 // --- Tree 0, header ---
-// Tree length (including header) = 4
-0400 0000 0000 0000
+// Tree length=4 first node ptr=1
+04000000 01000000
 
 // --- Tree 0, Node 0 ---
 // | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
@@ -21,8 +21,8 @@
 0200 0300 2041 02c0
 
 // --- Tree 1, header, idx 0 ---
-// Tree length = 4
-0400 0000 0000 0000
+// Tree length=4, first node ptr=1
+04000000 01000000
 
 // --- Tree 1, Node 0, idx 1 ---
 // | left: ptr=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |

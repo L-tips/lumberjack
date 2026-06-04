@@ -3,8 +3,9 @@
 // Junk data to simulate tree 1 starting at an offset from addr 0
 ef be ad de be ba fe ca // 0x0-0x7
 
-// --- Tree 0: header, including tree length ---
-0300 0000 0000 0000
+// --- Tree 0: header ---
+// Tree length=3, first node ptr=1
+03000000 01000000
 
 // --- Node 0: Tree 1 ---
 // | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |

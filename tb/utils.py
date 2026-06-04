@@ -56,17 +56,17 @@ def init_mem_le(mem, hexfile):
         mem[offset].value = value
         offset += 1
 
-def into_64b_chunks_le(data_bytes):
-    BYTES_IN_WORD = 8
-    mem_64 = []
-    for i in range(0, len(data_bytes), BYTES_IN_WORD):
-        chunk = data_bytes[i:i+BYTES_IN_WORD]
-        if len(chunk) < 8:
-            chunk = chunk + [0]*(BYTES_IN_WORD - len(chunk))
+def into_chunks_le(data_bytes, width):
+    bytes_per_word = (width + 7) // 8
+    mem_chunks = []
+    for i in range(0, len(data_bytes), bytes_per_word):
+        chunk = data_bytes[i:i+bytes_per_word]
+        if len(chunk) < width / bytes_per_word:
+            chunk = chunk + [0]*(bytes_per_word - len(chunk))
         value = int.from_bytes(bytes(chunk), byteorder="little", signed=False)
-        mem_64.append(value)
+        mem_chunks.append(value)
 
-    return mem_64
+    return mem_chunks
 
 """Read data from a .hex file into an array of byte-sized ints"""
 def read_hex(hexfile):

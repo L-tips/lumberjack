@@ -1,13 +1,13 @@
 module NodeEvaluator::<L: Layout> #(
-    param TREE_CACHE_ADDR_WIDTH: u32 = 0,
+    param CELL_CACHE_ADDR_WIDTH: u32 = 0,
 ) (
     node            : input   standard_layout::Node                                          ,
-    current_node_idx: input   logic                                   <TREE_CACHE_ADDR_WIDTH>,
+    current_node_idx: input   logic                                   <CELL_CACHE_ADDR_WIDTH>,
     feature_port    : modport memutils::ScratchpadRamPort::read_master                       ,
 
     is_prediction: output lbool                               ,
     prediction   : output L::Prediction                       ,
-    next_node_idx: output logic        <TREE_CACHE_ADDR_WIDTH>,
+    next_node_idx: output logic        <CELL_CACHE_ADDR_WIDTH>,
     error        : output lbool                               ,
 ) {
 
@@ -17,7 +17,7 @@ module NodeEvaluator::<L: Layout> #(
     // are formatted as IEEE754 bfloat16
     inst branch_picker: FloatLeq ( a: feature_port.data, b: node.split, leq: branch_left );
 
-    assign feature_port.address = node.flags.split_idx[L::FEAT_IDX_WIDTH - 1:0];
+    assign feature_port.address = node.flags.split_idx as L::FeatureIdx;
 
     // Check that out tree is a DAG and that there are no
     // circular conditions
@@ -25,16 +25,16 @@ module NodeEvaluator::<L: Layout> #(
     // assign error = false;
 
     var next_ptr: logic<L::CLASS_PTR_WIDTH>;
-    assign next_node_idx = next_ptr[TREE_CACHE_ADDR_WIDTH - 1:0];
+    assign next_node_idx = next_ptr[CELL_CACHE_ADDR_WIDTH - 1:0];
 
     always_comb {
         // Evaluate the node and decide next action
         if branch_left {
-            prediction    = node.left[L::CLASS_IDX_WIDTH - 1:0];
+            prediction    = node.left as L::Prediction;
             next_ptr      = node.left;
             is_prediction = node.flags.left_predict;
         } else {
-            prediction    = node.right[L::CLASS_IDX_WIDTH - 1:0];
+            prediction    = node.right as L::Prediction;
             next_ptr      = node.right;
             is_prediction = node.flags.right_predict;
         }

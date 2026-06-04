@@ -1,14 +1,17 @@
 pub module Forest::<L: Layout> #(
-    param TREE_INSTANCES: u32 = 1,
+    /// Number of instances of tree cell evaluators
+    param CELL_INSTANCES: u32 = 1,
+
     /// Use superscalar architecture
     param USE_SUPERSCALAR: bbool = true,
 
-    /// Size of the tree caches in 64 bit dwords
-    param TREE_CACHE_SIZE      : u64 = 1024                   ,
-    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
-
     /// Number of read ports the feature cache can support
     param READ_PORTS_PER_CACHE: u8 = 4,
+
+    /// Size of the tree caches in 64 bit dwords
+    param TREE_CACHE_SIZE: u64 = 1024,
+
+    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
 ) (
     clk      : input clock,
     rst      : input reset,
@@ -33,9 +36,12 @@ pub module Forest::<L: Layout> #(
     const READ_PORTS_PER_CACHE_U32: u32 = {24'h0, READ_PORTS_PER_CACHE};
     const PORTS_PER_TREE          : u32 = if USE_SUPERSCALAR ? 2 : 1;
     // Our caches have 4 read ports. Superscalar evaluators need 2 ports each, otherwise 1 port.
-    const TREE_INSTANCES_PER_CACHE: u32 = {24'h0, READ_PORTS_PER_CACHE} / PORTS_PER_TREE;
+    const CELL_INSTANCES_PER_CACHE: u32 = {24'h0, READ_PORTS_PER_CACHE} / PORTS_PER_TREE;
     // Ceiling div
-    const NUM_CACHES: u32 = (TREE_INSTANCES + TREE_INSTANCES_PER_CACHE - 1) / TREE_INSTANCES_PER_CACHE;
+    const NUM_CACHES: u32 = (CELL_INSTANCES + CELL_INSTANCES_PER_CACHE - 1) / CELL_INSTANCES_PER_CACHE;
+
+    const BITS_PER_COL      : u8 = 8;
+    const CELL_CACHE_NUM_COL: u8 = if USE_SUPERSCALAR ? L::NODE_SIZE * 2 : L::NODE_SIZE;
 
     // All read ports are (unfortunately) stored in a flat array.
     inst feature_read_port: memutils::ScratchpadRamPort [NUM_CACHES * READ_PORTS_PER_CACHE_U32] #(
@@ -57,18 +63,15 @@ pub module Forest::<L: Layout> #(
         );
     }
 
-    inst tree_ram_ports: memutils::BramPort [TREE_INSTANCES] #(
-        NUM_COL   : 8                    ,
-        COL_WIDTH : 8                    ,
-        ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH,
+    inst tree_ram_ports: memutils::BramPort [CELL_INSTANCES] #(
+        NUM_COL   : CELL_CACHE_NUM_COL   ,
+        COL_WIDTH : BITS_PER_COL         ,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
     );
 
-    var cells_ready: logic<TREE_INSTANCES>;
-    var cells_busy : logic<TREE_INSTANCES>;
-    var cells_error: logic<TREE_INSTANCES>;
-
-    // var next_done: lbool;
-    // assign done = next_done;
+    var cells_ready: logic<CELL_INSTANCES>;
+    var cells_busy : logic<CELL_INSTANCES>;
+    var cells_error: logic<CELL_INSTANCES>;
 
     // All cells done with their last vote acked
     var done_reg       : lbool;
@@ -79,24 +82,21 @@ pub module Forest::<L: Layout> #(
     var start_eval_reg: lbool;
     let start_eval    : lbool = start_eval_reg;
 
-    // New evaluation request incoming
-    // let start_eval: lbool = state == State::idle && enable && !done_reg;
-
     let rst_votes: reset = ~start_eval & rst;
 
     // Base trees per cell and remainder
-    let trees_per_cell_base: L::TreeIdx = num_trees / TREE_INSTANCES as L::TreeIdx;
-    let trees_remainder    : L::TreeIdx = num_trees % TREE_INSTANCES as L::TreeIdx;
+    let trees_per_cell_base: L::TreeIdx = num_trees / CELL_INSTANCES as L::TreeIdx;
+    let trees_remainder    : L::TreeIdx = num_trees % CELL_INSTANCES as L::TreeIdx;
 
-    var vote_ack  : logic<TREE_INSTANCES>;
-    var vote_valid: logic<TREE_INSTANCES>;
+    var vote_ack  : logic<CELL_INSTANCES>;
+    var vote_valid: logic<CELL_INSTANCES>;
 
-    var vote_classes: L::Prediction [TREE_INSTANCES];
+    var vote_classes: L::Prediction [CELL_INSTANCES];
 
     var votes: forest_types::VoteResult::<L>;
 
     inst vote_arbiter: VotesArbiter::<L> #(
-        NUM_REQUESTERS: TREE_INSTANCES            ,
+        NUM_REQUESTERS: CELL_INSTANCES            ,
         ADDR_WIDTH    : $clog2(L::MAX_NUM_CLASSES),
     ) (
         clk                  ,
@@ -107,10 +107,10 @@ pub module Forest::<L: Layout> #(
         votes                ,
     );
 
-    for i in 0..TREE_INSTANCES :inst_tree_cells {
-        const cache_idx: u32 = i / TREE_INSTANCES_PER_CACHE;
-        const slot_idx : u32 = i % TREE_INSTANCES_PER_CACHE;
-        const base_port: u32 = cache_idx * READ_PORTS_PER_CACHE_U32 + slot_idx * PORTS_PER_TREE;
+    for i in 0..CELL_INSTANCES :inst_tree_cells {
+        const CACHE_IDX: u32 = i / CELL_INSTANCES_PER_CACHE;
+        const SLOT_IDX : u32 = i % CELL_INSTANCES_PER_CACHE;
+        const BASE_PORT: u32 = CACHE_IDX * READ_PORTS_PER_CACHE_U32 + SLOT_IDX * PORTS_PER_TREE;
 
         // Cell i gets base + 1 if i < remainder, else base
         let num_trees_in_cell: L::TreeIdx = trees_per_cell_base + (if i as L::TreeIdx <: trees_remainder ? 1 : 0);
@@ -122,11 +122,13 @@ pub module Forest::<L: Layout> #(
         var cell_error     : lbool        ;
         var cell_prediction: L::Prediction;
 
-        // TODO: hardcoded
-        var tree_header_addr: logic<12>              ;
-        var tree_header_data: logic<L::NODE_SIZE * 8>;
+        var tree_header_addr: logic<CELL_CACHE_ADDR_WIDTH>;
 
-        inst orchestrator: CellOrchestrator::<L> (
+        var tree_header_data: standard_layout::TreeHeader;
+
+        inst orchestrator: CellOrchestrator::<L> #(
+            CELL_CACHE_ADDR_WIDTH  ,
+        ) (
             clk                               ,
             rst                               ,
             num_trees_in_cell                 ,
@@ -160,25 +162,13 @@ pub module Forest::<L: Layout> #(
             error           : cell_error                                                 ,
             start           : start_cell                                                 ,
             prediction      : cell_prediction                                            ,
-            feature_ports   : feature_read_port[base_port:base_port + PORTS_PER_TREE - 1],
+            feature_ports   : feature_read_port[BASE_PORT:BASE_PORT + PORTS_PER_TREE - 1],
             ram_port        : tree_ram_ports[i]                                          ,
         );
     }
 
     assign prediction = votes.max_vote_class;
     assign num_votes  = votes.max_vote;
-
-    // assign busy  = |cells_busy;
-    // assign ready = &cells_ready;
-    // assign error = |cells_error;
-
-    // always_ff {
-    //     if_reset {
-    //         ready = false;
-    //     } else {
-    //         ready = next_ready;
-    //     }
-    // }
 
     assign busy  = any_cells_busy || all_cells_ready && !done_reg;
     assign ready = done_reg;

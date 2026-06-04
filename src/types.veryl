@@ -88,4 +88,11 @@ package standard_layout for Layout {
         right: logic<16>,
         left : logic<16>,
     }
+
+    // TODO: hardcoded
+    // Field order inverted - little-endian memory
+    struct TreeHeader {
+        first_node_ptr: logic<32>,
+        tree_len      : logic<32>,
+    }
 }

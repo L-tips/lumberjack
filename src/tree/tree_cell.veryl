@@ -1,10 +1,11 @@
 module TreeCell::<L: Layout> #(
     /// Use superscalar architecture
     param USE_SUPERSCALAR: bbool = true,
+
     /// Size of the tree cache in 64 bit dwords
     param TREE_CACHE_SIZE: u64 = 1024,
 
-    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE)   ,
+    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE)   ,
     const FEAT_PORTS_PER_TREE  : u32 = if USE_SUPERSCALAR ? 2 : 1,
 ) (
     clk: input clock,
@@ -15,10 +16,10 @@ module TreeCell::<L: Layout> #(
     /// Strobe signalling the start of an evaluation
     start: input lbool,
     /// Tree index within the cache, aka the address of the first node in the tree
-    tree_header_addr: input logic<TREE_CACHE_ADDR_WIDTH>,
+    tree_header_addr: input logic<CELL_CACHE_ADDR_WIDTH>,
 
     /// Data inside the evaluated tree's header
-    tree_header_data: output logic<L::NODE_SIZE * 8>,
+    tree_header_data: output standard_layout::TreeHeader,
 
     ready     : output lbool        ,
     busy      : output lbool        ,
@@ -28,7 +29,12 @@ module TreeCell::<L: Layout> #(
     feature_ports: modport memutils::ScratchpadRamPort::read_master [FEAT_PORTS_PER_TREE],
     ram_port     : modport memutils::BramPort::slave                                     ,
 ) {
-    type NodePtr = logic<TREE_CACHE_ADDR_WIDTH>;
+    const BITS_PER_COL    : u8  = 8;
+    const CACHE_NUM_COL   : u8  = if USE_SUPERSCALAR ? L::NODE_SIZE * 2 : L::NODE_SIZE;
+    const CACHE_DATA_WIDTH: u32 = CACHE_NUM_COL * BITS_PER_COL;
+    const NODE_BITS       : u32 = L::NODE_SIZE * BITS_PER_COL;
+
+    type NodePtr = logic<CELL_CACHE_ADDR_WIDTH>;
 
     enum State {
         idle,
@@ -50,12 +56,20 @@ module TreeCell::<L: Layout> #(
 
     var next_prediction: L::Prediction;
 
-    inst tree_cache_bus        : memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
-    inst tree_cache_bus_demuxed: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+    inst tree_cache_bus: memutils::BramPort #(
+        NUM_COL   : CACHE_NUM_COL        ,
+        COL_WIDTH : BITS_PER_COL         ,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+    );
+    inst tree_cache_bus_demuxed: memutils::BramPort #(
+        NUM_COL   : CACHE_NUM_COL        ,
+        COL_WIDTH : BITS_PER_COL         ,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+    );
 
     inst cache_demux: BramDemux #(
-        ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH,
-        DATA_WIDTH: L::NODE_SIZE * 8,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+        DATA_WIDTH: CACHE_DATA_WIDTH     ,
     ) (
         master_0     : tree_cache_bus        ,
         master_1     : ram_port              ,
@@ -65,8 +79,8 @@ module TreeCell::<L: Layout> #(
 
     // RAM with 64b wide data so we can fetch a node in a single cycle
     inst tree_cache: memutils::SinglePortBlockRam #(
-        NUM_COL  : L::NODE_SIZE   ,
-        COL_WIDTH: 8              ,
+        NUM_COL  : CACHE_NUM_COL  ,
+        COL_WIDTH: BITS_PER_COL   ,
         RAM_DEPTH: TREE_CACHE_SIZE,
     ) (
         clk                         ,
@@ -79,35 +93,93 @@ module TreeCell::<L: Layout> #(
 
     let current_node_idx: NodePtr = read_addr - tree_header_addr;
 
-    // TODO: hardcoded?
-    var next_tree_header_data: logic<L::NODE_SIZE * 8>;
-    // Node indices are index-addressed, which maps directly to a dword index
-    // in the RAM. Moreover, a node with a pointer to another node stores the
-    // ABSOLUTE index of the next node relative to this storage block. For example:
-    //
-    // 0: [tree 0, node 0 (points to x)]
-    // 1: [tree 1, node 2 (points to tree 1, node 1 = idx 2)] -|
-    // 2: [tree 1, node 1] <--------------
-    assign tree_cache_bus.address = next_read_addr;
+    var next_tree_header_data: standard_layout::TreeHeader;
+
+    // Node indices are relative, mapping directly to a dword index
+    // in the RAM.
+    assign tree_cache_bus.address = if USE_SUPERSCALAR ? next_read_addr >> 1 : next_read_addr;
+
+    var node_0: standard_layout::Node;
+
+    if USE_SUPERSCALAR :assign_node_0 {
+        // Pick the low bits from the read data
+        assign node_0 = tree_cache_bus.read_data as standard_layout::Node;
+
+    } else {
+        assign node_0 = tree_cache_bus.read_data as standard_layout::Node;
+    }
+
+    var eval_is_prediction_0: lbool        ;
+    var eval_prediction_0   : L::Prediction;
+    var eval_next_idx_0     : NodePtr      ;
+    var eval_error_0        : lbool        ;
+
+    inst evaluator_0: NodeEvaluator::<L> #(
+        CELL_CACHE_ADDR_WIDTH  ,
+    ) (
+        node            : node_0              ,
+        current_node_idx: current_node_idx    ,
+        is_prediction   : eval_is_prediction_0,
+        prediction      : eval_prediction_0   ,
+        next_node_idx   : eval_next_idx_0     ,
+        error           : eval_error_0        ,
+        feature_port    : feature_ports[0]    ,
+    );
 
     var eval_is_prediction: lbool        ;
     var eval_prediction   : L::Prediction;
     var eval_next_idx     : NodePtr      ;
     var eval_error        : lbool        ;
 
-    inst evaluator: NodeEvaluator::<L> #(
-        TREE_CACHE_ADDR_WIDTH  ,
-    ) (
-        node                                ,
-        current_node_idx: current_node_idx  ,
-        is_prediction   : eval_is_prediction,
-        prediction      : eval_prediction   ,
-        next_node_idx   : eval_next_idx     ,
-        error           : eval_error        ,
-        feature_port    : feature_ports[0]  ,
-    );
+    if USE_SUPERSCALAR :evaluator_1 {
+        // Pick the high bits from the read data
+        let node_1: standard_layout::Node = tree_cache_bus.read_data[NODE_BITS * 2
+            - 1:NODE_BITS] as standard_layout::Node;
 
-    let node: standard_layout::Node = tree_cache_bus.read_data as standard_layout::Node;
+        var eval_is_prediction_1: lbool        ;
+        var eval_prediction_1   : L::Prediction;
+        var eval_next_idx_1     : NodePtr      ;
+        var eval_error_1        : lbool        ;
+
+        inst evaluator_1: NodeEvaluator::<L> #(
+            CELL_CACHE_ADDR_WIDTH  ,
+        ) (
+            node            : node_1              ,
+            current_node_idx: current_node_idx + 1,
+            is_prediction   : eval_is_prediction_1,
+            prediction      : eval_prediction_1   ,
+            next_node_idx   : eval_next_idx_1     ,
+            error           : eval_error_1        ,
+            feature_port    : feature_ports[1]    ,
+        );
+
+        let eval_node_high_bits: lbool = read_addr[0];
+        // This only works if read_addr is the addr of the low-bits node. Although if
+        // read_addr[0] == 1, then we're already picking the high-bits node anyway,
+        // so we don't care about this result.
+        let node_0_points_to_node_1: lbool = !eval_is_prediction_0 && eval_next_idx_0 == read_addr + 1;
+        let pick_node_1            : lbool = eval_node_high_bits || node_0_points_to_node_1;
+
+        always_comb {
+            if pick_node_1 {
+                eval_is_prediction = eval_is_prediction_1;
+                eval_prediction    = eval_prediction_1;
+                eval_next_idx      = eval_next_idx_1;
+                eval_error         = eval_error_1;
+            } else {
+                eval_is_prediction = eval_is_prediction_0;
+                eval_prediction    = eval_prediction_0;
+                eval_next_idx      = eval_next_idx_0;
+                eval_error         = eval_error_0;
+            }
+        }
+
+    } else {
+        assign eval_is_prediction = eval_is_prediction_0;
+        assign eval_prediction    = eval_prediction_0;
+        assign eval_next_idx      = eval_next_idx_0;
+        assign eval_error         = eval_error_0;
+    }
 
     always_comb {
         // Default: maintain current state
@@ -123,12 +195,14 @@ module TreeCell::<L: Layout> #(
         tree_cache_bus.byte_write_enable = 0;
         tree_cache_bus.write_data        = 0;
 
+        let header_data: standard_layout::TreeHeader = tree_cache_bus.read_data as standard_layout::TreeHeader;
+
         // State machine
         case state {
             State::read_header: {
                 tree_cache_bus.enable =  true;
-                next_read_addr        += 1;
-                next_tree_header_data =  tree_cache_bus.read_data;
+                next_read_addr        += header_data.first_node_ptr as NodePtr;
+                next_tree_header_data =  header_data;
                 next_state            =  State::evaluating;
             }
 
@@ -138,11 +212,11 @@ module TreeCell::<L: Layout> #(
                     next_ready      = true;
                     next_busy       = false;
                     next_state      = State::idle;
-                    next_prediction = eval_prediction[L::CLASS_IDX_WIDTH - 1:0];
+                    next_prediction = eval_prediction as L::Prediction;
                 } else {
                     // Continue on with another read
                     tree_cache_bus.enable = true;
-                    next_read_addr        = eval_next_idx[TREE_CACHE_ADDR_WIDTH - 1:0] + tree_header_addr;
+                    next_read_addr        = eval_next_idx as NodePtr + tree_header_addr;
                     next_err              = eval_error;
                     if next_err {
                         next_busy  = false;
