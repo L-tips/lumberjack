@@ -55,7 +55,7 @@ async def forest_test(dut):
 
     test_cases = [
         ("forest_2t_6n_aligned.hex", range(2,8), range(8,13)),
-        ("forest_2t_6n_misaligned.hex", range(1,5), range(5,9)),
+        ("forest_2t_6n_misaligned.hex", range(2,6), range(6,10)),
     ]
     
     for file, cache_0_range, cache_1_range in test_cases:
@@ -85,6 +85,9 @@ async def forest_test(dut):
         while not dut.ready.value == 1:
             cycle_count += 1
             await RisingEdge(dut.clk)
+
+            if cycle_count > 20:
+                assert False
 
         # Forest should predict class #1 with 2 votes
         assert dut.prediction.value == 1

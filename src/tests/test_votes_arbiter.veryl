@@ -1,2 +1,29 @@
-#[test(test_votes_arbiter, VotesArbiter)]
+module TestVotesArbiter #(
+    const NUM_REQUESTERS: u32 = 4,
+    const ADDR_WIDTH    : u32 = 9,
+) (
+    clk: input clock,
+    rst: input reset,
+
+    valid  : input  logic<NUM_REQUESTERS>                 ,
+    classes: input  logic<ADDR_WIDTH>     [NUM_REQUESTERS],
+    ack    : output logic<NUM_REQUESTERS>                 ,
+
+    votes: output forest_types::VoteResult::<test_layout>,
+) {
+
+    inst votes_arbiter: VotesArbiter::<test_layout> #(
+        NUM_REQUESTERS  ,
+        ADDR_WIDTH      ,
+    ) (
+        clk             ,
+        rst             ,
+        valid           ,
+        classes         ,
+        ack             ,
+        votes           ,
+    );
+}
+
+#[test(test_votes_arbiter, TestVotesArbiter)]
 include (cocotb, "../../tb/test_votes_arbiter.py");

@@ -32,7 +32,7 @@ module TestForest_2Cells (
     ) (
         clk                                  ,
         rst                                  ,
-        rst_cache         : rst              ,
+        rst_cell_caches   : rst              ,
         enable                               ,
         num_trees                            ,
         num_features                         ,

@@ -28,11 +28,11 @@ module TestForest_2Cells_Superscalar (
         TREE_CACHE_SIZE           ,
         CELL_INSTANCES      : 2   ,
         USE_SUPERSCALAR     : true,
-        READ_PORTS_PER_CACHE: 1   ,
+        READ_PORTS_PER_CACHE: 2   ,
     ) (
         clk                                  ,
         rst                                  ,
-        rst_cache         : rst              ,
+        rst_cell_caches   : rst              ,
         enable                               ,
         num_trees                            ,
         num_features                         ,

@@ -4,6 +4,10 @@
          //             Number of classes = 4 (1 byte)
          //             Padding (2 bytes)
 
+// Padding - NOTE: the first header in each tree's cache 
+// must always start at address 0.
+00000000 00000000
+
 // --- Tree 0, header ---
 // Tree length=4 first node ptr=1
 04000000 01000000

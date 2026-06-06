@@ -21,11 +21,11 @@ async def arbiter_test(dut):
 
     await RisingEdge(dut.clk)
 
-    dut.valid.value = 0xffff_ffff
-    dut.classes.value = list(range(0, 32))
+    dut.valid.value = 0b1111
+    dut.classes.value = list(range(0, 4))
     
-    for i in range(0, 32):
+    for i in range(0, 4):
         await RisingEdge(dut.clk)
         assert_ack(dut, i)
-        assert dut.increment_addr.value == i
+        assert dut.votes_arbiter.increment_addr.value == i
 

@@ -24,21 +24,22 @@ async def reset(dut):
 
 async def fill_tree_cache(dut, tree_idx, mem_file, rng):
     mem_data = read_hex(mem_file)
-    mem_data = utils.into_chunks_le(mem_data, 64)
+    mem_data = utils.into_chunks_le(mem_data, 128)
 
     port = dut.forest.tree_ram_ports[tree_idx]
 
     port.enable.value = True
-    port.byte_write_enable.value = 0b11111111
+    port.byte_write_enable.value = 0xffff
 
     for addr in rng:
         port.address.value = addr - rng.start
         port.write_data.value = mem_data[addr]
         await RisingEdge(dut.clk)
 
-    port.enable.value = False
     port.write_data.value = 0
     port.byte_write_enable.value = 0
+    await n_cycles(dut.clk, 2)
+    port.enable.value = False
 
 async def write_feature(dut, feature_idx, feature):
     dut.feature_write_bus.write_enable.value = True
@@ -54,8 +55,8 @@ async def forest_test(dut):
     
 
     test_cases = [
-        ("forest_2t_6n_aligned.hex", range(1,6), range(6,11)),
-        ("forest_2t_6n_misaligned.hex", range(1,5), range(5,9)),
+        ("forest_2t_6n_aligned.hex", range(1,4), range(4,7)),
+        ("forest_2t_6n_misaligned.hex", range(1,3), range(3,5)),
     ]
     
     for file, cache_0_range, cache_1_range in test_cases:
@@ -81,10 +82,12 @@ async def forest_test(dut):
         dut.enable.value = 0
 
         cycle_count = 1
-
         while not dut.ready.value == 1:
             cycle_count += 1
             await RisingEdge(dut.clk)
+
+            if cycle_count >= 20:
+                assert False
 
         # Forest should predict class #1 with 2 votes
         assert dut.prediction.value == 1

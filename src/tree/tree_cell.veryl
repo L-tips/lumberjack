@@ -131,6 +131,9 @@ module TreeCell::<L: Layout> #(
         let node_high: standard_layout::Node = tree_cache_bus.read_data[NODE_BITS * 2
             - 1:NODE_BITS] as standard_layout::Node;
 
+        let eval_high_bits: lbool   = read_addr[0];
+        let node_idx      : NodePtr = if eval_high_bits ? current_node_idx : current_node_idx + 1;
+
         var eval_is_prediction_1: lbool        ;
         var eval_prediction_1   : L::Prediction;
         var eval_next_idx_1     : NodePtr      ;
@@ -140,7 +143,7 @@ module TreeCell::<L: Layout> #(
             CELL_CACHE_ADDR_WIDTH  ,
         ) (
             node            : node_high           ,
-            current_node_idx: current_node_idx + 1,
+            current_node_idx: node_idx            ,
             is_prediction   : eval_is_prediction_1,
             prediction      : eval_prediction_1   ,
             next_node_idx   : eval_next_idx_1     ,
@@ -148,7 +151,6 @@ module TreeCell::<L: Layout> #(
             feature_port    : feature_ports[1]    ,
         );
 
-        let eval_high_bits: lbool = read_addr[0];
         // This only works if read_addr is the addr of the low-bits node. Although if
         // read_addr[0] == 1, then we're already picking the high-bits node anyway,
         // so we don't care about this result.
