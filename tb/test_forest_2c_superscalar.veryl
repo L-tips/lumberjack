@@ -1,4 +1,4 @@
-module TestForest_2Cells (
+module TestForest_2Cells_Superscalar (
     clk: input clock,
     rst: input reset,
 
@@ -22,13 +22,13 @@ module TestForest_2Cells (
         ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
     );
 
-    inst ctrl_bus: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+    inst ctrl_bus: memutils::BramPort #( NUM_COL: 16, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
 
     inst forest: Forest::<test_layout> #(
-        TREE_CACHE_SIZE            ,
-        CELL_INSTANCES      : 2    ,
-        USE_SUPERSCALAR     : false,
-        READ_PORTS_PER_CACHE: 1    ,
+        TREE_CACHE_SIZE           ,
+        CELL_INSTANCES      : 2   ,
+        USE_SUPERSCALAR     : true,
+        READ_PORTS_PER_CACHE: 2   ,
     ) (
         clk                                  ,
         rst                                  ,
@@ -47,5 +47,5 @@ module TestForest_2Cells (
     );
 }
 
-#[test(test_forest_2c, TestForest_2Cells)]
-include (cocotb, "../../tb/test_forest_2c.py");
+#[test(test_forest_2c_superscalar, TestForest_2Cells_Superscalar)]
+include (cocotb, "../tb/test_forest_2c_superscalar.py");

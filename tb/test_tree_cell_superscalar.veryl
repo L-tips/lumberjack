@@ -42,4 +42,4 @@ module TestTreeCellSuperscalar #(
 }
 
 #[test(test_tree_cell_superscalar, TestTreeCellSuperscalar)]
-include (cocotb, "../../tb/test_tree_cell_superscalar.py");
+include (cocotb, "../tb/test_tree_cell_superscalar.py");

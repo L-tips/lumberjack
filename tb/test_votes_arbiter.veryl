@@ -26,4 +26,4 @@ module TestVotesArbiter #(
 }
 
 #[test(test_votes_arbiter, TestVotesArbiter)]
-include (cocotb, "../../tb/test_votes_arbiter.py");
+include (cocotb, "../tb/test_votes_arbiter.py");

@@ -64,4 +64,4 @@ module TestForestTop (
 }
 
 #[test(test_forest_top, TestForestTop)]
-include (cocotb, "../../tb/forest_top.py");
+include (cocotb, "../tb/forest_top.py");

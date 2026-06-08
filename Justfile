@@ -7,7 +7,7 @@ build:
     veryl build --quiet
 
 wave file:
-    surfer {{justfile_directory()}}/target/waveform/{{file}}.fst -s {{justfile_directory()}}/{{file}}.surf.ron >& /dev/null & 
+    surfer target/waveform/{{file}}.fst -s {{file}}.surf.ron >& /dev/null & 
 
 check:
     veryl check --quiet
@@ -16,12 +16,12 @@ fmt:
     veryl fmt --quiet
 
 test TEST *extra_args:
-    uv run veryl test {{justfile_directory()}}/src/tests/test_{{TEST}}.veryl \
-        {{justfile_directory()}}/src/*.veryl \
-        {{justfile_directory()}}/src/tree/*.veryl \
-        {{justfile_directory()}}/src/forest/*.veryl \
-        {{justfile_directory()}}/src/ibex_bus/*.veryl \
-        {{justfile_directory()}}/src/tests/common/*.veryl \
+    uv run veryl test tb/test_{{TEST}}.veryl \
+        src/*.veryl \
+        src/tree/*.veryl \
+        src/forest/*.veryl \
+        src/ibex_bus/*.veryl \
+        tb/common/*.veryl \
         --wave --quiet {{extra_args}}
 
 test-all *extra_args:

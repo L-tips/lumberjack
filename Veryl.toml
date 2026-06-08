@@ -11,7 +11,7 @@ memutils = { version = "0.4.0", path = "../memutils-veryl" }
 clock_type = "posedge"
 reset_type = "async_low"
 
-sources = ["src"]
+sources = ["src", "tb"]
 target = { type = "directory", path = "target/veryl" }
 
 [format]
@@ -20,7 +20,6 @@ vertical_align = true
 [test]
 waveform_target = { type = "directory", path = "target/waveform" }
 waveform_format = "fst"
-# waveform_format = "vcd"
 include_files = [
     "tb/utils.py",
     "tb/test_data/forest_1t_2n_circular.hex",
