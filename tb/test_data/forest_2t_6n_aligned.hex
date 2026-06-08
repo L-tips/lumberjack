@@ -8,8 +8,8 @@
 00000000 00000000
 
 // --- Tree 0, header ---
-// Tree length=4 first node ptr=2
-04000000 02000000
+// Tree length=6 (including padding) first node ptr=2
+06000000 02000000
 
 // Padding
 00000000 00000000
@@ -30,8 +30,8 @@
 00000000 00000000
 
 // --- Tree 1, header, idx 0 ---
-// Tree length=4, first node ptr=2
-04000000 02000000
+// Tree length=5, first node ptr=2
+05000000 02000000
 
 // Padding
 00000000 00000000

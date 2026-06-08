@@ -1,8 +1,8 @@
 // NOTE: memory is in little-endian format
 
 // --- Tree 0: header ---
-// Tree len=3, first node ptr=2
-03000000 02000000
+// Tree len=4, first node ptr=2
+04000000 02000000
 
 // Padding (optional)
 00000000 00000000
