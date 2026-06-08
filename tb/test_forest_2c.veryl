@@ -48,4 +48,19 @@ module TestForest_2Cells (
 }
 
 #[test(test_forest_2c, TestForest_2Cells)]
-include (cocotb, "../tb/test_forest_2c.py");
+embed (cocotb) py{{{
+
+import cocotb
+import test_forest
+
+@cocotb.test()
+async def forest_test(dut):
+    test_cases = [
+        ("forest_2t_6n_aligned.hex", [range(2,8), range(8,13)]),
+        ("forest_2t_6n_misaligned.hex", [range(2,6), range(6,10)]),
+    ]
+
+    await test_forest.test_forest(dut, 64, test_cases)
+
+}}}
+

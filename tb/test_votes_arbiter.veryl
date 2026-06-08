@@ -16,12 +16,12 @@ module TestVotesArbiter #(
         NUM_REQUESTERS  ,
         ADDR_WIDTH      ,
     ) (
-        clk             ,
-        rst             ,
-        valid           ,
-        classes         ,
-        ack             ,
-        votes           ,
+        clk      ,
+        rst      ,
+        valid    ,
+        classes  ,
+        ack      ,
+        votes    ,
     );
 }
 

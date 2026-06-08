@@ -26,7 +26,7 @@ async def init_memory(dut, mem_file):
     mem_data = utils.into_chunks_le(mem_data, 64)
 
     dut.ram_port.enable.value = True
-    dut.ram_port.byte_write_enable.value = 0b11111111
+    dut.ram_port.byte_write_enable.value = 0xff
 
     for addr, data in enumerate(mem_data):
         dut.ram_port.address.value = addr
@@ -65,7 +65,7 @@ async def tree_test(dut):
         # assert dut.tree.state.value == 1
 
         # Test that we can't write data to the RAM while it's busy
-        dut.ram_port.byte_write_enable.value = 0b11111111
+        dut.ram_port.byte_write_enable.value = 0xff
 
         # Takes 2 cycles to fetch header + evaluate the full node
         await n_cycles(dut.clk, 2)
@@ -90,7 +90,7 @@ async def tree_test(dut):
         # Writes should still not be enabled until no longer busy
         assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
         # Even though the RAM port is trying to write
-        assert dut.ram_port.byte_write_enable.value == 0b11111111
+        assert dut.ram_port.byte_write_enable.value == 0xff
 
         # Make sure we don't overwrite the RAM when busy goes low
         dut.ram_port.byte_write_enable.value = 0

@@ -25,10 +25,10 @@ module TestForest_1Cell_Superscalar (
     inst ctrl_bus: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
 
     inst forest: Forest::<test_layout> #(
-        TREE_CACHE_SIZE            ,
-        CELL_INSTANCES      : 1    ,
+        TREE_CACHE_SIZE           ,
+        CELL_INSTANCES      : 1   ,
         USE_SUPERSCALAR     : true,
-        READ_PORTS_PER_CACHE: 2    ,
+        READ_PORTS_PER_CACHE: 2   ,
     ) (
         clk                                  ,
         rst                                  ,
@@ -48,4 +48,18 @@ module TestForest_1Cell_Superscalar (
 }
 
 #[test(test_forest_1c_superscalar, TestForest_1Cell_Superscalar)]
-include (cocotb, "../tb/test_forest_1c_superscalar.py");
+embed (cocotb) py{{{
+
+import cocotb
+import test_forest
+
+@cocotb.test()
+async def forest_test(dut):
+    test_cases = [
+        ("forest_2t_6n_aligned.hex", [range(1,7)]),
+        ("forest_2t_6n_misaligned.hex", [range(1,5)]),
+    ]
+
+    await test_forest.test_forest(dut, 128, test_cases)
+
+}}}
