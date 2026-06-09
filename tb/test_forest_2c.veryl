@@ -52,15 +52,23 @@ embed (cocotb) py{{{
 
 import cocotb
 import test_forest
+import test_cases
 
 @cocotb.test()
-async def forest_test(dut):
-    test_cases = [
-        ("forest_2t_6n_aligned.hex", [range(2,8), range(8,13)]),
-        ("forest_2t_6n_misaligned.hex", [range(2,6), range(6,10)]),
+async def forest_2c_aligned(dut):
+    cases = [
+        test_cases.TC_ALIGNED_2CELLS,
     ]
 
-    await test_forest.test_forest(dut, 64, test_cases)
+    await test_forest.test_forest(dut, cases)
+
+
+@cocotb.test()
+async def forest_2c_misaligned(dut):
+    cases = [
+        test_cases.TC_MISALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_forest(dut, cases)
 
 }}}
-

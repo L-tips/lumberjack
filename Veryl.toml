@@ -23,6 +23,7 @@ waveform_format = "fst"
 include_files = [
     "tb/utils.py",
     "tb/test_forest.py",
+    "tb/test_cases.py",
     "tb/test_data/forest_1t_2n_circular.hex",
     "tb/test_data/forest_2t_6n_aligned.hex",
     "tb/test_data/forest_2t_6n_misaligned.hex",
