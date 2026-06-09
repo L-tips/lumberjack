@@ -27,6 +27,8 @@
               verilator
               uv
               surfer
+              # The verilator package is missing the zlib dependency
+              zlib
             ];
           };
         }

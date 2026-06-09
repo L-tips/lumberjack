@@ -6,8 +6,11 @@ dependencies/
 # Surfer states
 *.surf.ron
 
+# Direnv/nix
+.direnv/
+.envrc
+
 .vscode/
 
 .venv
-.python-version
 **/__pycache__/
