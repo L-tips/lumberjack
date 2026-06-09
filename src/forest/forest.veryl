@@ -43,11 +43,11 @@ pub module Forest::<L: Layout> #(
     const NUM_CACHES: u32 = (CELL_INSTANCES + CELL_INSTANCES_PER_CACHE - 1) / CELL_INSTANCES_PER_CACHE;
 
     const BITS_PER_COL      : u8 = 8;
-    const CELL_CACHE_NUM_COL: u8 = if USE_SUPERSCALAR ? L::NODE_SIZE * 2 : L::NODE_SIZE;
+    const CELL_CACHE_NUM_COL: u8 = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
     // All read ports are (unfortunately) stored in a flat array.
     inst feature_read_port: memutils::ScratchpadRamPort [NUM_CACHES * READ_PORTS_PER_CACHE_U32] #(
-        DATA_WIDTH: L::FEATURE_WIDTH ,
+        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
         ADDR_WIDTH: L::FEAT_IDX_WIDTH,
     );
 
@@ -55,7 +55,7 @@ pub module Forest::<L: Layout> #(
         const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
             READ_PORTS: READ_PORTS_PER_CACHE,
-            DATA_WIDTH: L::FEATURE_WIDTH    ,
+            DATA_WIDTH: node_layout::FEATURE_WIDTH    ,
             DEPTH     : L::MAX_NUM_FEATURES ,
         ) (
             clk                      ,
@@ -127,7 +127,7 @@ pub module Forest::<L: Layout> #(
 
         var tree_header_addr: logic<CELL_CACHE_ADDR_WIDTH>;
 
-        var tree_header_data: standard_layout::TreeHeader;
+        var tree_header_data: node_layout::TreeHeader;
 
         inst orchestrator: CellOrchestrator::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,

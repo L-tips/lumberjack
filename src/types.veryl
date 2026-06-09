@@ -1,18 +1,6 @@
 proto package Layout {
-    /// Size of a single node in bytes
-    // TODO: hardcoded
-    const NODE_SIZE: u8;
-
-    /// Width of a single feature in bits
-    const FEATURE_WIDTH: u32;
-
     /// Maximum number of classes that can be predicted
     const MAX_NUM_CLASSES: u32;
-
-    /// Width of the LEFT/RIGHT fields in bits,
-    /// which represent either node pointers or
-    /// class predictions
-    const CLASS_PTR_WIDTH: u32;
 
     /// Max number of features addressable by a node
     const MAX_NUM_FEATURES: u32;
@@ -31,7 +19,6 @@ proto package Layout {
     type RamAddr   ;
     type FeatureIdx;
     type TreeIdx   ;
-    type ClassPtr  ;
     type Prediction;
     type NumVotes  ;
 }
@@ -46,18 +33,6 @@ package standard_layout for Layout {
     /// Max number of trees in a forest
     const MAX_NUM_TREES: u32 = 512;
 
-    /// Size of a single node in bytes
-    // TODO: hardcoded
-    const NODE_SIZE: u8 = 8;
-
-    /// Width of a single feature in bits
-    const FEATURE_WIDTH: u32 = 16;
-
-    /// Width of the LEFT/RIGHT fields in bits,
-    /// which represent either node pointers or
-    /// class predictions
-    const CLASS_PTR_WIDTH: u32 = 16;
-
     const RAM_ADDR_WIDTH: u8 = 32;
     const RAM_DATA_WIDTH: u8 = 32;
 
@@ -69,18 +44,31 @@ package standard_layout for Layout {
     type RamAddr    = logic<RAM_ADDR_WIDTH> ;
     type TreeIdx    = logic<TREE_IDX_WIDTH> ;
     type FeatureIdx = logic<FEAT_IDX_WIDTH> ;
-    type ClassPtr   = logic<CLASS_PTR_WIDTH>;
     type Prediction = logic<CLASS_IDX_WIDTH>;
     type NumVotes   = logic<TREE_IDX_WIDTH> ;
+}
 
+package node_layout {
+    /// Size of a single node in bytes
     // TODO: hardcoded
+    const NODE_SIZE: u8 = 8;
+
+    /// Width of a single feature in bits
+    const FEATURE_WIDTH: u32 = 16;
+
+    /// Width of the LEFT/RIGHT fields in bits,
+    /// which represent either node pointers or
+    /// class predictions
+    const CLASS_PTR_WIDTH: u32 = FEATURE_WIDTH;
+
+    type ClassPtr   = logic<CLASS_PTR_WIDTH>;
+
     struct Flags {
         left_predict : logic    ,
         right_predict: logic    ,
         split_idx    : logic<14>,
     }
 
-    // TODO: hardcoded
     // Field order inverted - little-endian memory
     struct Node {
         flags: Flags    ,
@@ -89,7 +77,6 @@ package standard_layout for Layout {
         left : logic<16>,
     }
 
-    // TODO: hardcoded
     // Field order inverted - little-endian memory
     struct TreeHeader {
         first_node_ptr: logic<32>,

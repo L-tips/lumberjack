@@ -6,14 +6,14 @@ module TestTreeCellSuperscalar #(
     rst             : input  reset                            ,
     start           : input  lbool                            ,
     tree_header_addr: input  logic<TREE_CACHE_ADDR_WIDTH>     ,
-    tree_header_data: output logic<test_layout::NODE_SIZE * 8>,
+    tree_header_data: output logic<node_layout::NODE_SIZE * 8>,
 ) {
     const USE_SUPERSCALAR: bbool = true;
     const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
 
     inst feature_buses: memutils::ScratchpadRamPort [FEATURE_PORTS] #(
         ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
-        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
     );
 
     inst ram_port: memutils::BramPort #( NUM_COL: 16, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );

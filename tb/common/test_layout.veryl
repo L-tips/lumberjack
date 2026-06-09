@@ -6,18 +6,6 @@ package test_layout for Layout {
     const MAX_NUM_TREES   : u32 = 1025;
     // ------
 
-    /// Size of a single node in bytes
-    // TODO: hardcoded
-    const NODE_SIZE: u8 = 8;
-
-    /// Width of a single feature in bits
-    const FEATURE_WIDTH: u32 = 16;
-
-    /// Width of the LEFT/RIGHT fields in bits,
-    /// which represent either node pointers or
-    /// class predictions
-    const CLASS_PTR_WIDTH: u32 = 16;
-
     const RAM_ADDR_WIDTH: u8 = 32;
     const RAM_DATA_WIDTH: u8 = 32;
 
@@ -28,30 +16,6 @@ package test_layout for Layout {
     type RamAddr    = logic<RAM_ADDR_WIDTH> ;
     type TreeIdx    = logic<TREE_IDX_WIDTH> ;
     type FeatureIdx = logic<FEAT_IDX_WIDTH> ;
-    type ClassPtr   = logic<CLASS_PTR_WIDTH>;
     type Prediction = logic<CLASS_IDX_WIDTH>;
     type NumVotes   = logic<TREE_IDX_WIDTH> ;
-
-    // TODO: hardcoded
-    struct Flags {
-        left_predict : logic    ,
-        right_predict: logic    ,
-        split_idx    : logic<14>,
-    }
-
-    // TODO: hardcoded
-    // Field order inverted - little-endian memory
-    struct Node {
-        flags: Flags    ,
-        split: logic<16>,
-        right: logic<16>,
-        left : logic<16>,
-    }
-
-    // TODO: hardcoded
-    // Field order inverted - little-endian memory
-    struct TreeHeader {
-        first_node_ptr: logic<32>,
-        tree_len      : logic<32>,
-    }
 }

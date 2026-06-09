@@ -18,7 +18,7 @@ module TestForest_2Cells_Superscalar (
     const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE);
 
     inst feature_write_bus: memutils::ScratchpadRamPort #(
-        DATA_WIDTH: test_layout::FEATURE_WIDTH ,
+        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
         ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
     );
 
