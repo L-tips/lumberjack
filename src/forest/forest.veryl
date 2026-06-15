@@ -11,9 +11,9 @@ pub module Forest::<L: Layout> #(
     param READ_PORTS_PER_CACHE: u8 = 4,
 
     /// Size of the tree caches in 64 bit dwords
-    param TREE_CACHE_SIZE: u64 = 1024,
+    param CELL_CACHE_SIZE: u64 = 1024,
 
-    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
 ) (
     clk            : input clock,
     rst            : input reset,
@@ -32,8 +32,9 @@ pub module Forest::<L: Layout> #(
 
     done: output lbool,
 
-    feature_write_port: modport memutils::ScratchpadRamPort::write_slave,
-    ctrl_port         : modport memutils::BramPort::slave               ,
+    feature_write_port: modport memutils::ScratchpadRamPort::write_slave                                 ,
+    cell_cache_ports  : modport memutils::BramPort::slave                                [CELL_INSTANCES],
+    cells_busy        : output  logic                                   <CELL_INSTANCES>                 ,
 ) {
     const READ_PORTS_PER_CACHE_U32: u32 = READ_PORTS_PER_CACHE as u32;
     const PORTS_PER_TREE          : u32 = if USE_SUPERSCALAR ? 2 : 1;
@@ -47,16 +48,16 @@ pub module Forest::<L: Layout> #(
 
     // All read ports are (unfortunately) stored in a flat array.
     inst feature_read_port: memutils::ScratchpadRamPort [NUM_CACHES * READ_PORTS_PER_CACHE_U32] #(
-        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
-        ADDR_WIDTH: L::FEAT_IDX_WIDTH,
+        DATA_WIDTH: node_layout::FEATURE_WIDTH,
+        ADDR_WIDTH: L::FEAT_IDX_WIDTH         ,
     );
 
     for i in 0..NUM_CACHES :inst_caches {
         const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
-            READ_PORTS: READ_PORTS_PER_CACHE,
-            DATA_WIDTH: node_layout::FEATURE_WIDTH    ,
-            DEPTH     : L::MAX_NUM_FEATURES ,
+            READ_PORTS: READ_PORTS_PER_CACHE      ,
+            DATA_WIDTH: node_layout::FEATURE_WIDTH,
+            DEPTH     : L::MAX_NUM_FEATURES       ,
         ) (
             clk                      ,
             rst                      ,
@@ -66,14 +67,7 @@ pub module Forest::<L: Layout> #(
         );
     }
 
-    inst tree_ram_ports: memutils::BramPort [CELL_INSTANCES] #(
-        NUM_COL   : CELL_CACHE_NUM_COL   ,
-        COL_WIDTH : BITS_PER_COL         ,
-        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
-    );
-
     var cells_ready: logic<CELL_INSTANCES>;
-    var cells_busy : logic<CELL_INSTANCES>;
     var cells_error: logic<CELL_INSTANCES>;
 
     // All cells done and their last vote acked
@@ -153,7 +147,7 @@ pub module Forest::<L: Layout> #(
 
         inst tree: TreeCell::<L> #(
             USE_SUPERSCALAR  ,
-            TREE_CACHE_SIZE  ,
+            CELL_CACHE_SIZE  ,
         ) (
             clk                                                           ,
             rst             : rst                                         ,
@@ -166,7 +160,7 @@ pub module Forest::<L: Layout> #(
             start           : start_cell                                  ,
             prediction      : cell_prediction                             ,
             feature_ports   : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
-            ram_port        : tree_ram_ports[i]                           ,
+            ram_port        : cell_cache_ports[i]                         ,
         );
     }
 

@@ -22,8 +22,8 @@ module CellOrchestrator::<L: Layout> #(
 
     start_cell: output lbool,
     // TODO: hardcoded
-    tree_header_addr: output logic<CELL_CACHE_ADDR_WIDTH>,
-    tree_header_data: input node_layout::TreeHeader,
+    tree_header_addr: output logic                  <CELL_CACHE_ADDR_WIDTH>,
+    tree_header_data: input  node_layout::TreeHeader                       ,
 
 ) {
     type NodePtr = logic<CELL_CACHE_ADDR_WIDTH>;

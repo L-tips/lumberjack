@@ -61,7 +61,7 @@ package node_layout {
     /// class predictions
     const CLASS_PTR_WIDTH: u32 = FEATURE_WIDTH;
 
-    type ClassPtr   = logic<CLASS_PTR_WIDTH>;
+    type ClassPtr = logic<CLASS_PTR_WIDTH>;
 
     struct Flags {
         left_predict : logic    ,

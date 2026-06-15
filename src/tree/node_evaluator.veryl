@@ -1,7 +1,7 @@
 module NodeEvaluator::<L: Layout> #(
     param CELL_CACHE_ADDR_WIDTH: u32 = 16,
 ) (
-    node            : input   node_layout::Node                                          ,
+    node            : input   node_layout::Node                                              ,
     current_node_idx: input   logic                                   <CELL_CACHE_ADDR_WIDTH>,
     feature_port    : modport memutils::ScratchpadRamPort::read_master                       ,
 

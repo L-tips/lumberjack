@@ -26,7 +26,7 @@ async def reset(dut):
 
 async def fill_tree_cache(dut, tree_idx, mem_file, rng):
     mem_data = read_hex(mem_file)
-    port = dut.forest.tree_ram_ports[tree_idx]
+    port = dut.cell_cache_ports[tree_idx]
     bus_width = len(port.write_data)
 
     if bus_width % 8 != 0:
