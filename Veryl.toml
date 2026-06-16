@@ -22,6 +22,7 @@ waveform_target = { type = "directory", path = "target/waveform" }
 waveform_format = "fst"
 include_files = [
     "tb/utils.py",
+    "tb/wb_driver.py",
     "tb/test_forest.py",
     "tb/test_cases.py",
     "tb/test_data/forest_1t_2n_circular.hex",
