@@ -2,7 +2,7 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Combine
 
 from typing import Sequence
 from test_cases import TestCase
@@ -57,12 +57,13 @@ async def fill_tree_cache(dut, tree_idx, mem_file, rng):
     port.write_data.value = 0
     port.byte_write_enable.value = 0
 
-async def write_feature(dut, feature_idx, feature):
+async def write_feature_word(dut, word_idx, word_value):
     dut.feature_write_bus.write_enable.value = True
-    dut.feature_write_bus.address.value = feature_idx
-    dut.feature_write_bus.data.value = feature
-
+    dut.feature_write_bus.address.value = word_idx
+    dut.feature_write_bus.data.value = word_value
     await RisingEdge(dut.clk)
+    dut.feature_write_bus.write_enable.value = False
+    dut.feature_write_bus.data.value = 0
 
 async def test_forest(dut, test_cases: Sequence[TestCase]):
     # Start a 10 ns clock
@@ -72,12 +73,14 @@ async def test_forest(dut, test_cases: Sequence[TestCase]):
         await reset(dut)
 
         # Write forest to tree evaluator cells
+        tasks = []
         for cell_idx, mem_range in enumerate(tc.cache_mem_ranges):
-            await fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range)
+            tasks.append(cocotb.start_soon(fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range)))
+        await Combine(*tasks)
 
-        # Write features to forest's caches
-        for i, feat in enumerate(tc.features):
-            await write_feature(dut, i, feat)
+        # Write features to forest's caches, packed 2x16-bit per 32-bit word
+        for word_idx, word in enumerate(utils.pack_16b_to_32b(tc.features)):
+            await write_feature_word(dut, word_idx, word)
 
         dut.enable.value = 1
         dut.num_trees.value = tc.num_trees

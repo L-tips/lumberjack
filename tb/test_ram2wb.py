@@ -56,15 +56,9 @@ FULL_SEL       = (1 << WB_COL_WIDTH) - 1   # 0xF
 # Reset
 # ---------------------------------------------------------------------------
 
-async def do_reset(dut, cycles: int = 4):
+async def do_reset(dut, wb, cycles: int = 4):
     dut.wb_rst.value             = 1
-    dut.ram_busy.value        = 0
-    dut.wb.cyc.value          = 0
-    dut.wb.stb.value          = 0
-    dut.wb.write_enable.value = 0
-    dut.wb.select.value       = 0
-    dut.wb.addr.value         = 0
-    dut.wb.write_data.value   = 0
+    wb.reset()
     await ClockCycles(dut.clk, cycles)
     dut.wb_rst.value = 0
     await ClockCycles(dut.clk, 2)
@@ -90,12 +84,12 @@ def wb_byte_addr(ram_word: int, sub_idx: int = 0, byte_lane: int = 0) -> int:
 # Test 0 - Issue pipelined transactions
 # ---------------------------------------------------------------------------
 @cocotb.test()
-async def test_pipelined_transactions(dut):
+async def test_pipelined(dut):
     """Write a 32-bit word and read it back via a second transaction."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
 
     addr = wb_byte_addr(ram_word=4, sub_idx=0)
 
@@ -103,7 +97,7 @@ async def test_pipelined_transactions(dut):
     for addr in range(0, 20, 4):
         transactions.append(Transaction(addr=addr, we=True, wdata=addr))
 
-    responses = await wb.pipelined_transactions(transactions)
+    responses = await wb.pipelined(transactions)
     for i, (ack, err, _) in enumerate(responses):
         assert ack == 1 and err == 0, f"Write failed at tx {i}"
 
@@ -111,12 +105,12 @@ async def test_pipelined_transactions(dut):
     for addr in range(0, 20, 4):
         transactions.append(Transaction(addr=addr, we=False))
 
-    responses = await wb.pipelined_transactions(transactions)
+    responses = await wb.pipelined(transactions)
     for i, (ack, err, rdata) in enumerate(responses):
         assert ack == 1 and err == 0, "Read failed"
         assert rdata == i * 4, f"Read-back: 0x{rdata:08x}"
 
-    log.info("test_pipelined_transactions PASSED")
+    log.info("test_pipelined PASSED")
 
 
 # ---------------------------------------------------------------------------
@@ -126,9 +120,9 @@ async def test_pipelined_transactions(dut):
 async def test_full_word_write_read(dut):
     """Write a 32-bit word and read it back via a second transaction."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
 
     addr = wb_byte_addr(ram_word=4, sub_idx=0)
 
@@ -153,9 +147,9 @@ async def test_subword_independence(dut):
     and that writing one does not disturb the other.
     """
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
 
     addr_lo = wb_byte_addr(ram_word=0, sub_idx=0)
     addr_hi = wb_byte_addr(ram_word=0, sub_idx=1)
@@ -188,8 +182,8 @@ async def test_subword_independence(dut):
 async def test_byte_reads(dut):
     """Plant a full word, then read each byte lane individually."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     addr = wb_byte_addr(ram_word=1, sub_idx=0)
 
@@ -218,8 +212,8 @@ async def test_byte_reads(dut):
 async def test_byte_writes(dut):
     """Write each byte lane individually; read back the whole word."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     # Zero the target word first
     addr = wb_byte_addr(ram_word=2, sub_idx=0)
@@ -249,8 +243,8 @@ async def test_byte_writes(dut):
 async def test_halfword_reads(dut):
     """Write a word, read back each halfword with appropriate sel."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     addr = wb_byte_addr(ram_word=3, sub_idx=0)
     ack, err, _ = await wb.transaction(Transaction(addr=addr, wdata=0x1234ABCD, we=1))
@@ -275,8 +269,8 @@ async def test_halfword_reads(dut):
 @cocotb.test()
 async def test_halfword_writes(dut):
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     addr = wb_byte_addr(ram_word=5, sub_idx=0)
 
@@ -327,8 +321,8 @@ async def test_misaligned(dut):
                 en_pulses.append(1)
     cocotb.start_soon(watch_en())
 
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     addr = wb_byte_addr(ram_word=6, sub_idx=0)
 
@@ -361,8 +355,8 @@ async def test_misaligned(dut):
 async def test_ram_busy(dut):
     """ram_busy held high for several cycles; transaction must still complete."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     addr = wb_byte_addr(ram_word=7, sub_idx=0)
 
@@ -393,8 +387,8 @@ async def test_ram_busy(dut):
 async def test_back_to_back(dut):
     """Write N words sequentially then read them all back."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     N = 16
     for i in range(N):
@@ -426,8 +420,8 @@ async def test_upper_subword_range(dut):
     N = 8
 
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     # Reset RAM contents to 0
     await clear_ram_range(wb, start_word=0, count=N)
@@ -468,8 +462,8 @@ async def test_stress(dut):
     tracks expected memory state.  Intermittent ram_busy throughout.
     """
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
-    await do_reset(dut)
-    wb = WbMaster(WB_DATA_WIDTH, dut.clk, dut.wb)
+    wb = WbMaster(dut.clk, dut.wb)
+    await do_reset(dut, wb)
 
     DEPTH  = 64    # RAM words we will touch (well within RAM_SIZE=1024)
     NTRANS = 300

@@ -47,15 +47,16 @@ pub module Forest::<L: Layout> #(
 
     // All read ports are (unfortunately) stored in a flat array.
     inst feature_read_port: memutils::ScratchpadRamPort [NUM_FEAT_BUF * READ_PORTS_PER_CACHE_U32] #(
-        DATA_WIDTH: node_layout::FEATURE_WIDTH,
+        DATA_WIDTH: csr_types::<L>::DATA_WIDTH,
         ADDR_WIDTH: L::FEAT_IDX_WIDTH         ,
     );
 
     for i in 0..NUM_FEAT_BUF :inst_caches {
         const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
-            READ_PORTS: READ_PORTS_PER_CACHE      ,
-            DATA_WIDTH: node_layout::FEATURE_WIDTH,
+            READ_PORTS: READ_PORTS_PER_CACHE,
+            // 32b wide, but features are 16b each
+            DATA_WIDTH: csr_types::<L>::DATA_WIDTH,
             DEPTH     : L::MAX_NUM_FEATURES       ,
         ) (
             clk                      ,
@@ -168,7 +169,7 @@ pub module Forest::<L: Layout> #(
 
     assign busy  = any_cells_busy || all_cells_ready && !done_reg;
     assign ready = done_reg;
-    assign done  = done_reg;
+    assign done  = done_reg || (error && !any_cells_busy);
     assign error = |cells_error;
 
     always_ff (clk, rst) {
@@ -176,7 +177,6 @@ pub module Forest::<L: Layout> #(
             done_reg       = false;
             start_eval_reg = false;
         } else {
-            start_eval_reg = enable && !any_cells_busy && !done_reg;
 
             if all_cells_ready {
                 done_reg = true;
@@ -184,6 +184,8 @@ pub module Forest::<L: Layout> #(
             if start_eval {
                 done_reg = false;
             }
+
+            start_eval_reg = enable && !any_cells_busy;
         }
     }
 

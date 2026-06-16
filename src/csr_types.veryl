@@ -1,9 +1,9 @@
-package csr_types {
-    // Up to 15 registers
-    const NUM_REGISTERS: u32               = 15;
-    const ADDR_WIDTH   : u32               = $clog2(NUM_REGISTERS);
-    type Address       = logic<ADDR_WIDTH>;
-
+package csr_types::<L: Layout> {
     const DATA_WIDTH: u32               = 32;
     type Data       = logic<DATA_WIDTH>;
+
+    // Up to 15 registers, plus however many features
+    const NUM_REGISTERS: u32               = 15 + L::MAX_NUM_FEATURES * node_layout::FEATURE_WIDTH / DATA_WIDTH;
+    const ADDR_WIDTH   : u32               = $clog2(NUM_REGISTERS);
+    type Address       = logic<ADDR_WIDTH>;
 }

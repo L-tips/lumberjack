@@ -16,13 +16,21 @@ class WbMaster:
     Returns (ack, err, rdata).
     """
 
-    def __init__(self, data_width, clk, bus):
-        self.data_width = data_width
+    def __init__(self, clk, bus):
+        self.bus = bus
+        self.data_width = len(self.bus.write_data)
         # Byte lanes
         self.col_width = self.data_width // 8
         self.full_sel = (1 << self.col_width) - 1 # 0xF
         self.clk = clk
-        self.bus = bus
+
+    def reset(self):
+        self.bus.cyc.value          = 0
+        self.bus.stb.value          = 0
+        self.bus.write_enable.value = 0
+        self.bus.select.value       = 0
+        self.bus.addr.value         = 0
+        self.bus.write_data.value   = 0
 
     async def transaction(
         self,
@@ -57,7 +65,7 @@ class WbMaster:
 
         raise RuntimeError(f"WB timeout at addr=0x{txn.addr:08x}")
 
-    async def pipelined_transactions(
+    async def pipelined(
         self,
         txns: list[Transaction],
         timeout: int = 200,
@@ -80,7 +88,6 @@ class WbMaster:
         self.bus.cyc.value = 1
 
         for _ in range(timeout):
-
             # Drive next request
             if issued < len(txns):
                 txn = txns[issued]
@@ -94,6 +101,9 @@ class WbMaster:
                 self.bus.select.value       = sel
             else:
                 self.bus.stb.value = 0
+                self.bus.write_data.value = 0
+                self.bus.write_enable.value = 0
+                self.bus.select.value = 0
 
             await RisingEdge(self.clk)
 

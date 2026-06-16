@@ -1,25 +1,22 @@
-import csr_types::DATA_WIDTH;
-import csr_types::DATA_WIDTH;
-
 /// CSR interface for controlling the ForestTop module.
 module CsrInterface::<L: Layout> (
     clk: input clock,
     rst: input reset,
 
     // --- CSR interface signals ---
-    address: input  csr_types::Address,
-    write  : input  lbool             , // Write enable
-    read   : input  lbool             , // Read enable
-    wdata  : input  csr_types::Data   , // Write data
-    rdata  : output csr_types::Data   , // Read data
+    address: input  csr_types::<L>::Address,
+    write  : input  lbool                  , // Write enable
+    read   : input  lbool                  , // Read enable
+    wdata  : input  csr_types::<L>::Data   , // Write data
+    rdata  : output csr_types::<L>::Data   , // Read data
 
     // --- Output control signals ---
-    enable             : output logic        ,
-    num_trees          : output L::TreeIdx   ,
-    forest_start_addr  : output L::RamAddr   ,
-    num_features       : output L::FeatureIdx,
-    features_start_addr: output L::RamAddr   ,
-    interrupt          : output logic        ,
+    start_stb: output logic     ,
+    num_trees: output L::TreeIdx,
+    // forest_start_addr  : output L::RamAddr   ,
+    num_features: output L::FeatureIdx,
+    // features_start_addr: output L::RamAddr   ,
+    interrupt: output logic,
 
     // --- Input control signals ---
     ready     : input logic        ,
@@ -29,24 +26,31 @@ module CsrInterface::<L: Layout> (
     prediction: input L::Prediction,
     num_votes : input L::NumVotes  ,
 
+    // --- Feature write signals ---
+    feature_write_port: modport memutils::ScratchpadRamPort::write_master,
+
 ) {
-    const CTRL               : csr_types::Address = 0;
-    const CTRL_SET           : csr_types::Address = 1;
-    const CTRL_CLR           : csr_types::Address = 2;
-    const NUM_TREES          : csr_types::Address = 3;
-    const FOREST_START_ADDR  : csr_types::Address = 4;
-    const NUM_FEATURES       : csr_types::Address = 5;
-    const FEATURES_START_ADDR: csr_types::Address = 6;
-    const PREDICTION         : csr_types::Address = 7;
-    const NUM_VOTES          : csr_types::Address = 8;
-    const INTEN_SET          : csr_types::Address = 9;
-    const INTEN_CLR          : csr_types::Address = 10;
-    const INTFLAG            : csr_types::Address = 11;
-    const PERF               : csr_types::Address = 12;
+    const CTRL     : csr_types::<L>::Address = 0;
+    const CTRL_SET : csr_types::<L>::Address = 1;
+    const CTRL_CLR : csr_types::<L>::Address = 2;
+    const NUM_TREES: csr_types::<L>::Address = 3;
+    // const FOREST_START_ADDR  : csr_types::<L>::Address = 4;
+    const NUM_FEATURES: csr_types::<L>::Address = 5;
+    // const FEATURES_START_ADDR: csr_types::<L>::Address = 6;
+    const PREDICTION: csr_types::<L>::Address = 7;
+    const NUM_VOTES : csr_types::<L>::Address = 8;
+    const INTEN_SET : csr_types::<L>::Address = 9;
+    const INTEN_CLR : csr_types::<L>::Address = 10;
+    const INTFLAG   : csr_types::<L>::Address = 11;
+    const PERF      : csr_types::<L>::Address = 12;
+
+    // Feature write address
+    const FEAT_WRITE_START: csr_types::<L>::Address = 16;
 
     const ENABLE_BIT: u8 = 0;
     const BUSY_BIT  : u8 = 1;
 
+    var enable          : logic;
     var enable_reg      : logic;
     var next_enable     : logic;
     var next_user_enable: logic;
@@ -57,17 +61,17 @@ module CsrInterface::<L: Layout> (
     var next_num_trees: L::TreeIdx;
     assign num_trees = num_trees_reg;
 
-    var forest_start_addr_reg : L::RamAddr;
-    var next_forest_start_addr: L::RamAddr;
-    assign forest_start_addr = forest_start_addr_reg;
+    // var forest_start_addr_reg : L::RamAddr;
+    // var next_forest_start_addr: L::RamAddr;
+    // assign forest_start_addr = forest_start_addr_reg;
 
     var num_features_reg : L::FeatureIdx;
     var next_num_features: L::FeatureIdx;
     assign num_features = num_features_reg;
 
-    var features_start_addr_reg : L::RamAddr;
-    var next_features_start_addr: L::RamAddr;
-    assign features_start_addr = features_start_addr_reg;
+    // var features_start_addr_reg : L::RamAddr;
+    // var next_features_start_addr: L::RamAddr;
+    // assign features_start_addr = features_start_addr_reg;
 
     struct Intflag {
         error: logic,
@@ -82,7 +86,7 @@ module CsrInterface::<L: Layout> (
 
     var prev_ready: logic;
 
-    var cyccnt: csr_types::Data;
+    var cyccnt: csr_types::<L>::Data;
 
     always_ff {
         if_reset {
@@ -104,14 +108,14 @@ module CsrInterface::<L: Layout> (
     // Write logic
     always_comb {
         // Defaults
-        next_enable              = enable_reg;
-        next_num_trees           = num_trees_reg;
-        next_forest_start_addr   = forest_start_addr_reg;
-        next_num_features        = num_features_reg;
-        next_features_start_addr = features_start_addr_reg;
-        next_inten               = inten_reg;
-        next_intflag             = intflag_reg;
-        next_user_enable         = 0;
+        next_enable    = enable_reg;
+        next_num_trees = num_trees_reg;
+        // next_forest_start_addr   = forest_start_addr_reg;
+        next_num_features = num_features_reg;
+        // next_features_start_addr = features_start_addr_reg;
+        next_inten       = inten_reg;
+        next_intflag     = intflag_reg;
+        next_user_enable = 0;
 
         // Write to CTRL register
         if write && (address == CTRL) {
@@ -138,20 +142,20 @@ module CsrInterface::<L: Layout> (
             next_num_trees = wdata[L::TREE_IDX_WIDTH - 1:0];
         }
 
-        // Write to FOREST_START_ADDR register (enable-protected)
-        if write && address == FOREST_START_ADDR && !enable {
-            next_forest_start_addr = wdata;
-        }
+        // // Write to FOREST_START_ADDR register (enable-protected)
+        // if write && address == FOREST_START_ADDR && !enable {
+        //     next_forest_start_addr = wdata;
+        // }
 
         // Write to NUM_FEATURES register (enable-protected)
         if write && address == NUM_FEATURES && !enable {
             next_num_features = wdata[L::FEAT_IDX_WIDTH - 1:0];
         }
 
-        // Write to FEATURES_START_ADDR register (enable-protected)
-        if write && address == FEATURES_START_ADDR && !enable {
-            next_features_start_addr = wdata;
-        }
+        // // Write to FEATURES_START_ADDR register (enable-protected)
+        // if write && address == FEATURES_START_ADDR && !enable {
+        //     next_features_start_addr = wdata;
+        // }
 
         // Set INTEN register bits
         if write && (address == INTEN_SET) {
@@ -212,32 +216,32 @@ module CsrInterface::<L: Layout> (
 
         // Read NUM_TREES register
         if read && address == NUM_TREES {
-            rdata = {1'b0 repeat (DATA_WIDTH - L::TREE_IDX_WIDTH), num_trees_reg};
+            rdata = {1'b0 repeat (csr_types::<L>::DATA_WIDTH - L::TREE_IDX_WIDTH), num_trees_reg};
         }
 
-        // Read FOREST_START_ADDR register
-        if read && address == FOREST_START_ADDR {
-            rdata = forest_start_addr_reg;
-        }
+        // // Read FOREST_START_ADDR register
+        // if read && address == FOREST_START_ADDR {
+        //     rdata = forest_start_addr_reg;
+        // }
 
         // Read NUM_FEATURES register
         if read && address == NUM_FEATURES {
-            rdata = {1'b0 repeat (DATA_WIDTH - L::FEAT_IDX_WIDTH), num_features_reg};
+            rdata = {1'b0 repeat (csr_types::<L>::DATA_WIDTH - L::FEAT_IDX_WIDTH), num_features_reg};
         }
 
-        // Read FEATURES_START_ADDR register
-        if read && address == FEATURES_START_ADDR {
-            rdata = features_start_addr_reg;
-        }
+        // // Read FEATURES_START_ADDR register
+        // if read && address == FEATURES_START_ADDR {
+        //     rdata = features_start_addr_reg;
+        // }
 
         // Read PREDICTION register
         if read && address == PREDICTION {
-            rdata = {1'b0 repeat (DATA_WIDTH - L::CLASS_IDX_WIDTH), prediction};
+            rdata = {1'b0 repeat (csr_types::<L>::DATA_WIDTH - L::CLASS_IDX_WIDTH), prediction};
         }
 
         // Read NUM_VOTES register
         if read && address == NUM_VOTES {
-            rdata = {1'b0 repeat (DATA_WIDTH - L::TREE_IDX_WIDTH), num_votes};
+            rdata = {1'b0 repeat (csr_types::<L>::DATA_WIDTH - L::TREE_IDX_WIDTH), num_votes};
         }
 
         // Read INTEN register
@@ -258,21 +262,36 @@ module CsrInterface::<L: Layout> (
     // Advance state machine
     always_ff {
         if_reset {
-            enable_reg              = 0;
-            num_trees_reg           = 0;
-            forest_start_addr_reg   = 0;
-            num_features_reg        = 0;
-            features_start_addr_reg = 0;
-            inten_reg               = 0;
-            intflag_reg             = 0;
+            enable_reg    = 0;
+            num_trees_reg = 0;
+            // forest_start_addr_reg   = 0;
+            num_features_reg = 0;
+            // features_start_addr_reg = 0;
+            inten_reg   = 0;
+            intflag_reg = 0;
+            start_stb   = 0;
         } else {
-            enable_reg              = next_enable;
-            num_trees_reg           = next_num_trees;
-            forest_start_addr_reg   = next_forest_start_addr;
-            num_features_reg        = next_num_features;
-            features_start_addr_reg = next_features_start_addr;
-            inten_reg               = next_inten;
-            intflag_reg             = next_intflag;
+            enable_reg    = next_enable;
+            num_trees_reg = next_num_trees;
+            // forest_start_addr_reg   = next_forest_start_addr;
+            num_features_reg = next_num_features;
+            // features_start_addr_reg = next_features_start_addr;
+            inten_reg   = next_inten;
+            intflag_reg = next_intflag;
+            start_stb   = next_enable && !enable_reg;
+        }
+    }
+
+    // Feature write logic
+    always_comb {
+        if write && address >= FEAT_WRITE_START && !enable {
+            feature_write_port.write_enable = true;
+            feature_write_port.address = address - FEAT_WRITE_START;
+            feature_write_port.data = wdata;
+        } else {
+            feature_write_port.write_enable = false;
+            feature_write_port.address = 0;
+            feature_write_port.data = 0;
         }
     }
 }

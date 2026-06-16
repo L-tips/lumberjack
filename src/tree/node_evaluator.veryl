@@ -13,11 +13,15 @@ module NodeEvaluator::<L: Layout> #(
 
     var branch_left: lbool;
 
+    // TODO: hardcoded
+    // idx is 2-byte addressed, but features are 4-byte addressed
+    assign feature_port.address = (node.flags.split_idx >> 1) as L::FeatureIdx;
+    // TODO: hardcoded
+    let feature_data: logic<16> = feature_port.data[node.flags.split_idx[0] * 16+:16];
+
     // Compare the feature to the split, which
     // are formatted as IEEE754 bfloat16
-    inst branch_picker: FloatLeq ( a: feature_port.data, b: node.split, leq: branch_left );
-
-    assign feature_port.address = node.flags.split_idx as L::FeatureIdx;
+    inst branch_picker: FloatLeq ( a: feature_data, b: node.split, leq: branch_left );
 
     // Check that out tree is a DAG and that there are no
     // circular conditions

@@ -1,5 +1,7 @@
 import cocotb
 from cocotb.triggers import RisingEdge
+
+from itertools import batched
 import struct
 import numpy as np
 import ml_dtypes
@@ -86,6 +88,17 @@ def read_hex(hexfile):
                 mem.append(int(str_data[i:i + 2], 16))
 
     return mem
+
+"""Pack an array of 16 bit halfwords into an array of 32 bit words"""
+def pack_16b_to_32b(halfwords):
+    packed = []
+    for word_idx, pair in enumerate(batched(halfwords, 2)):
+        lo = int(pair[0]) & 0xFFFF
+        hi = int(pair[1]) & 0xFFFF if len(pair) > 1 else 0
+
+        packed.append(lo | (hi << 16))
+
+    return packed
 
 def _get_num_bits(mem):
     return len(mem[0])

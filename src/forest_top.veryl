@@ -17,8 +17,8 @@ module ForestTop::<L: Layout> #(
     /// Size of the tree caches in 64 bit dwords
     param CELL_CACHE_SIZE: u64 = 1024,
 
-    param WB_DATA_WIDTH: u8 = 32,
-    param WB_ADDR_WIDTH: u8 = 32,
+    const WB_DATA_WIDTH: u8 = 32,
+    const WB_ADDR_WIDTH: u8 = 32,
 
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
 ) (
@@ -38,25 +38,26 @@ module ForestTop::<L: Layout> #(
     const CELL_CACHE_NUM_COL   : u8  = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
     const CELL_CACHE_DATA_WIDTH: u32 = CELL_CACHE_NUM_COL * BITS_PER_COL;
 
-    var enable             : logic        ;
-    var done               : lbool        ;
-    var forest_start_addr  : L::RamAddr   ;
-    var num_trees          : L::TreeIdx   ;
-    var features_start_addr: L::RamAddr   ;
-    var num_features       : L::FeatureIdx;
-    var busy               : logic        ;
-    var ready              : logic        ;
-    var error              : logic        ;
-    var prediction         : L::Prediction;
-    var num_votes          : L::NumVotes  ;
+    var start_stb: logic;
+    var done     : lbool;
+    // var forest_start_addr  : L::RamAddr   ;
+    var num_trees: L::TreeIdx;
+    // var features_start_addr: L::RamAddr   ;
+    var num_features: L::FeatureIdx;
+    var busy        : logic        ;
+    var ready       : logic        ;
+    var error       : logic        ;
+    var prediction  : L::Prediction;
+    var num_votes   : L::NumVotes  ;
 
     let rst: reset = wb_rst as reset;
 
     var cells_busy: logic<CELL_INSTANCES>;
 
     inst feature_write_bus: memutils::ScratchpadRamPort #(
-        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
-        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+        // 32b word size, but features are 16b wide
+        DATA_WIDTH: csr_types::<L>::DATA_WIDTH,
+        ADDR_WIDTH: L::FEAT_IDX_WIDTH         ,
     );
 
     inst cell_cache_ports: memutils::BramPort [CELL_INSTANCES] #(
@@ -89,7 +90,7 @@ module ForestTop::<L: Layout> #(
         clk                                  ,
         rst                                  ,
         rst_cell_caches   : rst_cache        ,
-        enable                               ,
+        enable            : start_stb        ,
         done                                 ,
         num_trees                            ,
         num_features                         ,
@@ -104,35 +105,36 @@ module ForestTop::<L: Layout> #(
     );
 
     // Control port is byte-addressed, but CSRs are word-addressed
-    let word_idx   : csr_types::Data    = control_port.addr >> 2;
-    let csr_address: csr_types::Address = word_idx[csr_types::ADDR_WIDTH - 1:0];
+    let word_idx   : csr_types::<L>::Data    = control_port.addr >> 2;
+    let csr_address: csr_types::<L>::Address = word_idx as csr_types::<L>::Address;
 
-    var csr_wdata: csr_types::Data;
-    var csr_rdata: csr_types::Data;
+    var csr_wdata: csr_types::<L>::Data;
+    var csr_rdata: csr_types::<L>::Data;
 
     let csr_write_req: logic = control_port.write_enable && control_port.valid_request();
     let csr_read_req : logic = !control_port.write_enable && control_port.valid_request();
 
     inst csr: CsrInterface::<L> (
-        clk                               ,
-        rst                               ,
-        address            : csr_address  ,
-        write              : csr_write_req,
-        read               : csr_read_req ,
-        wdata              : csr_wdata    ,
-        rdata              : csr_rdata    ,
-        enable                            ,
-        done                              ,
-        num_trees                         ,
-        forest_start_addr                 ,
-        num_features                      ,
-        features_start_addr               ,
-        ready                             ,
-        busy                              ,
-        error                             ,
-        prediction                        ,
-        num_votes                         ,
-        interrupt                         ,
+        clk                     ,
+        rst                     ,
+        address  : csr_address  ,
+        write    : csr_write_req,
+        read     : csr_read_req ,
+        wdata    : csr_wdata    ,
+        rdata    : csr_rdata    ,
+        start_stb               ,
+        done                    ,
+        num_trees               ,
+        // forest_start_addr                 ,
+        num_features  ,
+        // features_start_addr               ,
+        ready       ,
+        busy        ,
+        error       ,
+        prediction  ,
+        num_votes   ,
+        interrupt   ,
+        feature_write_port: feature_write_bus,
     );
 
     var prev_select: logic<4>;

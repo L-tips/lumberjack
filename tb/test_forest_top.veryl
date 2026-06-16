@@ -15,11 +15,6 @@ module TestForestTop (
 
     let wb_rst: reset_async_high = rst as reset_async_high;
 
-    inst feature_write_bus: memutils::ScratchpadRamPort #(
-        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
-        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
-    );
-
     const WB_DATA_WIDTH: u8 = 32;
     const WB_ADDR_WIDTH: u8 = 32;
 
@@ -30,10 +25,8 @@ module TestForestTop (
 
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
 
-    inst forest: ForestTop::<test_layout> #(
+    inst forest_top: ForestTop::<test_layout> #(
         CELL_CACHE_SIZE       ,
-        WB_DATA_WIDTH         ,
-        WB_ADDR_WIDTH         ,
         CELL_INSTANCES        ,
         USE_SUPERSCALAR       ,
         READ_PORTS_PER_CACHE  ,

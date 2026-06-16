@@ -23,8 +23,8 @@ module TestForest_1Cell_Superscalar (
     const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
     inst feature_write_bus: memutils::ScratchpadRamPort #(
-        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
-        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
     );
 
     inst cell_cache_ports: memutils::BramPort [CELL_INSTANCES] #(

@@ -12,8 +12,8 @@ module TestTreeCell #(
     const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
 
     inst feature_buses: memutils::ScratchpadRamPort [FEATURE_PORTS] #(
-        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
-        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
     );
 
     inst ram_port: memutils::BramPort #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
