@@ -2,20 +2,42 @@
 ///
 /// Defines the interface and registers
 /// to control the hardware.
-module ForestTop::<L: Layout> (
-    clk: input clock,
-    rst: input reset,
+module ForestTop::<L: Layout> #(
+    /// Number of instances of tree cell evaluators
+    param CELL_INSTANCES: u32 = 1,
+
+    /// Use superscalar architecture
+    param USE_SUPERSCALAR: bbool = true,
+
+    /// Number of read ports the feature cache can support.
+    /// When USE_SUPERSCALAR=true, this parameter must be larger
+    /// or equal to 2.
+    param READ_PORTS_PER_CACHE: u8 = 4,
+
+    /// Size of the tree caches in 64 bit dwords
+    param CELL_CACHE_SIZE: u64 = 1024,
+
+    param WB_DATA_WIDTH: u8 = 32,
+    param WB_ADDR_WIDTH: u8 = 32,
+
+    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
+) (
+    clk      : input clock           ,
+    wb_rst   : input reset_async_high,
+    rst_cache: input reset           ,
 
     /// Port to CPU bus for control/status
     control_port: modport memutils::Wishbone::slave,
 
-    /// Port to RAM where the forest and features
-    /// are stored
-    dma_port: modport memutils::Wishbone::master,
+    cell_cache_wb: modport memutils::Wishbone::slave [CELL_INSTANCES],
 
     /// Interrupt line
     interrupt: output logic,
 ) {
+    const BITS_PER_COL         : u8  = 8;
+    const CELL_CACHE_NUM_COL   : u8  = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
+    const CELL_CACHE_DATA_WIDTH: u32 = CELL_CACHE_NUM_COL * BITS_PER_COL;
+
     var enable             : logic        ;
     var done               : lbool        ;
     var forest_start_addr  : L::RamAddr   ;
@@ -28,21 +50,57 @@ module ForestTop::<L: Layout> (
     var prediction         : L::Prediction;
     var num_votes          : L::NumVotes  ;
 
-    inst evaluator: Forest::<L> (
-        clk                  ,
-        rst                  ,
-        enable               ,
-        done                 ,
-        forest_start_addr    ,
-        num_trees            ,
-        features_start_addr  ,
-        num_features         ,
-        busy                 ,
-        ready                ,
-        error                ,
-        prediction           ,
-        num_votes            ,
-        dma_port             ,
+    let rst: reset = wb_rst as reset;
+
+    var cells_busy: logic<CELL_INSTANCES>;
+
+    inst feature_write_bus: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: node_layout::FEATURE_WIDTH ,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH,
+    );
+
+    inst cell_cache_ports: memutils::BramPort [CELL_INSTANCES] #(
+        NUM_COL   : CELL_CACHE_NUM_COL   ,
+        COL_WIDTH : 8                    ,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+    );
+
+    for i in 0..CELL_INSTANCES :convert_wb_cell_cache {
+        inst wb_converter: Bram2Wishbone #(
+            ADDR_WIDTH    : WB_ADDR_WIDTH        ,
+            DATA_WIDTH    : WB_DATA_WIDTH        ,
+            RAM_ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+            RAM_DATA_WIDTH: CELL_CACHE_DATA_WIDTH,
+        ) (
+            clk                          ,
+            rst     : wb_rst             ,
+            ram_busy: cells_busy[i]      ,
+            wb      : cell_cache_wb[i]   ,
+            ram_port: cell_cache_ports[i],
+        );
+    }
+
+    inst evaluator: Forest::<L> #(
+        CELL_INSTANCES        ,
+        USE_SUPERSCALAR       ,
+        READ_PORTS_PER_CACHE  ,
+        CELL_CACHE_SIZE       ,
+    ) (
+        clk                                  ,
+        rst                                  ,
+        rst_cell_caches   : rst_cache        ,
+        enable                               ,
+        done                                 ,
+        num_trees                            ,
+        num_features                         ,
+        busy                                 ,
+        ready                                ,
+        error                                ,
+        prediction                           ,
+        num_votes                            ,
+        feature_write_port: feature_write_bus,
+        cell_cache_ports                     ,
+        cells_busy                           ,
     );
 
     // Control port is byte-addressed, but CSRs are word-addressed
@@ -79,7 +137,7 @@ module ForestTop::<L: Layout> (
 
     var prev_select: logic<4>;
 
-    always_ff {
+    always_ff (clk, rst) {
         if_reset {
             control_port.ack = 0;
             prev_select      = 0;
@@ -106,5 +164,4 @@ module ForestTop::<L: Layout> (
             }
         }
     }
-
 }

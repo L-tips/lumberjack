@@ -1,2 +1,2 @@
 #[test(test_float_leq, FloatLeq)]
-include (cocotb, "../tb/float_leq.py");
+include (cocotb, "../tb/test_float_leq.py");

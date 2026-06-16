@@ -19,7 +19,8 @@ pub module Forest::<L: Layout> #(
     rst            : input reset,
     rst_cell_caches: input reset,
 
-    enable: input logic,
+    enable: input  logic,
+    done  : output lbool,
 
     num_trees   : input L::TreeIdx   ,
     num_features: input L::FeatureIdx,
@@ -30,8 +31,6 @@ pub module Forest::<L: Layout> #(
     prediction: output L::Prediction,
     num_votes : output L::NumVotes  ,
 
-    done: output lbool,
-
     feature_write_port: modport memutils::ScratchpadRamPort::write_slave                                 ,
     cell_cache_ports  : modport memutils::BramPort::slave                                [CELL_INSTANCES],
     cells_busy        : output  logic                                   <CELL_INSTANCES>                 ,
@@ -41,18 +40,18 @@ pub module Forest::<L: Layout> #(
     // Our caches have 4 read ports. Superscalar evaluators need 2 ports each, otherwise 1 port.
     const CELL_INSTANCES_PER_CACHE: u32 = READ_PORTS_PER_CACHE_U32 / PORTS_PER_TREE;
     // Ceiling div
-    const NUM_CACHES: u32 = (CELL_INSTANCES + CELL_INSTANCES_PER_CACHE - 1) / CELL_INSTANCES_PER_CACHE;
+    const NUM_FEAT_BUF: u32 = (CELL_INSTANCES + CELL_INSTANCES_PER_CACHE - 1) / CELL_INSTANCES_PER_CACHE;
 
     const BITS_PER_COL      : u8 = 8;
     const CELL_CACHE_NUM_COL: u8 = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
     // All read ports are (unfortunately) stored in a flat array.
-    inst feature_read_port: memutils::ScratchpadRamPort [NUM_CACHES * READ_PORTS_PER_CACHE_U32] #(
+    inst feature_read_port: memutils::ScratchpadRamPort [NUM_FEAT_BUF * READ_PORTS_PER_CACHE_U32] #(
         DATA_WIDTH: node_layout::FEATURE_WIDTH,
         ADDR_WIDTH: L::FEAT_IDX_WIDTH         ,
     );
 
-    for i in 0..NUM_CACHES :inst_caches {
+    for i in 0..NUM_FEAT_BUF :inst_caches {
         const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
             READ_PORTS: READ_PORTS_PER_CACHE      ,

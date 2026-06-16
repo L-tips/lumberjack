@@ -1,0 +1,126 @@
+/// BRAM to Wishbone protocol converter
+///
+/// Acts as a bridge between the signals
+/// accepted by synthetisable RTL BRAM,
+/// and Wishbone bus in pipelined mode as
+/// specified in the B4 spec.
+module Bram2Wishbone #(
+    param ADDR_WIDTH    : u8  = 32,
+    param DATA_WIDTH    : u8  = 32,
+    param RAM_DATA_WIDTH: u32 = 32,
+    param RAM_ADDR_WIDTH: u32 = 32,
+) (
+    clk: input clock           ,
+    rst: input reset_async_high,
+
+    ram_busy: input   lbool                     ,
+    wb      : modport memutils::Wishbone::slave ,
+    ram_port: modport memutils::BramPort::master,
+) {
+    // Number of byte lanes in the WB word
+    const COL_WIDTH: u32 = DATA_WIDTH as u32 / 8;
+    // Number of byte lanes in one RAM word
+    const RAM_COL_WIDTH: u32 = RAM_DATA_WIDTH / 8;
+    // How many WB words fit in one RAM word (>= 1)
+    const SUBWORD_COUNT: u32 = RAM_COL_WIDTH / COL_WIDTH;
+    // Bits needed to index a byte within a WB word
+    const ADDR_SHIFT: u32 = $clog2(COL_WIDTH);
+    // Bits needed to index a byte within a RAM word
+    const RAM_ADDR_SHIFT: u32 = $clog2(RAM_COL_WIDTH);
+
+    // RAM word index: drop all sub-RAM-word bits
+    let ram_word_idx: logic<ADDR_WIDTH> = wb.addr >> RAM_ADDR_SHIFT;
+
+    // Sub-word index: which WB-word slot within the RAM word
+    // Width is $clog2(SUBWORD_COUNT); zero when SUBWORD_COUNT == 1.
+    const SUBWORD_IDX_WIDTH: u32 = RAM_ADDR_SHIFT - ADDR_SHIFT;
+
+    let sub_word_idx: logic<SUBWORD_IDX_WIDTH> = if SUBWORD_COUNT >: 1 ? wb.addr[RAM_ADDR_SHIFT - 1:ADDR_SHIFT] : 0;
+
+    // Bit offset of the WB word within the RAM word
+    let subword_bit_offset: logic<32> = sub_word_idx * DATA_WIDTH;
+
+    // Alignment check
+    var lowest_sel_byte: logic<ADDR_SHIFT>;
+    always_comb {
+        lowest_sel_byte = '0;
+
+        for i in 0..COL_WIDTH {
+            if wb.select[i] {
+                lowest_sel_byte = i[ADDR_SHIFT - 1:0];
+                break;
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Control signals
+    // ---------------------------------------------------------------
+
+    assign wb.stall = ram_busy;
+
+    var next_err: lbool;
+    var next_ack: lbool;
+
+    always_comb {
+        if !wb.stall {
+            // Misaligned: the byte-address offset within the WB word
+            // must equal the lowest asserted select lane.
+            next_err = wb.addr[ADDR_SHIFT - 1:0] != lowest_sel_byte;
+            next_ack = wb.valid_request() && !next_err;
+        } else {
+            next_err = 0;
+            next_ack = 0;
+        }
+    }
+
+    assign ram_port.enable  = next_ack;
+    assign ram_port.address = ram_word_idx[RAM_ADDR_WIDTH - 1:0];
+
+    // Replicate the WB word into every sub-word slot.
+    // The BWE mask below ensures only the correct lane is written.
+    // Replication is free in synthesis (just wiring).
+    assign ram_port.write_data = {wb.write_data repeat SUBWORD_COUNT};
+
+    // Byte-write-enable: shift the WB sel lanes to the correct
+    // position within the wider RAM BWE vector.
+    let select_extended: logic<RAM_COL_WIDTH> = {1'b0 repeat (RAM_COL_WIDTH - COL_WIDTH), wb.select};
+    let shifted_bwe    : logic<RAM_COL_WIDTH> = select_extended << sub_word_idx * COL_WIDTH;
+
+    assign ram_port.byte_write_enable = shifted_bwe & {wb.write_enable & next_ack repeat RAM_COL_WIDTH};
+
+    var prev_sub_word_idx: logic<SUBWORD_IDX_WIDTH>;
+    var prev_select      : logic<COL_WIDTH>        ;
+
+    always_ff (clk, rst) {
+        if_reset {
+            wb.ack            = 0;
+            wb.err            = 0;
+            prev_sub_word_idx = '0;
+            prev_select       = '0;
+        } else {
+            wb.ack            = next_ack;
+            wb.err            = next_err;
+            prev_sub_word_idx = sub_word_idx;
+            prev_select       = wb.select;
+        }
+    }
+
+    // Extract the relevant WB-word from the (possibly wider) RAM word
+    let prev_subword_bit_offset: logic<32>             = if SUBWORD_COUNT >: 1 ? prev_sub_word_idx * DATA_WIDTH : 32'h0;
+    let shifted_read           : logic<RAM_DATA_WIDTH> = ram_port.read_data >> prev_subword_bit_offset;
+    let extracted_word         : logic<DATA_WIDTH>     = shifted_read[DATA_WIDTH - 1:0];
+
+
+    // Mask to the asserted byte lanes so unselected bytes read as 0.
+    // Build a byte-expanded version of prev_select.
+    var byte_mask: logic<DATA_WIDTH>;
+    always_comb {
+        for i in 0..COL_WIDTH {
+            byte_mask[i * 8+:8] = {prev_select[i] repeat 8};
+        }
+    }
+
+    assign wb.read_data = extracted_word & byte_mask;
+    assign wb.rty       = 0;
+}

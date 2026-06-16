@@ -50,7 +50,6 @@ package standard_layout for Layout {
 
 package node_layout {
     /// Size of a single node in bytes
-    // TODO: hardcoded
     const NODE_SIZE: u8 = 8;
 
     /// Width of a single feature in bits

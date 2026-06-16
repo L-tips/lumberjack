@@ -1,0 +1,43 @@
+module TestRam2Wb (
+    clk     : input clock           ,
+    wb_rst  : input reset_async_high,
+    ram_busy: input logic           ,
+) {
+    const WB_ADDR_WIDTH : u8  = 32;
+    const WB_DATA_WIDTH : u8  = 32;
+    const RAM_NUM_COL   : u8  = 8;
+    const RAM_DATA_WIDTH: u32 = RAM_NUM_COL * 8;
+    const RAM_SIZE      : u32 = 1024;
+    const RAM_ADDR_WIDTH: u32 = $clog2(RAM_SIZE);
+
+    inst wb      : memutils::Wishbone #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
+    inst ram_port: memutils::BramPort #( COL_WIDTH: 8, NUM_COL: RAM_NUM_COL, ADDR_WIDTH: $clog2(RAM_SIZE) );
+
+    inst wb_converter: Bram2Wishbone #(
+        ADDR_WIDTH    : WB_ADDR_WIDTH,
+        DATA_WIDTH    : WB_DATA_WIDTH,
+        RAM_DATA_WIDTH               ,
+        RAM_ADDR_WIDTH               ,
+    ) (
+        clk             ,
+        rst     : wb_rst,
+        ram_busy        ,
+        wb              ,
+        ram_port        ,
+    );
+
+    let bram_rst: reset = wb_rst as reset;
+
+    inst ram: memutils::SinglePortBlockRam #(
+        NUM_COL  : RAM_NUM_COL,
+        COL_WIDTH: 8          ,
+        RAM_DEPTH: RAM_SIZE   ,
+    ) (
+        clk           ,
+        rst : bram_rst,
+        port: ram_port,
+    );
+}
+
+#[test(test_ram2wb, TestRam2Wb)]
+include (cocotb, "./test_ram2wb.py");
