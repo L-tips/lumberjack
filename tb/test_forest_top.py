@@ -98,7 +98,6 @@ async def forest_top_test(dut):
         ]
         await control_port.pipelined(txns)
 
-      
         await RisingEdge(dut.clk)
 
         # Now read the status register while the evaluator
@@ -173,9 +172,6 @@ async def forest_top_test(dut):
             assert dut.forest_top.ready.value == 1
             assert dut.forest_top.start_stb.value == 0
 
-
-
-
 @cocotb.test()
 async def rejects_circular_forests(dut):
      # Start a 10 ns clock
@@ -219,6 +215,7 @@ async def rejects_circular_forests(dut):
         await control_port.pipelined(txns)
 
         await FallingEdge(dut.forest_top.busy)
+        await RisingEdge(dut.clk)
         await RisingEdge(dut.clk)
 
         assert dut.interrupt_line.value == 1

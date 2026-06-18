@@ -45,13 +45,14 @@ module CellOrchestrator::<L: Layout> #(
     assign vote_valid = cell_prediction_arrived || vote_valid_reg;
     assign vote_class = if cell_prediction_arrived ? cell_prediction : vote_class_reg;
 
-    let vote_pending: lbool = vote_valid && !vote_ack;
+    // Vote has been acked
+    var vote_ready: lbool;
 
     // Cell is stalled if a vote is pending and not being acked this cycle
     let stall_cell: lbool = vote_valid_reg && !vote_ack;
 
-    assign busy_o  = cell_busy || next_start_cell || vote_pending;
-    assign ready_o = cell_ready && !next_start_cell && !vote_pending;
+    assign busy_o  = cell_busy || next_start_cell || !vote_ready;
+    assign ready_o = cell_ready && !next_start_cell && vote_ready;
     assign error_o = cell_error;
 
     always_comb {
@@ -112,6 +113,7 @@ module CellOrchestrator::<L: Layout> #(
             vote_valid_reg  = false;
             vote_class_reg  = 0;
             prev_cell_ready = false;
+            vote_ready      = true;
         } else {
             tree_idx         = next_tree_idx;
             tree_header_addr = next_tree_header_addr;
@@ -119,6 +121,12 @@ module CellOrchestrator::<L: Layout> #(
             vote_valid_reg   = next_vote_valid;
             vote_class_reg   = next_vote_class;
             prev_cell_ready  = cell_ready;
+
+            if vote_ack {
+                vote_ready = true;
+            } else if start_cell {
+                vote_ready = false;
+            }
         }
     }
 }

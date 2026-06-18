@@ -50,7 +50,6 @@ module TestForest_2Cells (
         error                                ,
         prediction                           ,
         num_votes                            ,
-        done              : _                ,
         feature_write_port: feature_write_bus,
         cell_cache_ports                     ,
         cells_busy        : _                ,
@@ -80,5 +79,21 @@ async def forest_2c_misaligned(dut):
     ]
 
     await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_2c_restart(dut):
+    cases = [
+        test_cases.TC_ALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_restart(dut, cases)
+
+@cocotb.test()
+async def forest_2c_restart_circular(dut):
+    cases = [
+        test_cases.TC_CIRCULAR_2CELLS,
+    ]
+
+    await test_forest.test_restart(dut, cases)
 
 }}}

@@ -19,8 +19,7 @@ pub module Forest::<L: Layout> #(
     rst            : input reset,
     rst_cell_caches: input reset,
 
-    enable: input  logic,
-    done  : output lbool,
+    enable: input logic,
 
     num_trees   : input L::TreeIdx   ,
     num_features: input L::FeatureIdx,
@@ -70,11 +69,6 @@ pub module Forest::<L: Layout> #(
     var cells_ready: logic<CELL_INSTANCES>;
     var cells_error: logic<CELL_INSTANCES>;
 
-    // All cells done and their last vote acked
-    var done_reg       : lbool;
-    let all_cells_ready: lbool = &cells_ready;
-    let any_cells_busy : lbool = |cells_busy;
-
     // Start a new evaluation when enabled and not already running or done
     var start_eval_reg: lbool;
     let start_eval    : lbool = start_eval_reg;
@@ -104,6 +98,24 @@ pub module Forest::<L: Layout> #(
         votes                ,
     );
 
+    var cells_error_posedge: lbool          ;
+    var cells_error_posedge_reg: lbool;
+    let rst_cells_low: reset_async_low = !(cells_error_posedge_reg as reset_async_high || !rst as reset_async_low);
+    let rst_cells    : reset           = rst_cells_low as reset;
+
+    inst detect_error_edge: $std::edge_detector #(
+        WIDTH        : 1            ,
+        INITIAL_VALUE: false        ,
+    ) (
+        i_clk        : clk          ,
+        i_rst        : rst          ,
+        i_clear      : false        ,
+        i_data       : |cells_error        ,
+        o_posedge    : cells_error_posedge,
+        o_negedge    : _            ,
+        o_edge       : _            ,
+    );
+
     for i in 0..CELL_INSTANCES :inst_tree_cells {
         const CACHE_IDX: u32 = i / CELL_INSTANCES_PER_CACHE;
         const SLOT_IDX : u32 = i % CELL_INSTANCES_PER_CACHE;
@@ -127,7 +139,7 @@ pub module Forest::<L: Layout> #(
             CELL_CACHE_ADDR_WIDTH  ,
         ) (
             clk                               ,
-            rst                               ,
+            rst              : rst_cells      ,
             num_trees_in_cell                 ,
             start_forest     : start_eval     ,
             cell_busy                         ,
@@ -150,7 +162,7 @@ pub module Forest::<L: Layout> #(
             CELL_CACHE_SIZE  ,
         ) (
             clk                                                           ,
-            rst             : rst                                         ,
+            rst             : rst_cells                                   ,
             rst_cache       : rst_cell_caches                             ,
             tree_header_addr                                              ,
             tree_header_data                                              ,
@@ -167,25 +179,22 @@ pub module Forest::<L: Layout> #(
     assign prediction = votes.max_vote_class;
     assign num_votes  = votes.max_vote;
 
-    assign busy  = any_cells_busy || all_cells_ready && !done_reg;
-    assign ready = done_reg;
-    assign done  = done_reg || (error && !any_cells_busy);
-    assign error = |cells_error;
+    assign busy  = |cells_busy & !error;
+    assign ready = &cells_ready;
 
     always_ff (clk, rst) {
         if_reset {
-            done_reg       = false;
             start_eval_reg = false;
+            error = false;
+            cells_error_posedge_reg = false;
         } else {
-
-            if all_cells_ready {
-                done_reg = true;
+            start_eval_reg = enable && !busy;
+            cells_error_posedge_reg = cells_error_posedge;
+            if cells_error_posedge {
+                error = true;
+            } else if enable {
+                error = false;
             }
-            if start_eval {
-                done_reg = false;
-            }
-
-            start_eval_reg = enable && !any_cells_busy;
         }
     }
 

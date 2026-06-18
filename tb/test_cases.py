@@ -59,6 +59,14 @@ TC_CIRCULAR_2CELLS = TestCase(
     hexfile="forest_2t_6n_circular.hex",
     features=[0x4110, 0x4130, 0x4110],
     num_trees=2,
-    cache_mem_ranges=[range(0x10, 0x30), range(0x30, 0x50)],
+    cache_mem_ranges=[range(0x10, 0x30), range(0x30, 0x70)],
+    expect_error=True,
+)
+
+TC_CIRCULAR_1CELL = TestCase(
+    hexfile="forest_2t_6n_circular.hex",
+    features=[0x4110, 0x4130, 0x4110],
+    num_trees=2,
+    cache_mem_ranges=[range(0x10, 0x70)],
     expect_error=True,
 )

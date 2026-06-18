@@ -39,7 +39,6 @@ module ForestTop::<L: Layout> #(
     const CELL_CACHE_DATA_WIDTH: u32 = CELL_CACHE_NUM_COL * BITS_PER_COL;
 
     var start_stb: logic;
-    var done     : lbool;
     // var forest_start_addr  : L::RamAddr   ;
     var num_trees: L::TreeIdx;
     // var features_start_addr: L::RamAddr   ;
@@ -91,7 +90,6 @@ module ForestTop::<L: Layout> #(
         rst                                  ,
         rst_cell_caches   : rst_cache        ,
         enable            : start_stb        ,
-        done                                 ,
         num_trees                            ,
         num_features                         ,
         busy                                 ,
@@ -123,17 +121,16 @@ module ForestTop::<L: Layout> #(
         wdata    : csr_wdata    ,
         rdata    : csr_rdata    ,
         start_stb               ,
-        done                    ,
         num_trees               ,
         // forest_start_addr                 ,
         num_features  ,
         // features_start_addr               ,
-        ready       ,
-        busy        ,
-        error       ,
-        prediction  ,
-        num_votes   ,
-        interrupt   ,
+        ready                                ,
+        busy                                 ,
+        error                                ,
+        prediction                           ,
+        num_votes                            ,
+        interrupt                            ,
         feature_write_port: feature_write_bus,
     );
 

@@ -22,7 +22,6 @@ module CsrInterface::<L: Layout> (
     ready     : input logic        ,
     busy      : input logic        ,
     error     : input logic        ,
-    done      : input logic        ,
     prediction: input L::Prediction,
     num_votes : input L::NumVotes  ,
 
@@ -85,15 +84,18 @@ module CsrInterface::<L: Layout> (
     var next_intflag: Intflag;
 
     var prev_ready: logic;
+    var prev_error: logic;
 
     var cyccnt: csr_types::<L>::Data;
 
     always_ff {
         if_reset {
             prev_ready = 0;
+            prev_error = 0;
             cyccnt     = 0;
         } else {
             prev_ready = ready;
+            prev_error = error;
 
             if enable {
                 cyccnt += 1;
@@ -104,6 +106,18 @@ module CsrInterface::<L: Layout> (
     }
 
     assign interrupt = (intflag_reg.ready && inten_reg.ready) || (intflag_reg.error && inten_reg.error);
+
+    var busy_negedge: lbool;
+    inst busy_edge: $std::edge_detector #(WIDTH: 1) (
+        
+        i_clk        : clk          ,
+        i_rst        : rst          ,
+        i_clear      : false        ,
+        i_data       : busy        ,
+        o_negedge    : busy_negedge            ,
+        o_posedge    : _,
+        o_edge       : _            ,
+    );
 
     // Write logic
     always_comb {
@@ -177,7 +191,7 @@ module CsrInterface::<L: Layout> (
 
         // Clear the enable bit if the forest
         // has just finished evaluating
-        if done && !next_user_enable {
+        if busy_negedge && !next_user_enable {
             next_enable = 0;
         }
 
@@ -193,7 +207,7 @@ module CsrInterface::<L: Layout> (
         }
 
         // Set the interrupt flag if error
-        if error {
+        if error && !prev_error {
             next_intflag.error = 1;
         }
 
@@ -286,12 +300,12 @@ module CsrInterface::<L: Layout> (
     always_comb {
         if write && address >= FEAT_WRITE_START && !enable {
             feature_write_port.write_enable = true;
-            feature_write_port.address = address - FEAT_WRITE_START;
-            feature_write_port.data = wdata;
+            feature_write_port.address      = address - FEAT_WRITE_START;
+            feature_write_port.data         = wdata;
         } else {
             feature_write_port.write_enable = false;
-            feature_write_port.address = 0;
-            feature_write_port.data = 0;
+            feature_write_port.address      = 0;
+            feature_write_port.data         = 0;
         }
     }
 }

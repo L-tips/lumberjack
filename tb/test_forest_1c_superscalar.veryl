@@ -50,7 +50,6 @@ module TestForest_1Cell_Superscalar (
         error                                ,
         prediction                           ,
         num_votes                            ,
-        done              : _                ,
         feature_write_port: feature_write_bus,
         cell_cache_ports                     ,
         cells_busy        : _                ,
@@ -79,5 +78,21 @@ async def forest_1c_misaligned_sc(dut):
     ]
 
     await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_1c_restart(dut):
+    cases = [
+        test_cases.TC_ALIGNED_1CELL,
+    ]
+
+    await test_forest.test_restart(dut, cases)
+
+@cocotb.test()
+async def forest_1c_restart_circular(dut):
+    cases = [
+        test_cases.TC_CIRCULAR_1CELL,
+    ]
+
+    await test_forest.test_restart(dut, cases)
 
 }}}
