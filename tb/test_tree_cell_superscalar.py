@@ -48,8 +48,8 @@ async def tree_test(dut):
     await init_memory(dut, "single_tree_2n_aligned.hex")
 
     # Always return 11.0_f32 as the feature
-    dut.feature_buses[0].data.value = 0x4130
-    dut.feature_buses[1].data.value = 0x4130
+    dut.feature_buses[0].data.value = 0x00004130
+    dut.feature_buses[1].data.value = 0x00004130
 
     # ...and start tree prediction
     dut.start.value = 1
