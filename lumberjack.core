@@ -6,18 +6,29 @@ description: "Random forest hardware accelerator"
 filesets:
   rtl:
     files:
+      - dependencies/memutils/src/wb/wishbone_if.sv
+      - dependencies/memutils/src/scratchpad_ram.sv
+      - dependencies/memutils/src/bram/bram_bus.sv
+      - dependencies/memutils/src/bram/sp_bram.sv
+      - dependencies/std/edge_detector/edge_detector.sv
       - target/veryl/types.sv
-      - target/veryl/csr_types.sv
-      - target/veryl/forest_top.sv
-      - target/veryl/forest.sv
-      - target/veryl/tree.sv
-      - target/veryl/csr.sv
-      - target/veryl/float_leq.sv
+      - target/veryl/tree/float_leq.sv
+      - target/veryl/tree/bram_demux.sv
+      - target/veryl/self_arbiter.sv
+      - target/veryl/ram2wb.sv
       - target/veryl/ibex_bus/ibex_bus.sv
       - target/veryl/ibex_bus/wb2ibex_bus.sv
-      - dependencies/memutils/src/wb/wishbone_if.sv
-      - dependencies/memutils/src/wb/wb_demux.sv
-      - dependencies/memutils/src/scratchpad_ram.sv
+      - target/veryl/forest/ram_counter.sv
+      - target/veryl/tree/node_evaluator.sv
+      - target/veryl/tree/tree_cell.sv
+      - target/veryl/forest/types.sv
+      - target/veryl/forest/votes_arbiter.sv
+      - target/veryl/forest/cell_orchestrator.sv
+      - target/veryl/csr_types.sv
+      - target/veryl/forest/forest.sv
+      - target/veryl/csr.sv
+      - target/veryl/forest_top.sv
+      - target/veryl/forest_top_std.sv
     file_type: systemVerilogSource
 
 targets:
