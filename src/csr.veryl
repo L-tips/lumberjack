@@ -108,15 +108,16 @@ module CsrInterface::<L: Layout> (
     assign interrupt = (intflag_reg.ready && inten_reg.ready) || (intflag_reg.error && inten_reg.error);
 
     var busy_negedge: lbool;
-    inst busy_edge: $std::edge_detector #(WIDTH: 1) (
-        
-        i_clk        : clk          ,
-        i_rst        : rst          ,
-        i_clear      : false        ,
-        i_data       : busy        ,
-        o_negedge    : busy_negedge            ,
-        o_posedge    : _,
-        o_edge       : _            ,
+    inst busy_edge: $std::edge_detector #(
+        WIDTH: 1,
+    ) (
+        i_clk    : clk         ,
+        i_rst    : rst         ,
+        i_clear  : false       ,
+        i_data   : busy        ,
+        o_negedge: busy_negedge,
+        o_posedge: _           ,
+        o_edge   : _           ,
     );
 
     // Write logic

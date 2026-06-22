@@ -98,22 +98,23 @@ pub module Forest::<L: Layout> #(
         votes                ,
     );
 
-    var cells_error_posedge: lbool          ;
-    var cells_error_posedge_reg: lbool;
-    let rst_cells_low: reset_async_low = !(cells_error_posedge_reg as reset_async_high || !rst as reset_async_low);
-    let rst_cells    : reset           = rst_cells_low as reset;
+    var cells_error_posedge    : lbool          ;
+    var cells_error_posedge_reg: lbool          ;
+    let rst_cells_low          : reset_async_low = !(cells_error_posedge_reg as reset_async_high
+        || !rst as reset_async_low);
+    let rst_cells              : reset           = rst_cells_low as reset;
 
     inst detect_error_edge: $std::edge_detector #(
-        WIDTH        : 1            ,
-        INITIAL_VALUE: false        ,
+        WIDTH        : 1    ,
+        INITIAL_VALUE: false,
     ) (
-        i_clk        : clk          ,
-        i_rst        : rst          ,
-        i_clear      : false        ,
-        i_data       : |cells_error        ,
-        o_posedge    : cells_error_posedge,
-        o_negedge    : _            ,
-        o_edge       : _            ,
+        i_clk    : clk                ,
+        i_rst    : rst                ,
+        i_clear  : false              ,
+        i_data   : |cells_error       ,
+        o_posedge: cells_error_posedge,
+        o_negedge: _                  ,
+        o_edge   : _                  ,
     );
 
     for i in 0..CELL_INSTANCES :inst_tree_cells {
@@ -184,11 +185,11 @@ pub module Forest::<L: Layout> #(
 
     always_ff (clk, rst) {
         if_reset {
-            start_eval_reg = false;
-            error = false;
+            start_eval_reg          = false;
+            error                   = false;
             cells_error_posedge_reg = false;
         } else {
-            start_eval_reg = enable && !busy;
+            start_eval_reg          = enable && !busy;
             cells_error_posedge_reg = cells_error_posedge;
             if cells_error_posedge {
                 error = true;
