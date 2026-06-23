@@ -112,7 +112,9 @@ module ForestTop::<L: Layout> #(
     let csr_write_req: logic = control_port.write_enable && control_port.valid_request();
     let csr_read_req : logic = !control_port.write_enable && control_port.valid_request();
 
-    inst csr: CsrInterface::<L> (
+    inst csr: CsrInterface::<L> #(
+        CELL_INSTANCES  ,
+    ) (
         clk                     ,
         rst                     ,
         address  : csr_address  ,

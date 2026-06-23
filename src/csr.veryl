@@ -1,5 +1,7 @@
 /// CSR interface for controlling the ForestTop module.
-module CsrInterface::<L: Layout> (
+module CsrInterface::<L: Layout> #(
+    param CELL_INSTANCES: u32 = 1,
+) (
     clk: input clock,
     rst: input reset,
 
@@ -42,6 +44,7 @@ module CsrInterface::<L: Layout> (
     const INTEN_CLR : csr_types::<L>::Address = 10;
     const INTFLAG   : csr_types::<L>::Address = 11;
     const PERF      : csr_types::<L>::Address = 12;
+    const NUM_CELLS : csr_types::<L>::Address = 13;
 
     // Feature write address
     const FEAT_WRITE_START: csr_types::<L>::Address = 16;
@@ -271,6 +274,10 @@ module CsrInterface::<L: Layout> (
 
         if read && address == PERF {
             rdata = cyccnt;
+        }
+
+        if read && address == NUM_CELLS {
+            rdata = CELL_INSTANCES;
         }
     }
 
