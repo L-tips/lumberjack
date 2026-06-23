@@ -308,7 +308,7 @@ module CsrInterface::<L: Layout> #(
     always_comb {
         if write && address >= FEAT_WRITE_START && !enable {
             feature_write_port.write_enable = true;
-            feature_write_port.address      = address - FEAT_WRITE_START;
+            feature_write_port.address      = address as L::FEAT_IDX_WIDTH - FEAT_WRITE_START as L::FEAT_IDX_WIDTH;
             feature_write_port.data         = wdata;
         } else {
             feature_write_port.write_enable = false;
