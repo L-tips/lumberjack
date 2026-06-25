@@ -27,7 +27,7 @@ interface IbexBus #(
 
     modport slave {
         req: input,
-        // slaves do not see the gnt signal
+        gnt: output,
 
         addr : input,
         we   : input,

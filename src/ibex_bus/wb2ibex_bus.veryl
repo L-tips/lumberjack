@@ -22,6 +22,7 @@ module IbexBus2Wishbone #(
 
     assign ibex_in.rdata  = wb_out.read_data;
     assign ibex_in.rvalid = wb_out.ack;
+    assign ibex_in.gnt = !wb_out.stall;
 
     // LOCK, ERR, RTY not supported by Ibex bus, but may be
     // assigned by other modules, such as arbiters.
@@ -45,7 +46,6 @@ module Wishbone2IbexBus #(
 
     assign wb_in.read_data = ibex_out.rdata;
     assign wb_in.ack       = ibex_out.rvalid;
-
     assign wb_in.stall = !ibex_out.gnt;
 
     // LOCK, ERR, RTY not supported by Ibex bus, but may be
