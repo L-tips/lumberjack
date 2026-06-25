@@ -1,6 +1,10 @@
 /// Protocol converter from an Ibex bus master
 /// to a Wishbone pipelined slave.
 ///
+/// TODO:
+/// WARNING: Not fully Wishbone compliant. In particular, does NOT
+/// set the low address bits to the lowest byte select lane.
+///
 /// May only be used with slaves that meet the
 /// following condition:
 ///
@@ -22,7 +26,7 @@ module IbexBus2Wishbone #(
 
     assign ibex_in.rdata  = wb_out.read_data;
     assign ibex_in.rvalid = wb_out.ack;
-    assign ibex_in.gnt = !wb_out.stall;
+    assign ibex_in.gnt    = !wb_out.stall;
 
     // LOCK, ERR, RTY not supported by Ibex bus, but may be
     // assigned by other modules, such as arbiters.
@@ -46,7 +50,7 @@ module Wishbone2IbexBus #(
 
     assign wb_in.read_data = ibex_out.rdata;
     assign wb_in.ack       = ibex_out.rvalid;
-    assign wb_in.stall = !ibex_out.gnt;
+    assign wb_in.stall     = !ibex_out.gnt;
 
     // LOCK, ERR, RTY not supported by Ibex bus, but may be
     // assigned by other modules, such as arbiters.

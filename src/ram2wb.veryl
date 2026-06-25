@@ -40,40 +40,14 @@ module Bram2Wishbone #(
     // Bit offset of the WB word within the RAM word
     let subword_bit_offset: logic<32> = sub_word_idx * DATA_WIDTH;
 
-    // // Alignment check
-    // var lowest_sel_byte: logic<ADDR_SHIFT>;
-    // always_comb {
-    //     lowest_sel_byte = '0;
-
-    //     for i in 0..COL_WIDTH {
-    //         if wb.select[i] {
-    //             lowest_sel_byte = i[ADDR_SHIFT - 1:0];
-    //             break;
-    //         }
-    //     }
-    // }
-
     // ---------------------------------------------------------------
     // Control signals
     // ---------------------------------------------------------------
 
+    let next_ack: lbool = wb.valid_request() && !wb.stall;
+
     assign wb.stall = ram_busy;
-
-    var next_err: lbool;
-    var next_ack: lbool;
-
-    always_comb {
-        next_err = 0;
-        if !wb.stall {
-            // // Misaligned: the byte-address offset within the WB word
-            // // must equal the lowest asserted select lane.
-            // next_err = wb.addr[ADDR_SHIFT - 1:0] != lowest_sel_byte;
-            next_ack = wb.valid_request() && !next_err;
-        } else {
-            // next_err = 0;
-            next_ack = 0;
-        }
-    }
+    assign wb.err   = false;
 
     assign ram_port.enable  = next_ack;
     assign ram_port.address = ram_word_idx[RAM_ADDR_WIDTH - 1:0];
@@ -96,12 +70,10 @@ module Bram2Wishbone #(
     always_ff (clk, rst) {
         if_reset {
             wb.ack            = 0;
-            wb.err            = 0;
             prev_sub_word_idx = '0;
             prev_select       = '0;
         } else {
             wb.ack            = next_ack;
-            wb.err            = next_err;
             prev_sub_word_idx = sub_word_idx;
             prev_select       = wb.select;
         }
