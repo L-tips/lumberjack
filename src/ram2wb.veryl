@@ -40,18 +40,18 @@ module Bram2Wishbone #(
     // Bit offset of the WB word within the RAM word
     let subword_bit_offset: logic<32> = sub_word_idx * DATA_WIDTH;
 
-    // Alignment check
-    var lowest_sel_byte: logic<ADDR_SHIFT>;
-    always_comb {
-        lowest_sel_byte = '0;
+    // // Alignment check
+    // var lowest_sel_byte: logic<ADDR_SHIFT>;
+    // always_comb {
+    //     lowest_sel_byte = '0;
 
-        for i in 0..COL_WIDTH {
-            if wb.select[i] {
-                lowest_sel_byte = i[ADDR_SHIFT - 1:0];
-                break;
-            }
-        }
-    }
+    //     for i in 0..COL_WIDTH {
+    //         if wb.select[i] {
+    //             lowest_sel_byte = i[ADDR_SHIFT - 1:0];
+    //             break;
+    //         }
+    //     }
+    // }
 
     // ---------------------------------------------------------------
     // Control signals
@@ -63,13 +63,14 @@ module Bram2Wishbone #(
     var next_ack: lbool;
 
     always_comb {
+        next_err = 0;
         if !wb.stall {
-            // Misaligned: the byte-address offset within the WB word
-            // must equal the lowest asserted select lane.
-            next_err = wb.addr[ADDR_SHIFT - 1:0] != lowest_sel_byte;
+            // // Misaligned: the byte-address offset within the WB word
+            // // must equal the lowest asserted select lane.
+            // next_err = wb.addr[ADDR_SHIFT - 1:0] != lowest_sel_byte;
             next_ack = wb.valid_request() && !next_err;
         } else {
-            next_err = 0;
+            // next_err = 0;
             next_ack = 0;
         }
     }
