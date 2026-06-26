@@ -11,6 +11,7 @@ module CellOrchestrator::<L: Layout> #(
     cell_ready     : input lbool        ,
     cell_error     : input lbool        ,
     cell_prediction: input L::Prediction,
+    cell_rst       : input lbool        ,
 
     vote_valid: output lbool        ,
     vote_ack  : input  lbool        ,
@@ -51,8 +52,15 @@ module CellOrchestrator::<L: Layout> #(
     // Cell is stalled if a vote is pending and not being acked this cycle
     let stall_cell: lbool = vote_valid_reg && !vote_ack;
 
+    // Return ready immediately when the cell is empty
+    var empty_forest_ready     : lbool;
+    var next_empty_forest_ready: lbool;
+
+    // Combinational view so ready_o can react the same cycle start_forest fires
+    let empty_forest_now: lbool = (start_forest && num_trees_in_cell == 0) || empty_forest_ready;
+
     assign busy_o  = cell_busy || next_start_cell || !vote_ready;
-    assign ready_o = cell_ready && !next_start_cell && vote_ready;
+    assign ready_o = (cell_ready && !next_start_cell && vote_ready) || empty_forest_now;
     assign error_o = cell_error;
 
     always_comb {
@@ -62,6 +70,8 @@ module CellOrchestrator::<L: Layout> #(
 
         next_vote_valid = vote_valid_reg;
         next_vote_class = vote_class_reg;
+
+        next_empty_forest_ready = empty_forest_ready;
 
         if start_cell {
             next_start_cell = false;
@@ -95,7 +105,18 @@ module CellOrchestrator::<L: Layout> #(
         if start_forest {
             next_tree_idx         = 0;
             next_tree_header_addr = 0;
-            next_start_cell       = true;
+
+            if num_trees_in_cell == 0 {
+                // If cell is empty, immediarely return ready
+                next_empty_forest_ready = true;
+            } else {
+                // Only start tree cell if we actually have trees to evaluate
+                next_start_cell = true;
+            }
+        }
+
+        if next_start_cell || cell_rst {
+            next_empty_forest_ready = false;
         }
 
         // Clear vote_valid when acked
@@ -109,18 +130,20 @@ module CellOrchestrator::<L: Layout> #(
             tree_idx         = 0;
             tree_header_addr = 0;
             // tree_rst   = false;
-            start_cell      = false;
-            vote_valid_reg  = false;
-            vote_class_reg  = 0;
-            prev_cell_ready = false;
-            vote_ready      = true;
+            start_cell         = false;
+            vote_valid_reg     = false;
+            vote_class_reg     = 0;
+            prev_cell_ready    = false;
+            vote_ready         = true;
+            empty_forest_ready = false;
         } else {
-            tree_idx         = next_tree_idx;
-            tree_header_addr = next_tree_header_addr;
-            start_cell       = next_start_cell;
-            vote_valid_reg   = next_vote_valid;
-            vote_class_reg   = next_vote_class;
-            prev_cell_ready  = cell_ready;
+            tree_idx           = next_tree_idx;
+            tree_header_addr   = next_tree_header_addr;
+            start_cell         = next_start_cell;
+            vote_valid_reg     = next_vote_valid;
+            vote_class_reg     = next_vote_class;
+            prev_cell_ready    = cell_ready;
+            empty_forest_ready = next_empty_forest_ready;
 
             if vote_ack {
                 vote_ready = true;
