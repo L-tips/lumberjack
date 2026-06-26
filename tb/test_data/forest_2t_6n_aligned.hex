@@ -1,6 +1,6 @@
 // HEADER
 02000000 // 0x1005c  Number of trees = 2 (4 bytes)
-00030004 // 0x10060  Number of features = 3 (1 byte)
+03004000 // 0x10060  Number of features = 3 (1 byte)
          //             Number of classes = 4 (1 byte)
          //             Padding (2 bytes)
 
