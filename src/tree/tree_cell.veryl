@@ -5,6 +5,9 @@ module TreeCell::<L: Layout> #(
     /// Size of the tree cache in 64 bit dwords
     param CELL_CACHE_SIZE: u64 = 1024,
 
+    /// Inhibit model checking. Should only be used for development purposes.
+    param INHIBIT_ERR: bbool = false,
+
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE)   ,
     const FEAT_PORTS_PER_TREE  : u32 = if USE_SUPERSCALAR ? 2 : 1,
 ) (
@@ -109,6 +112,7 @@ module TreeCell::<L: Layout> #(
 
     inst evaluator_0: NodeEvaluator::<L> #(
         CELL_CACHE_ADDR_WIDTH  ,
+        INHIBIT_ERR            ,
     ) (
         node            : node_low            ,
         current_node_idx: current_node_idx    ,
@@ -140,6 +144,7 @@ module TreeCell::<L: Layout> #(
 
         inst evaluator_1: NodeEvaluator::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
+            INHIBIT_ERR            ,
         ) (
             node            : node_high           ,
             current_node_idx: node_idx            ,

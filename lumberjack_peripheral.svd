@@ -103,21 +103,6 @@
         </register>
 
         <register>
-          <name>FOREST_START</name>
-          <description>Address of the first node in the forest</description>
-          <addressOffset>0x0010</addressOffset>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>ADDR</name>
-              <description>Address of the first node in the forest</description>
-              <bitRange>[31:0]</bitRange>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-
-        <register>
           <name>NUM_FEATURES</name>
           <description>Number of features in forest</description>
           <addressOffset>0x0014</addressOffset>
@@ -126,21 +111,6 @@
             <field>
               <name>NUM</name>
               <description>Number of features in the forest</description>
-              <bitRange>[31:0]</bitRange>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-
-        <register>
-          <name>FEATURES_START</name>
-          <description>Address of the first feature to be used for prediction</description>
-          <addressOffset>0x0018</addressOffset>
-          <resetValue>0x00000000</resetValue>
-          <fields>
-            <field>
-              <name>ADDR</name>
-              <description>Address of the first feature to be used for prediction</description>
               <bitRange>[31:0]</bitRange>
               <access>read-write</access>
             </field>
@@ -259,6 +229,48 @@
               <bitRange>[31:0]</bitRange>
               <access>read-only</access>
             </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>NUM_CELLS</name>
+          <description>Number of cells</description>
+          <addressOffset>0x0034</addressOffset>
+          <resetValue>0x00000000</resetValue>
+          <fields>
+
+            <field>
+              <name>NUM_CELLS</name>
+              <description>Number of cell instances in this peripheral</description>
+              <bitRange>[31:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>FEAT_WRITE[%s]</name>
+          <description>Write features</description>
+          <dim>128</dim>
+          <dimIncrement>0x4</dimIncrement>
+          <addressOffset>0x0040</addressOffset>
+          <resetValue>0x00000000</resetValue>
+         <fields>
+
+            <field>
+              <name>CHUNK0</name>
+              <description>Lower 16-bit chunk of features (bits 15:0)</description>
+              <bitRange>[15:0]</bitRange>
+              <access>write-only</access>
+            </field>
+
+            <field>
+              <name>CHUNK1</name>
+              <description>Upper 16-bit chunk of features (bits 31:16)</description>
+              <bitRange>[31:16]</bitRange>
+              <access>write-only</access>
+            </field>
+
           </fields>
         </register>
 

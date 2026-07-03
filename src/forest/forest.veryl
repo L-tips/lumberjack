@@ -13,6 +13,9 @@ pub module Forest::<L: Layout> #(
     /// Size of the tree caches in 64 bit dwords
     param CELL_CACHE_SIZE: u64 = 1024,
 
+    /// Inhibit model checking. Should only be used for development purposes.
+    param INHIBIT_ERR: bbool = false,
+
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
 ) (
     clk            : input clock,
@@ -162,6 +165,7 @@ pub module Forest::<L: Layout> #(
         inst tree: TreeCell::<L> #(
             USE_SUPERSCALAR  ,
             CELL_CACHE_SIZE  ,
+            INHIBIT_ERR      ,
         ) (
             clk                                                           ,
             rst             : rst_cells                                   ,
