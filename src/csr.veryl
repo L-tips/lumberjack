@@ -6,11 +6,12 @@ module CsrInterface::<L: Layout> #(
     rst: input reset,
 
     // --- CSR interface signals ---
-    address: input  csr_types::<L>::Address,
-    write  : input  lbool                  , // Write enable
-    read   : input  lbool                  , // Read enable
-    wdata  : input  csr_types::<L>::Data   , // Write data
-    rdata  : output csr_types::<L>::Data   , // Read data
+    address    : input  csr_types::<L>::Address,
+    write      : input  lbool                  , // Write enable
+    read       : input  lbool                  , // Read enable
+    wdata      : input  csr_types::<L>::Data   , // Write data
+    byte_select: input  csr_types::<L>::Select , // Byte selection
+    rdata      : output csr_types::<L>::Data   , // Read data
 
     // --- Output control signals ---
     start_stb: output logic     ,
