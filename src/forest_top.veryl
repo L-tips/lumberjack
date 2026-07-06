@@ -110,9 +110,8 @@ module ForestTop::<L: Layout> #(
     let word_idx   : csr_types::<L>::Data    = control_port.addr >> 2;
     let csr_address: csr_types::<L>::Address = word_idx as csr_types::<L>::Address;
 
-    var csr_wdata      : csr_types::<L>::Data  ;
-    var csr_rdata      : csr_types::<L>::Data  ;
-    var csr_byte_select: csr_types::<L>::Select;
+    var csr_wdata: csr_types::<L>::Data;
+    var csr_rdata: csr_types::<L>::Data;
 
     let csr_write_req: logic = control_port.write_enable && control_port.valid_request();
     let csr_read_req : logic = !control_port.write_enable && control_port.valid_request();
@@ -120,19 +119,16 @@ module ForestTop::<L: Layout> #(
     inst csr: CsrInterface::<L> #(
         CELL_INSTANCES  ,
     ) (
-        clk                         ,
-        rst                         ,
-        address    : csr_address    ,
-        write      : csr_write_req  ,
-        read       : csr_read_req   ,
-        wdata      : csr_wdata      ,
-        rdata      : csr_rdata      ,
-        byte_select: csr_byte_select,
-        start_stb                   ,
-        num_trees                   ,
-        // forest_start_addr                 ,
-        num_features  ,
-        // features_start_addr               ,
+        clk                                  ,
+        rst                                  ,
+        address           : csr_address      ,
+        write             : csr_write_req    ,
+        read              : csr_read_req     ,
+        wdata             : csr_wdata        ,
+        rdata             : csr_rdata        ,
+        start_stb                            ,
+        num_trees                            ,
+        num_features                         ,
         ready                                ,
         busy                                 ,
         error                                ,

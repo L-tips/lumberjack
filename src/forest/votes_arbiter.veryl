@@ -67,7 +67,9 @@ module VotesArbiter::<L: Layout> #(
             votes.max_vote_class = 0;
         } else {
             if increment {
-                if read_data + 1 >: votes.max_vote {
+                // Record max voted class, with a tie breaker that prefers the lowest class index
+                if (read_data + 1 >: votes.max_vote)
+                    || ((read_data + 1 == votes.max_vote) && (increment_addr <: votes.max_vote_class)) {
                     votes.max_vote       = read_data + 1;
                     votes.max_vote_class = increment_addr;
                 }
