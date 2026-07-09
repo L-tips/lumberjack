@@ -42,15 +42,11 @@ module ForestTop::<L: Layout> #(
     const CELL_CACHE_DATA_WIDTH: u32 = CELL_CACHE_NUM_COL * BITS_PER_COL;
 
     var start_stb: logic;
-    // var forest_start_addr  : L::RamAddr   ;
-    var num_trees: L::TreeIdx;
-    // var features_start_addr: L::RamAddr   ;
-    var num_features: L::FeatureIdx;
-    var busy        : logic        ;
-    var ready       : logic        ;
-    var error       : logic        ;
-    var prediction  : L::Prediction;
-    var num_votes   : L::NumVotes  ;
+    var busy      : logic        ;
+    var ready     : logic        ;
+    var error     : logic        ;
+    var prediction: L::Prediction;
+    var num_votes : L::NumVotes  ;
 
     let rst: reset = wb_rst as reset;
 
@@ -90,12 +86,10 @@ module ForestTop::<L: Layout> #(
         CELL_CACHE_SIZE       ,
         INHIBIT_ERR           ,
     ) (
-        clk                                  ,
-        rst                                  ,
-        rst_cell_caches   : rst_cache        ,
-        enable            : start_stb        ,
-        num_trees                            ,
-        num_features                         ,
+        clk                       ,
+        rst                       ,
+        rst_cell_caches: rst_cache,
+        enable         : start_stb,
         busy                                 ,
         ready                                ,
         error                                ,
@@ -119,16 +113,14 @@ module ForestTop::<L: Layout> #(
     inst csr: CsrInterface::<L> #(
         CELL_INSTANCES  ,
     ) (
-        clk                                  ,
-        rst                                  ,
-        address           : csr_address      ,
-        write             : csr_write_req    ,
-        read              : csr_read_req     ,
-        wdata             : csr_wdata        ,
-        rdata             : csr_rdata        ,
-        start_stb                            ,
-        num_trees                            ,
-        num_features                         ,
+        clk                     ,
+        rst                     ,
+        address  : csr_address  ,
+        write    : csr_write_req,
+        read     : csr_read_req ,
+        wdata    : csr_wdata    ,
+        rdata    : csr_rdata    ,
+        start_stb               ,
         ready                                ,
         busy                                 ,
         error                                ,

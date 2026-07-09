@@ -1,15 +1,16 @@
 // HEADER
-02000000 // Number of trees = 2 (4 bytes)
+02000001 // Number of trees = 2 (3 bytes), number of cells = 1 (1 byte)
 03004000 // Number of features = 3 (2 bytes), number of classes = 4 (2 bytes)
 
 // Padding (8 bytes)
 00000000 00000000
 
-// --- Tree 0, header 1---
+// --- Tree 0, header---
 // Tree length=6 (including padding) first node ptr=2
-06000000 02000000
+// Cache metadata: is cache header=true, num_trees=2
+06000000 02000280
 
-// Tree 0, header 2
+// Tree 0, padding
 00000000 00000000
 
 // --- Tree 0, Node 0 ---
@@ -29,6 +30,7 @@
 
 // --- Tree 1, header, idx 0 ---
 // Tree length=6, first node ptr=2
+// Cache metadata: is cache header=false
 05000000 02000000
 
 // Padding

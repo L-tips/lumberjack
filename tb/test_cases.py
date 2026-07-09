@@ -6,7 +6,6 @@ class TestCase:
     hexfile: str
     cache_mem_ranges: Sequence[range]
     features: Sequence[int]
-    num_trees: int
     expect_error: bool = False
     expected_prediction: Optional[int] = None
     expected_votes: Optional[int] = None
@@ -20,53 +19,55 @@ class TestCase:
                 )
 
 TC_ALIGNED_1CELL = TestCase(
-    hexfile="forest_2t_6n_aligned.hex",
+    hexfile="forest_1c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
     cache_mem_ranges=[range(0x10, 0x70)],
     expected_prediction=1,
     expected_votes=2,
 )
 
 TC_MISALIGNED_1CELL = TestCase(
-    hexfile="forest_2t_6n_misaligned.hex",
+    hexfile="forest_1c_2t_6n_misaligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
-    cache_mem_ranges=[range(0x10, 0x70)],
+    cache_mem_ranges=[range(0x10, 0x60)],
     expected_prediction=1,
     expected_votes=2,
 )
 
 TC_ALIGNED_2CELLS = TestCase(
-    hexfile="forest_2t_6n_aligned.hex",
+    hexfile="forest_2c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
     cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x70)],
+    expected_prediction=1,
+    expected_votes=2,
+)
+
+TC_2CELLS_ASYMMETRICAL = TestCase(
+    hexfile="forest_1c_2t_6n_aligned.hex",
+    features=[0x4110, 0x4130, 0x4110],
+    cache_mem_ranges=[range(0x10, 0x70), range(0x70, 0xE0)],
     expected_prediction=1,
     expected_votes=2,
 )
 
 TC_MISALIGNED_2CELLS = TestCase(
-    hexfile="forest_2t_6n_misaligned.hex",
+    hexfile="forest_2c_2t_6n_misaligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
-    cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x70)],
+    cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x60)],
     expected_prediction=1,
     expected_votes=2,
 )
 
 TC_CIRCULAR_2CELLS = TestCase(
-    hexfile="forest_2t_6n_circular.hex",
+    hexfile="forest_2c_2t_6n_circular.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
     cache_mem_ranges=[range(0x10, 0x30), range(0x30, 0x70)],
     expect_error=True,
 )
 
 TC_CIRCULAR_1CELL = TestCase(
-    hexfile="forest_2t_6n_circular.hex",
+    hexfile="forest_1c_2t_6n_circular.hex",
     features=[0x4110, 0x4130, 0x4110],
-    num_trees=2,
     cache_mem_ranges=[range(0x10, 0x70)],
     expect_error=True,
 )

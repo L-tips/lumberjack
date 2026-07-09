@@ -1,16 +1,17 @@
 // HEADER
-02000000 // Number of trees = 2 (4 bytes)
+02000001 // Number of trees = 2 (3 bytes), number of cells = 1 (1 byte)
 03004000 // Number of features = 3 (2 bytes), number of classes = 4 (2 bytes)
 
 // Padding - NOTE: the first header in each tree's cache 
 // must always start at address 0.
 00000000 00000000
 
-// --- Tree 0, header 1 ---
-// Tree length=6 first node ptr=3
-06000000 03000000
+// --- Tree 0, header ---
+// Tree length=6, first node ptr=3
+// Cache metadata: is cache header=true, num_trees=2
+06000000 03000280
 
-// Tree 0: header 2
+// Tree 0: padding
 00000000 00000000
 
 // Padding to simulate misalignment
@@ -28,23 +29,18 @@
 // | left: class=2 | right: class=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=2 |
 0200 0300 2041 02c0
 
-// --- Tree 1, header 2, idx 0 ---
-// Tree length=6, first node ptr=3
-06000000 03000000
-
-// Tree 1: header 2
-00000000 00000000
-
-// Padding to simulate misalignment
-00000000 00000000
+// --- Tree 1, padding, idx 0 ---
+// Tree length=4, first node ptr=1
+// Cache metadata: is cache header=false
+06000000 01000000
 
 // --- Tree 1, Node 0, idx 1 ---
-// | left: ptr=4 | right: ptr=5 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |
-0400 0500 2041 0100
+// | left: ptr=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |
+0200 0300 2041 0100
 
 // --- Tree 1, Node 1, idx 2 ---
-// | left: class=2 | right: ptr=5 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
-0200 0500 2041 0080
+// | left: class=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
+0200 0300 2041 0080
 
 // --- Tree 1, Node 2, idx 3 ---
 // | left: class=1 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, righ=true, split feat=2 |

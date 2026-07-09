@@ -1,10 +1,10 @@
 // NOTE: memory is in little-endian format
 
-// --- Tree 0: header 1 ---
+// --- Tree 0: header ---
 // Tree len=6, first node ptr=3
 06000000 03000000
 
-// Tree 0: header 2
+// Tree 0: padding
 00000000 00000000
 
 // Padding to simulate misalignment

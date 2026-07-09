@@ -83,8 +83,6 @@ async def test_forest(dut, test_cases: Sequence[TestCase]):
             await write_feature_word(dut, word_idx, word)
 
         dut.enable.value = 1
-        dut.num_trees.value = tc.num_trees
-        dut.num_features.value = len(tc.features)
 
         await RisingEdge(dut.clk)
         dut.enable.value = 0
@@ -139,8 +137,6 @@ async def test_restart(dut, test_cases: Sequence[TestCase]):
         # Run 3 times to check if restarts work
         for _ in range(3):
             dut.enable.value = 1
-            dut.num_trees.value = tc.num_trees
-            dut.num_features.value = len(tc.features)
 
             await RisingEdge(dut.clk)
             dut.enable.value = 0

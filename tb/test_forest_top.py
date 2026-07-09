@@ -86,11 +86,6 @@ async def forest_top_test(dut):
         await control_port.pipelined(txns)
 
         txns = [
-            # set num_trees
-            Transaction(addr=0xc, wdata=tc.num_trees, sel=0b1111, we=True),
-            #  set num_features
-            # TODO: not needed?
-            Transaction(addr=0x14, wdata=len(tc.features), sel=0b1111, we=True),
             # Enable the interrupt
             Transaction(addr=0x24, wdata=0b1, sel=0b1, we=True),
             # enable
@@ -106,12 +101,6 @@ async def forest_top_test(dut):
 
         # BUSY and ENABLE should be set
         assert rdata == 0b11
-
-        # Check that num_trees is actually enable-protected
-        await control_port.transaction(Transaction(addr=0xc, wdata=0x00, we=True))
-
-        # Check that first_feature hasn't changed (enable protection works)
-        assert dut.forest_top.num_trees.value == tc.num_trees
 
         # Wait for eval to finish
         await FallingEdge(dut.forest_top.busy)
@@ -153,7 +142,6 @@ async def forest_top_test(dut):
 
         # Disable the interrupt
         await control_port.transaction(Transaction(addr=0x28, wdata=0b1, sel=0b1, we=True))
-
 
         # Restart for a 3rd time
         await control_port.transaction(Transaction(addr=0x0, wdata=1, sel=0b1, we=True))
@@ -202,11 +190,6 @@ async def rejects_circular_forests(dut):
         await control_port.pipelined(txns)
 
         txns = [
-            # set num_trees
-            Transaction(addr=0xc, wdata=tc.num_trees, sel=0b1111, we=True),
-            #  set num_features
-            # TODO: not needed?
-            Transaction(addr=0x14, wdata=len(tc.features), sel=0b1111, we=True),
             # Enable the ERROR interrupt, but not the READY bit
             Transaction(addr=0x24, wdata=0b10, sel=0b1, we=True),
             # enable

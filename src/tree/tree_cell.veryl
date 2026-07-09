@@ -23,6 +23,7 @@ module TreeCell::<L: Layout> #(
 
     /// Data inside the evaluated tree's header
     tree_header_data: output node_layout::TreeHeader,
+    header_valid    : output lbool                  ,
 
     ready     : output lbool        ,
     busy      : output lbool        ,
@@ -97,6 +98,7 @@ module TreeCell::<L: Layout> #(
     let current_node_idx: NodePtr = read_addr - tree_header_addr;
 
     var next_tree_header_data: node_layout::TreeHeader;
+    assign header_valid = state == State::evaluating;
 
     // Node indices are relative, mapping directly to a dword index
     // in the RAM.

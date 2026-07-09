@@ -42,7 +42,7 @@ async def tree_test(dut):
     # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
-    test_cases = ["single_tree_2n_aligned.hex", "single_tree_2n_misaligned.hex"]
+    test_cases = ["tree_2n_aligned.hex", "tree_2n_misaligned.hex"]
     for file in test_cases:
         await reset(dut)
         # Start by writing the data into the tree cache
@@ -144,7 +144,7 @@ async def rejects_circular_trees(dut):
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
     await reset(dut)
-    await init_memory(dut, "forest_1t_2n_circular.hex")
+    await init_memory(dut, "tree_2n_circular.hex")
 
     # Always return 9.0_f32 as the feature
     dut.feature_buses[0].data.value = 0x4110

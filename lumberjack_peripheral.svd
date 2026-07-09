@@ -87,6 +87,7 @@
           </fields>
         </register>
 
+        <!--
         <register>
           <name>NUM_TREES</name>
           <description>Number of trees in forest</description>
@@ -116,6 +117,7 @@
             </field>
           </fields>
         </register>
+        -->
 
         <register>
           <name>PREDICTION</name>

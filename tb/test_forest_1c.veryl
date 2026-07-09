@@ -4,9 +4,6 @@ module TestForest_1Cell (
 
     enable: input logic,
 
-    num_trees   : input test_layout::TreeIdx   ,
-    num_features: input test_layout::FeatureIdx,
-
     busy : output lbool,
     ready: output lbool,
     error: output lbool,
@@ -43,8 +40,6 @@ module TestForest_1Cell (
         rst                                  ,
         rst_cell_caches   : rst              ,
         enable                               ,
-        num_trees                            ,
-        num_features                         ,
         busy                                 ,
         ready                                ,
         error                                ,

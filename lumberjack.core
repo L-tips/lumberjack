@@ -23,7 +23,7 @@ filesets:
       - target/veryl/tree/tree_cell.sv
       - target/veryl/forest/types.sv
       - target/veryl/forest/votes_arbiter.sv
-      - target/veryl/forest/cell_orchestrator.sv
+      - target/veryl/forest/cell_driver.sv
       - target/veryl/csr_types.sv
       - target/veryl/forest/forest.sv
       - target/veryl/csr.sv

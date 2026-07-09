@@ -4,9 +4,6 @@ module TestForest_2Cells_Superscalar (
 
     enable: input logic,
 
-    num_trees   : input test_layout::TreeIdx   ,
-    num_features: input test_layout::FeatureIdx,
-
     busy : output lbool,
     ready: output lbool,
     error: output lbool,
@@ -34,17 +31,15 @@ module TestForest_2Cells_Superscalar (
     );
 
     inst forest: Forest::<test_layout> #(
-        CELL_CACHE_SIZE           ,
-        CELL_INSTANCES      : 2   ,
-        USE_SUPERSCALAR     : true,
-        READ_PORTS_PER_CACHE: 2   ,
+        CELL_CACHE_SIZE       ,
+        CELL_INSTANCES        ,
+        USE_SUPERSCALAR       ,
+        READ_PORTS_PER_CACHE  ,
     ) (
         clk                                  ,
         rst                                  ,
         rst_cell_caches   : rst              ,
         enable                               ,
-        num_trees                            ,
-        num_features                         ,
         busy                                 ,
         ready                                ,
         error                                ,
@@ -81,7 +76,16 @@ async def forest_2c_misaligned_sc(dut):
     await test_forest.test_forest(dut, cases)
 
 @cocotb.test()
-async def forest_2c_restart(dut):
+async def forest_2c_asymmetrical_sc(dut):
+    cases = [
+        test_cases.TC_2CELLS_ASYMMETRICAL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+
+@cocotb.test()
+async def forest_2c_restart_sc(dut):
     cases = [
         test_cases.TC_ALIGNED_2CELLS,
     ]
@@ -89,7 +93,7 @@ async def forest_2c_restart(dut):
     await test_forest.test_restart(dut, cases)
 
 @cocotb.test()
-async def forest_2c_restart_circular(dut):
+async def forest_2c_restart_circular_Sc(dut):
     cases = [
         test_cases.TC_CIRCULAR_2CELLS,
     ]

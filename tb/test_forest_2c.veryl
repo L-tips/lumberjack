@@ -4,9 +4,6 @@ module TestForest_2Cells (
 
     enable: input logic,
 
-    num_trees   : input test_layout::TreeIdx   ,
-    num_features: input test_layout::FeatureIdx,
-
     busy : output lbool,
     ready: output lbool,
     error: output lbool,
@@ -34,17 +31,15 @@ module TestForest_2Cells (
     );
 
     inst forest: Forest::<test_layout> #(
-        CELL_CACHE_SIZE            ,
-        CELL_INSTANCES      : 2    ,
-        USE_SUPERSCALAR     : false,
-        READ_PORTS_PER_CACHE: 1    ,
+        CELL_CACHE_SIZE       ,
+        CELL_INSTANCES        ,
+        USE_SUPERSCALAR       ,
+        READ_PORTS_PER_CACHE  ,
     ) (
         clk                                  ,
         rst                                  ,
         rst_cell_caches   : rst              ,
         enable                               ,
-        num_trees                            ,
-        num_features                         ,
         busy                                 ,
         ready                                ,
         error                                ,
@@ -76,6 +71,14 @@ async def forest_2c_aligned(dut):
 async def forest_2c_misaligned(dut):
     cases = [
         test_cases.TC_MISALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_2c_asymmetrical(dut):
+    cases = [
+        test_cases.TC_2CELLS_ASYMMETRICAL,
     ]
 
     await test_forest.test_forest(dut, cases)
