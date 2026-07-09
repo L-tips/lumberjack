@@ -1,17 +1,15 @@
 // HEADER
-02000000 // 0x1005c  Number of trees = 2 (4 bytes)
-03004000 // 0x10060  Number of features = 3 (1 byte)
-         //             Number of classes = 4 (1 byte)
-         //             Padding (2 bytes)
+02000000 // Number of trees = 2 (4 bytes)
+03004000 // Number of features = 3 (2 bytes), number of classes = 4 (2 bytes)
 
 // Padding (8 bytes)
 00000000 00000000
 
-// --- Tree 0, header ---
+// --- Tree 0, header 1---
 // Tree length=6 (including padding) first node ptr=2
 06000000 02000000
 
-// Padding
+// Tree 0, header 2
 00000000 00000000
 
 // --- Tree 0, Node 0 ---

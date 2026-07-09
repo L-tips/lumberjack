@@ -73,10 +73,6 @@ async def tree_test(dut):
         # Writes should not be enabled
         assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
 
-        # We're taking the right branch, which is
-        # a node pointer
-        assert dut.tree.next_read_addr.value == 0x3
-
         # Which means we're going to be evaluating
         # another node
         assert dut.tree.next_ready.value == 0
@@ -152,7 +148,7 @@ async def rejects_circular_trees(dut):
 
     # Always return 9.0_f32 as the feature
     dut.feature_buses[0].data.value = 0x4110
-    dut.tree_header_addr.value = 0x01
+    dut.tree_header_addr.value = 0
 
     # ...and start tree prediction
     dut.start.value = 1

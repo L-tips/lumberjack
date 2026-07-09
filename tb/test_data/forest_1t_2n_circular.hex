@@ -1,17 +1,15 @@
-// NOTE: memory is in little-endian format
-// Node 0: Tree 0
-// Junk data to simulate tree 1 starting at an offset from addr 0 (and therefore misaligned)
-ef be ad de be ba fe ca
+// --- Tree 0: header 1 ---
+// Tree length=4, first node ptr=2
+04000000 02000000
 
-// --- Tree 0: header ---
-// Tree length=3, first node ptr=1
-03000000 01000000
+// Tree 0, header 2
+00000000 00000000
 
-// --- Node 0: Tree 1 ---
-// | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
-0200 0000 2041 0040 // 0x8-0xf
+// --- Node 0: Tree 0 ---
+// | left: ptr=3 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
+0300 0000 2041 0040 // 0x8-0xf
 
-// --- Node 1: Tree 1 ---
-// | left: ptr=1 (go backwards) | right: ptr=2 (this node) | split: 10.0_bf16=0x4120 |
+// --- Node 1: Tree 0 ---
+// | left: ptr=2 (go backwards) | right: ptr=3 (this node) | split: 10.0_bf16=0x4120 |
 // | flags: left=false, right=false, split feat=0
-0100 0200 2041 0000 // 0x10-0x17
+0200 0300 2041 0000 // 0x10-0x17

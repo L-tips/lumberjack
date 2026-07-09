@@ -77,7 +77,6 @@ async def tree_test(dut):
     assert dut.tree.next_ready.value == 1
     assert dut.tree.next_busy.value == 0
 
-
     # Writes should still not be enabled until no longer busy
     assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
     # Even though the RAM port is trying to write
@@ -142,7 +141,7 @@ async def rejects_circular_trees(dut):
 
     # Always return 9.0_f32 as the feature
     dut.feature_buses[0].data.value = 0x4110
-    dut.tree_header_addr.value = 0x01
+    dut.tree_header_addr.value = 0
 
     # ...and start tree prediction
     dut.start.value = 1
