@@ -25,12 +25,12 @@ proto package Layout {
 
 package standard_layout for Layout {
     /// Maximum number of classes that can be predicted
-    const MAX_NUM_CLASSES: u32 = 16;
+    const MAX_NUM_CLASSES: u32 = 64;
 
     /// Max number of features addressable by a node
-    const MAX_NUM_FEATURES: u32 = 16;
+    const MAX_NUM_FEATURES: u32 = 64;
 
-    /// Max number of trees in a forest
+    /// Max number of trees in a cell
     const MAX_NUM_TREES: u32 = 512;
 
     const RAM_ADDR_WIDTH: u8 = 32;
