@@ -5,10 +5,10 @@
 // Padding (8 bytes)
 00000000 00000000
 
-// --- Tree 0, header 0 ---
+// --- Tree 0, header ---
 // Tree length=6 (including padding), first node ptr=2
-// Cache metadata: is cache header=true, num_trees=2
-06000000 02000280
+// trees in cell = 2
+06000000 02000200
 
 // Padding
 00000000 00000000
@@ -30,7 +30,7 @@
 
 // --- Tree 1, header, idx 0 ---
 // Tree length=6, first node ptr=2
-// Cache metadata: is cache header=false
+// trees in cell = null
 06000000 02000000
 
 // Padding

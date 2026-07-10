@@ -77,7 +77,7 @@ module CellOrchestrator::<L: Layout> #(
         next_empty_forest_ready = empty_forest_ready;
 
         if first_header_valid {
-            next_num_trees_in_cell = tree_header_data.cache_metadata.num_trees as L::TreeIdx;
+            next_num_trees_in_cell = tree_header_data.trees_in_cell as L::TreeIdx;
         }
 
         if start_cell {

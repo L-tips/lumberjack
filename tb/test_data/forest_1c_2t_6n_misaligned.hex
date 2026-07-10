@@ -9,7 +9,8 @@
 // --- Tree 0, header ---
 // Tree length=6, first node ptr=3
 // Cache metadata: is cache header=true, num_trees=2
-06000000 03000280
+// Trees in cell = 2
+06000000 03000200
 
 // Tree 0: padding
 00000000 00000000
@@ -31,7 +32,7 @@
 
 // --- Tree 1, padding, idx 0 ---
 // Tree length=4, first node ptr=1
-// Cache metadata: is cache header=false
+// trees in cell = null
 06000000 01000000
 
 // --- Tree 1, Node 0, idx 1 ---

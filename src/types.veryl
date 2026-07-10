@@ -76,16 +76,12 @@ package node_layout {
         left : logic<16>,
     }
 
-    // Field order inverted - little-endian memory
-    struct CacheMetadata {
-        cache_header: logic    ,
-        num_trees   : logic<15>,
-    }
+
 
     // Field order inverted - little-endian memory
     struct TreeHeader {
-        cache_metadata: CacheMetadata    ,
-        first_node_ptr: logic        <16>,
-        tree_len      : logic        <32>,
+        trees_in_cell : logic<16>,
+        first_node_ptr: logic<16>,
+        tree_len      : logic<32>,
     }
 }
