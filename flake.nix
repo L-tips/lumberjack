@@ -1,25 +1,27 @@
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
+
+    lumberjack-compiler = {
+      url = "github:L-tips/lumberjack-compiler";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
-    { self, nixpkgs }:
-    let
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+
       systems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
 
-      forAllSystems = nixpkgs.lib.genAttrs systems;
-    in
-    {
-      devShells = forAllSystems (
-        system:
+      perSystem =
+        { pkgs, system, ... }:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            # config.allowUnfree = true;
-          };
-
           veryl = pkgs.veryl.overrideAttrs (
             old:
             let
@@ -32,6 +34,7 @@
             in
             {
               inherit src;
+
               cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
                 inherit src;
                 name = "veryl";
@@ -41,17 +44,17 @@
           );
         in
         {
-          default = pkgs.mkShell {
+          devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
               veryl
               verilator
               uv
               surfer
-              # The verilator package is missing the zlib dependency
               zlib
+
+              inputs.lumberjack-compiler.packages.${system}.default
             ];
           };
-        }
-      );
+        };
     };
 }
