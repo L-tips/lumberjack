@@ -21,32 +21,11 @@
 
       perSystem =
         { pkgs, system, ... }:
-        let
-          veryl = pkgs.veryl.overrideAttrs (
-            old:
-            let
-              src = pkgs.fetchFromGitHub {
-                owner = "veryl-lang";
-                repo = "veryl";
-                rev = "81daeab2bf4596016db472fec72219a0098b18be";
-                hash = "sha256-TB8gmURTH6SQJCl3n00okGvlN/viAqITAUVJonscbFQ=";
-              };
-            in
-            {
-              inherit src;
-
-              cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-                inherit src;
-                name = "veryl";
-                hash = "sha256-/BKVUz3m26MvUvxp9Irtfd0RhbGVZPC2wnZ+Ow1evtU=";
-              };
-            }
-          );
-        in
+        
         {
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
-              veryl
+              veryl # >= 0.20.2
               verilator
               uv
               surfer
