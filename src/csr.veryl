@@ -106,7 +106,7 @@ module CsrInterface::<L: Layout> #(
     // Write logic
     always_comb {
         // Defaults
-        next_enable = enable_reg;
+        next_enable      = enable_reg;
         next_inten       = inten_reg;
         next_intflag     = intflag_reg;
         next_user_enable = 0;
@@ -220,12 +220,12 @@ module CsrInterface::<L: Layout> #(
     // Advance state machine
     always_ff {
         if_reset {
-            enable_reg = 0;
+            enable_reg  = 0;
             inten_reg   = 0;
             intflag_reg = 0;
             start_stb   = 0;
         } else {
-            enable_reg = next_enable;
+            enable_reg  = next_enable;
             inten_reg   = next_inten;
             intflag_reg = next_intflag;
             start_stb   = next_enable && !enable_reg;

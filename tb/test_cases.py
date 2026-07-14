@@ -21,7 +21,7 @@ class TestCase:
 TC_ALIGNED_1CELL = TestCase(
     hexfile="forest_1c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    cache_mem_ranges=[range(0x10, 0x70)],
+    cache_mem_ranges=[range(0x10, 0x50)],
     expected_prediction=1,
     expected_votes=2,
 )
@@ -37,7 +37,7 @@ TC_MISALIGNED_1CELL = TestCase(
 TC_ALIGNED_2CELLS = TestCase(
     hexfile="forest_2c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x70)],
+    cache_mem_ranges=[range(0x10, 0x30), range(0x30, 0x50)],
     expected_prediction=1,
     expected_votes=2,
 )
@@ -45,7 +45,7 @@ TC_ALIGNED_2CELLS = TestCase(
 TC_2CELLS_ASYMMETRICAL = TestCase(
     hexfile="forest_1c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
-    cache_mem_ranges=[range(0x10, 0x70), range(0x70, 0xE0)],
+    cache_mem_ranges=[range(0x10, 0x50), range(0x50, 0xE0)],
     expected_prediction=1,
     expected_votes=2,
 )

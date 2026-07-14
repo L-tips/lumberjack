@@ -41,7 +41,7 @@ module ForestTop::<L: Layout> #(
     const CELL_CACHE_NUM_COL   : u8  = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
     const CELL_CACHE_DATA_WIDTH: u32 = CELL_CACHE_NUM_COL * BITS_PER_COL;
 
-    var start_stb: logic;
+    var start_stb : logic        ;
     var busy      : logic        ;
     var ready     : logic        ;
     var error     : logic        ;
@@ -86,10 +86,10 @@ module ForestTop::<L: Layout> #(
         CELL_CACHE_SIZE       ,
         INHIBIT_ERR           ,
     ) (
-        clk                       ,
-        rst                       ,
-        rst_cell_caches: rst_cache,
-        enable         : start_stb,
+        clk                                  ,
+        rst                                  ,
+        rst_cell_caches   : rst_cache        ,
+        enable            : start_stb        ,
         busy                                 ,
         ready                                ,
         error                                ,
@@ -113,14 +113,14 @@ module ForestTop::<L: Layout> #(
     inst csr: CsrInterface::<L> #(
         CELL_INSTANCES  ,
     ) (
-        clk                     ,
-        rst                     ,
-        address  : csr_address  ,
-        write    : csr_write_req,
-        read     : csr_read_req ,
-        wdata    : csr_wdata    ,
-        rdata    : csr_rdata    ,
-        start_stb               ,
+        clk                                  ,
+        rst                                  ,
+        address           : csr_address      ,
+        write             : csr_write_req    ,
+        read              : csr_read_req     ,
+        wdata             : csr_wdata        ,
+        rdata             : csr_rdata        ,
+        start_stb                            ,
         ready                                ,
         busy                                 ,
         error                                ,

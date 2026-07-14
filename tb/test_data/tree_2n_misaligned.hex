@@ -1,18 +1,18 @@
 // NOTE: memory is in little-endian format
 
+// Padding to misalign header
+00000000 00000000
+
 // --- Tree 0: header ---
-// Tree len=6, first node ptr=3
-06000000 03000000
+// Tree len=5, first node ptr=2
+05000000 02000000
 
 // Tree 0: padding
 00000000 00000000
 
-// Padding to simulate misalignment
-00000000 00000000
-
 // --- Node 0 ---
-// | left: class=0 | right: ptr=4 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=false, split feat=0 |
-0000 0400 2041 0080
+// | left: class=0 | right: ptr=3 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=false, split feat=0 |
+0000 0300 2041 0080
 // --- Node 1 ---
 // | left: class=1 | right: class=2 | split: 10.0_bf16 = 0x4120 | flags: left=true, right=true, split feat=1 |
 0100 0200 2041 01c0

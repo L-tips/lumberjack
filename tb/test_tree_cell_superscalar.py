@@ -38,7 +38,7 @@ async def init_memory(dut, mem_file):
     dut.ram_port.byte_write_enable.value = 0
 
 @cocotb.test()
-async def tree_test(dut):
+async def tree_test_aligned(dut):
     # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
@@ -48,8 +48,8 @@ async def tree_test(dut):
     await init_memory(dut, "tree_2n_aligned.hex")
 
     # Always return 11.0_f32 as the feature
-    dut.feature_buses[0].data.value = 0x00004130
-    dut.feature_buses[1].data.value = 0x00004130
+    dut.feature_buses[0].data.value = 0x4130
+    dut.feature_buses[1].data.value = 0x4130
 
     # ...and start tree prediction
     dut.start.value = 1
@@ -100,6 +100,7 @@ async def tree_test(dut):
     # Now let's try to take another branch.
     # Always return 6.0_f32 as the input feature
     dut.feature_buses[0].data.value = 0x40C0
+    dut.feature_buses[1].data.value = 0x40C0
     dut.start.value = 1
 
     await RisingEdge(dut.clk)
@@ -108,9 +109,9 @@ async def tree_test(dut):
 
     # The first node is directly a prediction.
     # Entire prediction sequence should complete
-    # in a total of 3 cycles after START has been
+    # in a total of 2 cycles after START has been
     # set.
-    await n_cycles(dut.clk, 3)
+    await n_cycles(dut.clk, 2)
 
     assert dut.ready.value == 1
     assert dut.busy.value == 0
@@ -129,6 +130,42 @@ async def tree_test(dut):
     assert dut.busy.value == 1
 
     await n_cycles(dut.clk, 2)
+
+@cocotb.test()
+async def tree_test_misaligned(dut):
+    # Start a 10 ns clock
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+
+    await reset(dut)
+    # Start by writing the data into the tree cache
+    # through the external RAM port
+    await init_memory(dut, "tree_2n_misaligned.hex")
+
+    # Always return 11.0_f32 as the feature
+    dut.feature_buses[0].data.value = 0x4130
+    dut.feature_buses[1].data.value = 0x4130
+
+    # ...and start tree prediction
+    dut.start.value = 1
+    dut.tree_header_addr.value = 1
+
+    await RisingEdge(dut.clk)
+
+    dut.start.value = 0
+    assert dut.tree.busy.value == 1
+
+
+    # Takes 4 cycles to fetch header + evaluate the full tree
+    await n_cycles(dut.clk, 4)
+
+    # Result should now be available
+    assert dut.ready.value == 1
+    assert dut.busy.value == 0
+    assert dut.tree.state.value == 0
+    # According to the tree and the input
+    # feature, predicted class should
+    # be 2
+    assert dut.prediction.value == 2
 
 
 @cocotb.test()

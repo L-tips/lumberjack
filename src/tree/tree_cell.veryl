@@ -132,6 +132,10 @@ module TreeCell::<L: Layout> #(
 
     var header_data: node_layout::TreeHeader;
 
+    // When fetching the header, if the first node is at index 1, we already have the result available
+    // in the high data bits. Only relevant when using superscalar evaluation.
+    var header_points_to_node_high: lbool;
+
     if USE_SUPERSCALAR :evaluator_1 {
         // Pick the high bits from the read data
         let node_high: node_layout::Node = tree_cache_bus.read_data[NODE_BITS * 2 - 1:NODE_BITS] as node_layout::Node;
@@ -161,7 +165,8 @@ module TreeCell::<L: Layout> #(
         // read_addr[0] == 1, then we're already picking the high-bits node anyway,
         // so we don't care about this result.
         let node_low_points_to_node_high: lbool = !eval_is_prediction_0 && eval_next_idx_0 == read_addr + 1;
-        let pick_node_high              : lbool = eval_high_bits || node_low_points_to_node_high;
+        let pick_node_high              : lbool = eval_high_bits || node_low_points_to_node_high
+            || header_points_to_node_high;
 
         always_comb {
             if pick_node_high {
@@ -184,12 +189,16 @@ module TreeCell::<L: Layout> #(
             node_low as node_layout::TreeHeader
         ;
 
+        assign header_points_to_node_high = state == State::read_header && header_data.first_node_ptr == 1
+            && !eval_high_bits;
+
     } else {
-        assign eval_is_prediction = eval_is_prediction_0;
-        assign eval_prediction    = eval_prediction_0;
-        assign eval_next_idx      = eval_next_idx_0;
-        assign eval_error         = eval_error_0;
-        assign header_data        = node_low as node_layout::TreeHeader;
+        assign eval_is_prediction         = eval_is_prediction_0;
+        assign eval_prediction            = eval_prediction_0;
+        assign eval_next_idx              = eval_next_idx_0;
+        assign eval_error                 = eval_error_0;
+        assign header_data                = node_low as node_layout::TreeHeader;
+        assign header_points_to_node_high = false;
     }
 
     always_comb {
@@ -214,6 +223,30 @@ module TreeCell::<L: Layout> #(
                 next_read_addr        += header_data.first_node_ptr as NodePtr;
                 next_tree_header_data =  header_data;
                 next_state            =  State::evaluating;
+
+                // If the header points to node index 1, the node data is already available.
+                // We can directly evaluate it.
+                if header_points_to_node_high {
+                    // Same logic as State::evaluating
+                    // Leaf node reached - use prediction
+                    if eval_is_prediction {
+                        next_ready      = true;
+                        next_busy       = false;
+                        next_state      = State::idle;
+                        next_prediction = eval_prediction as L::Prediction;
+                    } else {
+                        // Continue on with another read
+                        tree_cache_bus.enable = true;
+                        // tree_header_addr will become available next cycle. Instead, here we use
+                        // read_addr, which points to the header address this cycle.
+                        next_read_addr = eval_next_idx as NodePtr + read_addr;
+                        next_err       = eval_error;
+                        if next_err {
+                            next_busy  = false;
+                            next_state = State::idle;
+                        }
+                    }
+                }
             }
 
             State::evaluating: {

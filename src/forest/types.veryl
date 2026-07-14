@@ -4,6 +4,6 @@ package forest_types {
         max_vote_class: L::Prediction,
         /// The number of votes that has the most
         /// voted class
-        max_vote: L::TreeIdx,
+        max_vote: L::NumVotes,
     }
 }

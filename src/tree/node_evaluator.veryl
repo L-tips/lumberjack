@@ -24,7 +24,11 @@ module NodeEvaluator::<L: Layout> #(
 
     // Compare the feature to the split, which
     // are formatted as IEEE754 bfloat16
-    inst branch_picker: FloatLeq ( a: feature_data, b: node.split, leq: branch_left );
+    inst branch_picker: FloatLeq (
+        a  : feature_data,
+        b  : node.split  ,
+        leq: branch_left ,
+    );
 
     // Check that out tree is a DAG and that there are no
     // circular conditions
