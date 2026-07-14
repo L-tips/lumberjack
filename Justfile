@@ -15,6 +15,14 @@ check:
 fmt:
     veryl fmt --quiet
 
+[working-directory: 'benchmark/']
+bench:
+    just build
+    uv run pytest benchmark.py -s
+
+wave-bench:
+    surfer benchmark/sim_build/dump.fst -s benchmark/benchmark.surf.ron >&/dev/null &
+
 test TEST *extra_args:
     uv run veryl test tb/test_{{TEST}}.veryl \
         src/*.veryl \

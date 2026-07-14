@@ -10,6 +10,10 @@ dependencies/
 .direnv/
 .envrc
 
+# Cocotb/verilator
+sim_build/
+pytest_cache/
+
 .vscode/
 
 .venv
