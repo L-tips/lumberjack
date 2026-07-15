@@ -50,13 +50,9 @@ async def test_single_inference(dut):
     assert not await driver.error(), "Accelerator flagged an error"
 
     pred = await driver.prediction()
-    votes = await driver.num_votes()
-    cycles = await driver.num_cycles()
-
     print(f"Prediction : {pred}")
+    votes = await driver.num_votes()
     print(f"Votes      : {votes}")
-    print(f"Cycles     : {cycles}")
-    print(f"Throughput : {CLK_PERIOD_NS * cycles} ns/inference")
 
     await monitor.stop(report_path=Path("perf.yml"))
 

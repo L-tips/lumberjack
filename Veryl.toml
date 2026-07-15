@@ -34,6 +34,4 @@ include_files = [
     "tb/test_data/forest_2c_2t_6n_misaligned.hex",
     "tb/test_data/forest_1c_2t_6n_circular.hex",
     "tb/test_data/forest_2c_2t_6n_circular.hex",
-    # "bench-data/test_forest_2c_2t_6n_0.lj_data",
-    # "bench-data/test_forest_2c_2t_6n_1.lj_data",
 ]

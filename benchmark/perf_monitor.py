@@ -14,10 +14,11 @@ class CellStats:
     vote_pending: int = 0
     stall_vote: int = 0
     total_vote_commits: int = 0
-    superscalar_hit: int = 0
+    superscalar_hits: int = 0
     mem_fetches: int = 0
     useful_evaluations: int = 0
     total_evaluations: int = 0
+    cell_idle: int = 0
 
 
 @dataclass
@@ -76,6 +77,9 @@ async def _cell_perf_task(
         ):
             stats.stall_vote += 1
 
+        if cell_dut.tree.state.value == 0 and cell_dut.orchestrator.busy_o.value:
+            stats.cell_idle += 1
+
         if (
             cell_dut.tree.busy.value
             and cell_dut.tree.tree_cache_bus.enable.value
@@ -91,7 +95,7 @@ async def _cell_perf_task(
             cell_dut.tree.state.value == 2
             and cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
         ):
-            stats.superscalar_hit += 1
+            stats.superscalar_hits += 1
             stats.useful_evaluations += superscalar_stages
             stats.total_evaluations += superscalar_stages
 

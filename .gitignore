@@ -12,7 +12,7 @@ dependencies/
 
 # Cocotb/verilator
 sim_build/
-pytest_cache/
+.pytest_cache/
 
 .vscode/
 
