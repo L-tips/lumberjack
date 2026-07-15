@@ -30,6 +30,7 @@
               uv
               surfer
               zlib
+              yq
 
               inputs.lumberjack-compiler.packages.${system}.default
             ];

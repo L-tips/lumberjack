@@ -12,7 +12,9 @@ TOP = "lumberjack_Benchmark"
 MODULE = "benchmark"
 
 CLK_PERIOD_NS = 1
-NUM_CELL_DATA = 2
+
+NUM_CELLS = int(os.environ["BENCH_NUM_CELLS"])
+CACHE_FILES = os.environ["BENCH_CACHE_FILES"].split(",")
 
 
 @cocotb.test()
@@ -26,10 +28,7 @@ async def test_single_inference(dut):
         map(lambda bus: WbMaster(dut.clk, bus), dut.cell_cache_ports)
     )
 
-    cache_data = [
-        ModelCache(f"../bench-data/test_forest_2c_2t_6n/cache{i}.lj_data")
-        for i in range(NUM_CELL_DATA)
-    ]
+    cache_data = [ModelCache(f) for f in CACHE_FILES]
     model = Model(cache_data)
 
     monitor = PerfMonitor(clk=dut.clk, dut=dut.forest_top)
