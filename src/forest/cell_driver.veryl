@@ -49,7 +49,7 @@ module CellOrchestrator::<L: Layout> #(
     var vote_ready: lbool;
 
     // Cell is stalled if a vote is pending and not being acked this cycle
-    let vote_pending: lbool = vote_valid && !vote_ack;
+    let vote_pending: lbool = vote_valid_reg && !vote_ack;
 
     // Return ready immediately when the cell is empty
     var empty_forest_ready     : lbool;
