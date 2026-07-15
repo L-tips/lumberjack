@@ -18,7 +18,7 @@ fmt:
 [working-directory: 'benchmark/']
 bench:
     just build
-    uv run pytest benchmark.py -s
+    WAVES=1 uv run pytest benchmark.py -s
 
 wave-bench:
     surfer benchmark/sim_build/dump.fst -s benchmark/benchmark.surf.ron >&/dev/null &

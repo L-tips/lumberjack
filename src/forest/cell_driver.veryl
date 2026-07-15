@@ -49,7 +49,7 @@ module CellOrchestrator::<L: Layout> #(
     var vote_ready: lbool;
 
     // Cell is stalled if a vote is pending and not being acked this cycle
-    let stall_cell: lbool = vote_valid_reg && !vote_ack;
+    let vote_pending: lbool = vote_valid && !vote_ack;
 
     // Return ready immediately when the cell is empty
     var empty_forest_ready     : lbool;
@@ -101,7 +101,7 @@ module CellOrchestrator::<L: Layout> #(
 
             // Only advance to next tree if vote buffer is clear or being
             // cleared this cycle, so we don't overwrite an unserviced vote
-            if !stall_cell && next_tree_idx as L::TreeIdx <: num_trees_in_cell - 1 {
+            if !vote_pending && next_tree_idx as L::TreeIdx <: num_trees_in_cell - 1 {
                 next_tree_idx += 1;
                 // Tree header contains the tree's length
                 next_tree_header_addr = tree_header_addr + tree_header_data.tree_len as NodePtr;

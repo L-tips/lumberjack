@@ -11,7 +11,9 @@ USE_SUPERSCALAR = False
 class CellStats:
     cell_idx: int
     busy_cycles: int = 0
+    vote_pending: int = 0
     stall_vote: int = 0
+    total_vote_commits: int = 0
     superscalar_hit: int = 0
     mem_fetches: int = 0
     useful_evaluations: int = 0
@@ -62,9 +64,15 @@ async def _cell_perf_task(
         if cell_dut.orchestrator.busy_o.value == 1:
             stats.busy_cycles += 1
 
+        if cell_dut.orchestrator.vote_ack.value:
+            stats.total_vote_commits += 1
+
+        if cell_dut.orchestrator.vote_pending.value:
+            stats.vote_pending += 1
+
         if (
-            cell_dut.orchestrator.vote_valid.value
-            and not cell_dut.orchestrator.vote_ack.value
+            cell_dut.orchestrator.vote_pending.value
+            and not cell_dut.orchestrator.next_start_cell.value
         ):
             stats.stall_vote += 1
 
