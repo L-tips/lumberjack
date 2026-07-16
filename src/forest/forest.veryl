@@ -124,10 +124,13 @@ pub module Forest::<L: Layout> #(
 
         var cell_busy      : lbool        ;
         var cell_ready     : lbool        ;
+        var next_cell_ready: lbool        ;
         var cell_error     : lbool        ;
         var cell_prediction: L::Prediction;
 
-        var tree_header_addr: logic<CELL_CACHE_ADDR_WIDTH>;
+        var tree_header_addr     : logic<CELL_CACHE_ADDR_WIDTH>;
+        var pre_start            : lbool                       ;
+        var pre_start_header_addr: logic<CELL_CACHE_ADDR_WIDTH>;
 
         var tree_header_data: node_layout::TreeHeader;
         var header_valid    : lbool                  ;
@@ -136,24 +139,27 @@ pub module Forest::<L: Layout> #(
             CELL_CACHE_ADDR_WIDTH  ,
             VOTE_FIFO_DEPTH        ,
         ) (
-            clk                                  ,
-            rst             : rst_cells          ,
-            start_forest    : start_eval         ,
-            cell_busy                            ,
-            cell_ready                           ,
-            cell_error                           ,
-            cell_prediction                      ,
-            cell_rst        : cells_error_posedge,
-            start_cell                           ,
-            tree_header_addr                     ,
-            tree_header_data                     ,
-            header_valid                         ,
-            ready_o         : cells_ready[i]     ,
-            busy_o          : cells_busy[i]      ,
-            error_o         : cells_error[i]     ,
-            vote_valid      : vote_valid[i]      ,
-            vote_class      : vote_classes[i]    ,
-            vote_ack        : vote_ack[i]        ,
+            clk                                       ,
+            rst                  : rst_cells          ,
+            start_forest         : start_eval         ,
+            cell_busy                                 ,
+            cell_ready                                ,
+            next_cell_ready                           ,
+            cell_error                                ,
+            cell_prediction                           ,
+            cell_rst             : cells_error_posedge,
+            start_cell                                ,
+            tree_header_addr                          ,
+            tree_header_data                          ,
+            pre_start                                 ,
+            pre_start_header_addr                     ,
+            header_valid                              ,
+            ready_o              : cells_ready[i]     ,
+            busy_o               : cells_busy[i]      ,
+            error_o              : cells_error[i]     ,
+            vote_valid           : vote_valid[i]      ,
+            vote_class           : vote_classes[i]    ,
+            vote_ack             : vote_ack[i]        ,
         );
 
         inst tree: TreeCell::<L> #(
@@ -161,19 +167,22 @@ pub module Forest::<L: Layout> #(
             CELL_CACHE_SIZE  ,
             INHIBIT_ERR      ,
         ) (
-            clk                                                           ,
-            rst             : rst_cells                                   ,
-            rst_cache       : rst_cell_caches                             ,
-            tree_header_addr                                              ,
-            tree_header_data                                              ,
-            header_valid                                                  ,
-            ready           : cell_ready                                  ,
-            busy            : cell_busy                                   ,
-            error           : cell_error                                  ,
-            start           : start_cell                                  ,
-            prediction      : cell_prediction                             ,
-            feature_ports   : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
-            ram_port        : cell_cache_ports[i]                         ,
+            clk                                                                ,
+            rst                  : rst_cells                                   ,
+            rst_cache            : rst_cell_caches                             ,
+            tree_header_addr                                                   ,
+            tree_header_data                                                   ,
+            pre_start                                                          ,
+            pre_start_header_addr                                              ,
+            header_valid                                                       ,
+            ready                : cell_ready                                  ,
+            next_ready           : next_cell_ready                             ,
+            busy                 : cell_busy                                   ,
+            error                : cell_error                                  ,
+            start                : start_cell                                  ,
+            prediction           : cell_prediction                             ,
+            feature_ports        : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
+            ram_port             : cell_cache_ports[i]                         ,
         );
     }
 

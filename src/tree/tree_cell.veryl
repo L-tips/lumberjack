@@ -25,7 +25,11 @@ module TreeCell::<L: Layout> #(
     tree_header_data: output node_layout::TreeHeader,
     header_valid    : output lbool                  ,
 
+    pre_start            : input lbool                       ,
+    pre_start_header_addr: input logic<CELL_CACHE_ADDR_WIDTH>,
+
     ready     : output lbool        ,
+    next_ready: output lbool        ,
     busy      : output lbool        ,
     error     : output lbool        ,
     prediction: output L::Prediction,
@@ -49,8 +53,8 @@ module TreeCell::<L: Layout> #(
     var state     : State;
     var next_state: State;
 
-    var ready_reg : lbool;
-    var next_ready: lbool;
+    var pre_start_reg: lbool;
+    var ready_reg    : lbool;
 
     var busy_reg : lbool;
     var next_busy: lbool;
@@ -95,7 +99,8 @@ module TreeCell::<L: Layout> #(
     var read_addr     : NodePtr;
     var next_read_addr: NodePtr;
 
-    let current_node_idx: NodePtr = read_addr - tree_header_addr;
+    let header_addr     : NodePtr = if pre_start_reg ? pre_start_header_addr : tree_header_addr;
+    let current_node_idx: NodePtr = read_addr - header_addr;
 
     var next_tree_header_data: node_layout::TreeHeader;
     assign header_valid = state == State::evaluating || state == State::read_header;
@@ -220,31 +225,32 @@ module TreeCell::<L: Layout> #(
         // State machine
         case state {
             State::read_header: {
-                tree_cache_bus.enable =  true;
-                next_read_addr        += header_data.first_node_ptr as NodePtr;
-                next_tree_header_data =  header_data;
-                next_state            =  State::evaluating;
+                // If we got here via pre_start, wait for start_cell confirmation
+                // before processing the header result
+                if pre_start_reg && !start {
+                    // Hold — don't advance, just keep RAM enabled to hold data
+                    tree_cache_bus.enable = true;
+                } else {
+                    tree_cache_bus.enable = true;
+                    next_read_addr        = header_addr + header_data.first_node_ptr as NodePtr;
+                    next_tree_header_data = header_data;
+                    next_state            = State::evaluating;
+                    next_ready            = false;
 
-                // If the header points to node index 1, the node data is already available.
-                // We can directly evaluate it.
-                if header_points_to_node_high {
-                    // Same logic as State::evaluating
-                    // Leaf node reached - use prediction
-                    if eval_is_prediction {
-                        next_ready      = true;
-                        next_busy       = false;
-                        next_state      = State::idle;
-                        next_prediction = eval_prediction as L::Prediction;
-                    } else {
-                        // Continue on with another read
-                        tree_cache_bus.enable = true;
-                        // tree_header_addr will become available next cycle. Instead, here we use
-                        // read_addr, which points to the header address this cycle.
-                        next_read_addr = eval_next_idx as NodePtr + read_addr;
-                        next_err       = eval_error;
-                        if next_err {
-                            next_busy  = false;
-                            next_state = State::idle;
+                    if header_points_to_node_high {
+                        if eval_is_prediction {
+                            next_ready      = true;
+                            next_busy       = false;
+                            next_state      = State::idle;
+                            next_prediction = eval_prediction as L::Prediction;
+                        } else {
+                            tree_cache_bus.enable = true;
+                            next_read_addr        = eval_next_idx as NodePtr + read_addr;
+                            next_err              = eval_error;
+                            if next_err {
+                                next_busy  = false;
+                                next_state = State::idle;
+                            }
                         }
                     }
                 }
@@ -257,10 +263,19 @@ module TreeCell::<L: Layout> #(
                     next_busy       = false;
                     next_state      = State::idle;
                     next_prediction = eval_prediction as L::Prediction;
+
+                    // Prefetch next tree header
+                    if pre_start {
+                        next_state            = State::read_header;
+                        next_read_addr        = pre_start_header_addr;
+                        next_busy             = true;
+                        tree_cache_bus.enable = true;
+                    }
+
                 } else {
                     // Continue on with another read
                     tree_cache_bus.enable = true;
-                    next_read_addr        = eval_next_idx as NodePtr + tree_header_addr;
+                    next_read_addr        = eval_next_idx as NodePtr + header_addr;
                     next_err              = eval_error;
                     if next_err {
                         next_busy  = false;
@@ -273,7 +288,7 @@ module TreeCell::<L: Layout> #(
             default: {
                 if start {
                     next_state     = State::read_header;
-                    next_read_addr = tree_header_addr;
+                    next_read_addr = header_addr;
                     next_ready     = false;
                     next_busy      = true;
                     next_err       = false;
@@ -289,6 +304,7 @@ module TreeCell::<L: Layout> #(
     always_ff (clk, rst) {
         if_reset {
             read_addr            = 0;
+            pre_start_reg        = false;
             ready_reg            = false;
             busy_reg             = false;
             err_reg              = false;
@@ -297,6 +313,7 @@ module TreeCell::<L: Layout> #(
             tree_header_data_reg = 0;
         } else {
             read_addr            = next_read_addr;
+            pre_start_reg        = pre_start;
             ready_reg            = next_ready;
             busy_reg             = next_busy;
             err_reg              = next_err;

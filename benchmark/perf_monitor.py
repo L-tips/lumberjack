@@ -96,13 +96,17 @@ async def _cell_perf_task(
                 # TODO
                 assert True
 
+            try:
+                low_points_to_high = (
+                    cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
+                )
+            except AttributeError:
+                low_points_to_high = False
+
             if (
                 cell_dut.tree.state.value == 1
                 and cell_dut.tree.header_points_to_node_high.value
-            ) or (
-                cell_dut.tree.state.value == 2
-                and cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
-            ):
+            ) or (cell_dut.tree.state.value == 2 and low_points_to_high):
                 stats.superscalar_hits += 1
                 stats.useful_evaluations += superscalar_stages
                 stats.total_evaluations += superscalar_stages

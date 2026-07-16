@@ -9,6 +9,7 @@ module CellOrchestrator::<L: Layout> #(
 
     cell_busy      : input lbool        ,
     cell_ready     : input lbool        ,
+    next_cell_ready: input lbool        ,
     cell_error     : input lbool        ,
     cell_prediction: input L::Prediction,
     cell_rst       : input lbool        ,
@@ -21,10 +22,13 @@ module CellOrchestrator::<L: Layout> #(
     ready_o: output lbool,
     error_o: output lbool,
 
-    start_cell      : output lbool                                         ,
-    tree_header_addr: output logic                  <CELL_CACHE_ADDR_WIDTH>,
-    tree_header_data: input  node_layout::TreeHeader                       ,
-    header_valid    : input  lbool                                         ,
+    tree_header_data: input node_layout::TreeHeader,
+    header_valid    : input lbool                  ,
+
+    start_cell           : output lbool                       ,
+    tree_header_addr     : output logic<CELL_CACHE_ADDR_WIDTH>,
+    pre_start            : output lbool                       ,
+    pre_start_header_addr: output logic<CELL_CACHE_ADDR_WIDTH>,
 ) {
     type NodePtr = logic<CELL_CACHE_ADDR_WIDTH>;
 
@@ -75,8 +79,14 @@ module CellOrchestrator::<L: Layout> #(
     let first_header_valid: lbool = header_valid && tree_idx == 0;
 
     assign busy_o  = (cell_busy || next_start_cell || !all_votes_registered) && !empty_forest_ready;
-    assign ready_o = (cell_ready && !next_start_cell && all_votes_registered) || empty_forest_ready;
+    assign ready_o = (cell_ready && !pre_start && !next_start_cell && all_votes_registered) || empty_forest_ready;
     assign error_o = cell_error && num_trees_in_cell != 0;
+
+    assign pre_start = next_cell_ready && !cell_ready && !vote_stall && next_tree_idx as L::TreeIdx <: num_trees_in_cell
+        - 1;
+    // Compute next tree's header address combinationally so TreeCell
+    // can begin the pre-read the same cycle the prediction arrives
+    assign pre_start_header_addr = tree_header_addr + tree_header_data.tree_len as NodePtr;
 
     always_comb {
         next_tree_idx         = tree_idx;
