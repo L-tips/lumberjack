@@ -16,9 +16,9 @@ fmt:
     veryl fmt --quiet
 
 [working-directory: 'benchmark/']
-bench:
+bench MODEL:
     just build
-    WAVES=1 uv run pytest benchmark.py -s
+    make run MODEL={{MODEL}}
 
 wave-bench:
     surfer benchmark/sim_build/dump.fst -s benchmark/benchmark.surf.ron >&/dev/null &

@@ -4,8 +4,6 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import yaml
 
-USE_SUPERSCALAR = False
-
 
 @dataclass
 class CellStats:
@@ -24,6 +22,7 @@ class CellStats:
 @dataclass
 class GlobalStats:
     inference_cycles: int = 0
+    predictions: int = 0
 
 
 @dataclass
@@ -62,46 +61,57 @@ async def _cell_perf_task(
     while not stop_event.is_set():
         # Sample on falling edge to get the correctly registered values
         await FallingEdge(clk)
-        if cell_dut.orchestrator.busy_o.value == 1:
+        if cell_dut.orchestrator.busy_o.value:
             stats.busy_cycles += 1
 
-        if cell_dut.orchestrator.vote_ack.value:
-            stats.total_vote_commits += 1
+            if cell_dut.orchestrator.vote_ack.value:
+                stats.total_vote_commits += 1
 
-        if cell_dut.orchestrator.vote_pending.value:
-            stats.vote_pending += 1
+            if (
+                cell_dut.orchestrator.vote_valid.value
+                and not cell_dut.orchestrator.vote_ack.value
+            ):
+                stats.vote_pending += 1
 
-        if (
-            cell_dut.orchestrator.vote_pending.value
-            and not cell_dut.orchestrator.next_start_cell.value
-        ):
-            stats.stall_vote += 1
+            if (
+                cell_dut.orchestrator.vote_pending.value
+                and not cell_dut.orchestrator.next_start_cell.value
+            ):
+                stats.stall_vote += 1
 
-        if cell_dut.tree.state.value == 0 and cell_dut.orchestrator.busy_o.value:
-            stats.cell_idle += 1
+            if cell_dut.tree.state.value == 0:
+                stats.cell_idle += 1
 
-        if (
-            cell_dut.tree.busy.value
-            and cell_dut.tree.tree_cache_bus.enable.value
-            and cell_dut.tree.tree_cache_bus.byte_write_enable.value == 0
-            and cell_dut.orchestrator.busy_o.value
-        ):
-            stats.mem_fetches += 1
+            if (
+                cell_dut.tree.busy.value
+                and cell_dut.tree.tree_cache_bus.enable.value
+                and cell_dut.tree.tree_cache_bus.byte_write_enable.value == 0
+            ):
+                stats.mem_fetches += 1
 
-        if (
-            cell_dut.tree.state.value == 1
-            and cell_dut.tree.header_points_to_node_high.value
-        ) or (
-            cell_dut.tree.state.value == 2
-            and cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
-        ):
-            stats.superscalar_hits += 1
-            stats.useful_evaluations += superscalar_stages
-            stats.total_evaluations += superscalar_stages
+            # State::evaluating
+            if cell_dut.tree.state.value == 2:
+                # TODO
+                assert True
 
-        elif cell_dut.tree.state.value == 1 or cell_dut.tree.state.value == 2:
-            stats.useful_evaluations += 1
-            stats.total_evaluations += superscalar_stages
+            # State::read_header
+            if cell_dut.tree.state.value == 1:
+                # TODO
+                assert True
+
+            if (
+                cell_dut.tree.state.value == 1
+                and cell_dut.tree.header_points_to_node_high.value
+            ) or (
+                cell_dut.tree.state.value == 2
+                and cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
+            ):
+                stats.superscalar_hits += 1
+                stats.useful_evaluations += superscalar_stages
+                stats.total_evaluations += superscalar_stages
+            elif cell_dut.tree.state.value == 1 or cell_dut.tree.state.value == 2:
+                stats.useful_evaluations += 1
+                stats.total_evaluations += superscalar_stages
 
 
 async def _global_perf_task(clk, dut, stats: GlobalStats, stop_event):
@@ -113,6 +123,8 @@ async def _global_perf_task(clk, dut, stats: GlobalStats, stop_event):
         await FallingEdge(clk)
         if dut.busy.value == 1:
             stats.inference_cycles += 1
+        if dut.evaluator.start_eval.value:
+            stats.predictions += 1
 
 
 class PerfMonitor:

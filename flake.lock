@@ -44,11 +44,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784141494,
-        "narHash": "sha256-t7vusz9xPxxHEJknQaDxEIQbXfK/InMpGiVOeI9W8kA=",
+        "lastModified": 1784170353,
+        "narHash": "sha256-vTDHkjZpcfKktE2OuiR7vt8CstQlGllIrUQ2cw0kY68=",
         "owner": "L-tips",
         "repo": "lumberjack-compiler",
-        "rev": "217d1a4e76817c9d318f18c97f553998b4406ea9",
+        "rev": "f4a45cab458de57ab159637d7ed0601ed38562ae",
         "type": "github"
       },
       "original": {

@@ -144,7 +144,8 @@ class Driver:
                 Transaction(addr=base + i * 4, wdata=word, we=True, sel=sel)
                 for i, (word, sel) in enumerate(cache.to_words())
             ]
-            tasks.append(cocotb.start_soon(bus.pipelined(txns)))
+            task = bus.pipelined(txns, timeout=None)
+            tasks.append(cocotb.start_soon(task))
         await Combine(*tasks)
 
     # ------------------------------------------------------------------

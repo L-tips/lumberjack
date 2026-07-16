@@ -3,28 +3,40 @@ models:
     num_cells: 2
     model_path: bench-data/test_forest_2t_6n.csv
     test_vectors: bench-data/test_vectors_3.csv
+    placement_strategy: execution-aware
+    partition_strategy: greedy
 
   iris:
     num_cells: 4
     model_path: bench-data/iris_200_100.csv
     test_vectors: bench-data/iris_test_vectors_20000.csv
+    placement_strategy: execution-aware
+    partition_strategy: greedy
 
   skydive:
     num_cells: 4
     model_path: bench-data/skydive_200_100.csv
     test_vectors: bench-data/skydive_test_vectors_20000.csv
+    placement_strategy: execution-aware
+    partition_strategy: greedy
 
   breast_cancer:
     num_cells: 4
     model_path: bench-data/breast_cancer_200_100.csv
     test_vectors: bench-data/breast_cancer_test_vectors_20000.csv
+    placement_strategy: random
+    partition_strategy: equal-sorted
 
   wine:
     num_cells: 4
     model_path: bench-data/wine_200_100.csv
     test_vectors: bench-data/wine_test_vectors_20000.csv
+    placement_strategy: execution-aware
+    partition_strategy: greedy
 
   covertype:
     num_cells: 4
     model_path: bench-data/covertype_200_10.csv
     test_vectors: bench-data/covertype_test_vectors_20000.csv
+    placement_strategy: execution-aware
+    partition_strategy: greedy

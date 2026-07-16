@@ -1,11 +1,14 @@
 import os
 from pathlib import Path
-from cocotb_tools.runner import get_runner
+
+import csv
+from dataclasses import dataclass
 
 import cocotb
 from cocotb.clock import Clock
-from accel_driver import Driver, Model, ModelCache
-from wb_driver import WbMaster
+from cocotb.triggers import RisingEdge, First
+from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMissingImports]
+from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
 from perf_monitor import PerfMonitor
 
 TOP = "lumberjack_Benchmark"
@@ -15,10 +18,37 @@ CLK_PERIOD_NS = 1
 
 NUM_CELLS = int(os.environ["BENCH_NUM_CELLS"])
 CACHE_FILES = os.environ["BENCH_CACHE_FILES"].split(",")
+PERF_OUT = os.environ["BENCH_PERF_FILE"]
+TEST_VEC_FILE = os.environ["BENCH_TEST_VECS"]
+
+
+@dataclass
+class TestVector:
+    features: list[float]
+    expected_prediction: int
+    expected_num_votes: int
+
+
+def load_test_vectors(path: str) -> list[TestVector]:
+    vectors = []
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            prediction = int(row.pop("prediction"))
+            num_votes = int(row.pop("num_votes"))
+            features = [float(v) for v in row.values()]
+            vectors.append(
+                TestVector(
+                    features=features,
+                    expected_prediction=prediction,
+                    expected_num_votes=num_votes,
+                )
+            )
+    return vectors
 
 
 @cocotb.test()
-async def test_single_inference(dut):
+async def perf_benchmark(dut):
     # Clock
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
 
@@ -28,7 +58,7 @@ async def test_single_inference(dut):
         map(lambda bus: WbMaster(dut.clk, bus), dut.cell_cache_ports)
     )
 
-    cache_data = [ModelCache(f) for f in CACHE_FILES]
+    cache_data = [ModelCache(f"../{f}") for f in CACHE_FILES]
     model = Model(cache_data)
 
     monitor = PerfMonitor(clk=dut.clk, dut=dut.forest_top)
@@ -38,22 +68,24 @@ async def test_single_inference(dut):
     await driver.reset(dut.rst, cycles=1)
     await driver.write_caches(model)
 
-    features = [0.5, -1.2]
-    await driver.enable_interrupt()
-    await driver.start(features)
+    test_vectors = load_test_vectors(f"../{TEST_VEC_FILE}")
 
-    # # Wait for result (choose one)
-    await driver.wait_ready_irq(dut.interrupt_line)
-    # # await driver.wait_ready_poll()
+    for i, vec in enumerate(test_vectors):
+        await driver.start(vec.features)
+        await First(RisingEdge(dut.forest_top.ready), RisingEdge(dut.forest_top.error))
 
-    assert not await driver.error(), "Accelerator flagged an error"
+        assert not dut.forest_top.error.value, "Unexpected evaluation error"
 
-    pred = await driver.prediction()
-    print(f"Prediction : {pred}")
-    votes = await driver.num_votes()
-    print(f"Votes      : {votes}")
+        pred = await driver.prediction()
+        pred_num_votes = await driver.num_votes()
+        assert pred == vec.expected_prediction, (
+            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}"
+        )
+        assert pred == vec.expected_prediction, (
+            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}"
+        )
 
-    await monitor.stop(report_path=Path("perf.yml"))
+    await monitor.stop(report_path=Path(PERF_OUT))
 
 
 VERYL_SOURCES = [
@@ -96,6 +128,8 @@ DEPENDENCY_SOURCES = [
 
 
 def test_run_benchmark():
+    from cocotb_tools.runner import get_runner
+
     sim = os.getenv("SIM", "verilator")
     repo_root = Path(__file__).resolve().parent.parent
     veryl_out = repo_root / "target" / "veryl"

@@ -2,8 +2,8 @@ module Benchmark (
     clk: input clock,
     rst: input reset,
 
-    interrupt_line: output logic    ,
-    dbg_mark      : input  logic<16>,
+    irq     : output logic    ,
+    dbg_mark: input  logic<16>,
 ) {
     const CELL_CACHE_SIZE      : u64 = 4096;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
@@ -26,16 +26,17 @@ module Benchmark (
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
 
     inst forest_top: ForestTop::<test_layout> #(
-        CELL_CACHE_SIZE       ,
-        CELL_INSTANCES        ,
-        USE_SUPERSCALAR       ,
-        READ_PORTS_PER_CACHE  ,
+        CELL_CACHE_SIZE           ,
+        CELL_INSTANCES            ,
+        USE_SUPERSCALAR           ,
+        READ_PORTS_PER_CACHE      ,
+        INHIBIT_ERR         : true,
     ) (
         clk                            ,
         wb_rst                         ,
         rst_cache    : rst             ,
         control_port : control_bus     ,
         cell_cache_wb: cell_cache_ports,
-        interrupt    : interrupt_line  ,
+        interrupt    : irq             ,
     );
 }
