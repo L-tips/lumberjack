@@ -165,7 +165,7 @@ module TreeCell::<L: Layout> #(
         // This only works if read_addr is the addr of the low-bits node. Although if
         // read_addr[0] == 1, then we're already picking the high-bits node anyway,
         // so we don't care about this result.
-        let node_low_points_to_node_high: lbool = !eval_is_prediction_0 && eval_next_idx_0 == read_addr + 1;
+        let node_low_points_to_node_high: lbool = !eval_is_prediction_0 && eval_next_idx_0 == current_node_idx + 1;
         let pick_node_high              : lbool = eval_high_bits || node_low_points_to_node_high
             || header_points_to_node_high;
 
