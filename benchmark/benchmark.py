@@ -99,6 +99,7 @@ VERYL_SOURCES = [
     "types.sv",
     "common/test_layout.sv",
     "forest/cell_driver.sv",
+    "forest/vote_fifo.sv",
     "forest/forest.sv",
     "forest/ram_counter.sv",
     "forest/types.sv",

@@ -16,6 +16,8 @@ pub module Forest::<L: Layout> #(
     /// Inhibit model checking. Should only be used for development purposes.
     param INHIBIT_ERR: bbool = false,
 
+    param VOTE_FIFO_DEPTH: u8 = 2,
+
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
 ) (
     clk            : input clock,
@@ -132,6 +134,7 @@ pub module Forest::<L: Layout> #(
 
         inst orchestrator: CellOrchestrator::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
+            VOTE_FIFO_DEPTH        ,
         ) (
             clk                                  ,
             rst             : rst_cells          ,

@@ -10,7 +10,7 @@ class CellStats:
     cell_idx: int
     busy_cycles: int = 0
     vote_pending: int = 0
-    stall_vote: int = 0
+    vote_stall: int = 0
     total_vote_commits: int = 0
     superscalar_hits: int = 0
     mem_fetches: int = 0
@@ -73,11 +73,8 @@ async def _cell_perf_task(
             ):
                 stats.vote_pending += 1
 
-            if (
-                cell_dut.orchestrator.vote_pending.value
-                and not cell_dut.orchestrator.next_start_cell.value
-            ):
-                stats.stall_vote += 1
+            if cell_dut.orchestrator.vote_stall.value:
+                stats.vote_stall += 1
 
             if cell_dut.tree.state.value == 0:
                 stats.cell_idle += 1

@@ -1,0 +1,58 @@
+module VoteFifo::<L: Layout> #(
+    param DEPTH     : u8  = 8            ,
+    const ADDR_WIDTH: u32 = $clog2(DEPTH),
+) (
+    clk: input clock,
+    rst: input reset,
+
+    write_enable: input  lbool        ,
+    write_data  : input  L::Prediction,
+    read_enable : input  lbool        ,
+    read_data   : output L::Prediction,
+    empty       : output lbool        ,
+    full        : output lbool        ,
+) {
+    var mem: L::Prediction [DEPTH];
+
+    var write_ptr     : logic<ADDR_WIDTH>    ;
+    var next_write_ptr: logic<ADDR_WIDTH>    ;
+    var read_ptr      : logic<ADDR_WIDTH>    ;
+    var next_read_ptr : logic<ADDR_WIDTH>    ;
+    var count         : logic<ADDR_WIDTH + 1>;
+    var next_count    : logic<ADDR_WIDTH + 1>;
+
+    assign empty     = count == 0;
+    assign full      = count == DEPTH[ADDR_WIDTH:0];
+    assign read_data = mem[read_ptr];
+
+    always_comb {
+        next_write_ptr = write_ptr;
+        next_read_ptr  = read_ptr;
+        next_count     = count;
+
+        if write_enable && !full {
+            next_write_ptr = write_ptr + 1;
+            next_count     = count + 1;
+        }
+
+        if read_enable && !empty {
+            next_read_ptr = read_ptr + 1;
+            next_count    = next_count - 1;
+        }
+    }
+
+    always_ff (clk, rst) {
+        if_reset {
+            write_ptr = 0;
+            read_ptr  = 0;
+            count     = 0;
+        } else {
+            if write_enable && !full {
+                mem[write_ptr] = write_data;
+            }
+            write_ptr = next_write_ptr;
+            read_ptr  = next_read_ptr;
+            count     = next_count;
+        }
+    }
+}

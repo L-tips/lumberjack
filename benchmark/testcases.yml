@@ -24,7 +24,7 @@ models:
     num_cells: 4
     model_path: bench-data/breast_cancer_200_100.csv
     test_vectors: bench-data/breast_cancer_test_vectors_20000.csv
-    placement_strategy: random
+    placement_strategy: execution-aware
     partition_strategy: equal-sorted
 
   wine:

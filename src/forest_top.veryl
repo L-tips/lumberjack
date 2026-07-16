@@ -20,6 +20,9 @@ module ForestTop::<L: Layout> #(
     /// Inhibit model checking. Should only be used for development purposes.
     param INHIBIT_ERR: bbool = false,
 
+    // Depth of the FIFOs that register votes to avoid stalling the cells
+    param VOTE_FIFO_DEPTH: u8 = 2,
+
     const WB_DATA_WIDTH: u8 = 32,
     const WB_ADDR_WIDTH: u8 = 32,
 
@@ -85,6 +88,7 @@ module ForestTop::<L: Layout> #(
         READ_PORTS_PER_CACHE  ,
         CELL_CACHE_SIZE       ,
         INHIBIT_ERR           ,
+        VOTE_FIFO_DEPTH       ,
     ) (
         clk                                  ,
         rst                                  ,
