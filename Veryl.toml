@@ -1,6 +1,6 @@
 [project]
 name = "lumberjack"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Justin Beaurivage <code@beaurivage.io>"]
 
 [dependencies]
