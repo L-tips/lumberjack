@@ -230,6 +230,7 @@ module TreeCell::<L: Layout> #(
                 if pre_start_reg && !start {
                     // Hold — don't advance, just keep RAM enabled to hold data
                     tree_cache_bus.enable = true;
+                    next_ready            = false;
                 } else {
                     tree_cache_bus.enable = true;
                     next_read_addr        = header_addr + header_data.first_node_ptr as NodePtr;

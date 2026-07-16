@@ -10,6 +10,7 @@ from cocotb.triggers import RisingEdge, First
 from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMissingImports]
 from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
 from perf_monitor import PerfMonitor
+import ml_dtypes
 
 TOP = "lumberjack_Benchmark"
 MODULE = "benchmark"
@@ -24,11 +25,13 @@ MODEL_NAME = os.environ["BENCH_MODEL"]
 MODEL_PATH = os.environ["BENCH_MODEL_PATH"]
 PLACEMENT_STRATEGY = os.environ["BENCH_PLACEMENT_STRATEGY"]
 PARTITION_STRATEGY = os.environ["BENCH_PARTITION_STRATEGY"]
+NUM_TREES = int(os.environ["BENCH_NUM_TREES"])
+MAX_NODE = int(os.environ["BENCH_MAX_NODE"])
 
 
 @dataclass
 class TestVector:
-    features: list[float]
+    features: list[any]
     expected_prediction: int
     expected_num_votes: int
 
@@ -40,7 +43,7 @@ def load_test_vectors(path: str) -> list[TestVector]:
         for row in reader:
             prediction = int(row.pop("prediction"))
             num_votes = int(row.pop("num_votes"))
-            features = [float(v) for v in row.values()]
+            features = [ml_dtypes.bfloat16(v) for v in row.values()]
             vectors.append(
                 TestVector(
                     features=features,
@@ -75,6 +78,7 @@ async def perf_benchmark(dut):
     test_vectors = load_test_vectors(f"../{TEST_VEC_FILE}")
 
     for i, vec in enumerate(test_vectors):
+        print(vec)
         await driver.start(vec.features)
         await First(RisingEdge(dut.forest_top.ready), RisingEdge(dut.forest_top.error))
 
@@ -91,14 +95,18 @@ async def perf_benchmark(dut):
 
     SUPERSCALAR_EXECUTION = bool(dut.forest_top.USE_SUPERSCALAR.value)
     VOTE_FIFO_DEPTH = int(dut.forest_top.VOTE_FIFO_DEPTH.value)
+    NUM_TEST_VECTORS = len(test_vectors)
     extra_data = {
         "used_cells": USED_CELLS,
         "model_path": MODEL_PATH,
         "test_vecs": TEST_VEC_FILE,
+        "num_test_vectors": NUM_TEST_VECTORS,
         "placement_strategy": PLACEMENT_STRATEGY,
         "partition_strategy": PARTITION_STRATEGY,
         "superscalar_execution": SUPERSCALAR_EXECUTION,
         "vote_fifo_depth": VOTE_FIFO_DEPTH,
+        "num_trees": NUM_TREES,
+        "maxnode": MAX_NODE,
     }
 
     await monitor.stop(report_path=Path(PERF_OUT), extra_data=extra_data)

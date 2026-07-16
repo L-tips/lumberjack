@@ -5,7 +5,7 @@ module Benchmark (
     irq     : output logic    ,
     dbg_mark: input  logic<16>,
 ) {
-    const CELL_CACHE_SIZE      : u64 = 4096;
+    const CELL_CACHE_SIZE      : u64 = 1024 * 32;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
 
     const CELL_INSTANCES      : u32   = 4;
