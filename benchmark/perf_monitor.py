@@ -30,14 +30,21 @@ class PerfStats:
     cells: list[CellStats]
     globals: GlobalStats
 
-    def report(self, path: Path | None = None):
-        d = {
-            "cells": {
-                c.cell_idx: {k: v for k, v in asdict(c).items() if k != "cell_idx"}
-                for c in self.cells
-            },
+    def report(self, path: Path | None = None, extra_data: dict | None = None):
+        perf_data = {
+            # "cells": {
+            #     c.cell_idx: {k: v for k, v in asdict(c).items() if k != "cell_idx"}
+            #     for c in self.cells
+            # },
+            "cells": [asdict(c) for c in self.cells],
             "globals": asdict(self.globals),
         }
+
+        if extra_data:
+            d = extra_data
+            d.update(perf_data)
+        else:
+            d = extra_data
 
         # Log to cocotb
         for c in self.cells:
@@ -184,12 +191,14 @@ class PerfMonitor:
             )
         )
 
-    async def stop(self, report_path: Path | None = None) -> PerfStats:
+    async def stop(
+        self, report_path: Path | None = None, extra_data: dict | None = None
+    ) -> PerfStats:
         self._stop_event.set()
         for t in self._tasks:
             t.cancel()
         self._tasks.clear()
 
         stats = PerfStats(cells=self._cell_stats, globals=self._global_stats)
-        stats.report(path=report_path)
+        stats.report(path=report_path, extra_data=extra_data)
         return stats

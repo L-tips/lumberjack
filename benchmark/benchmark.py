@@ -16,10 +16,14 @@ MODULE = "benchmark"
 
 CLK_PERIOD_NS = 1
 
-NUM_CELLS = int(os.environ["BENCH_NUM_CELLS"])
 CACHE_FILES = os.environ["BENCH_CACHE_FILES"].split(",")
+USED_CELLS = len(CACHE_FILES)
 PERF_OUT = os.environ["BENCH_PERF_FILE"]
 TEST_VEC_FILE = os.environ["BENCH_TEST_VECS"]
+MODEL_NAME = os.environ["BENCH_MODEL"]
+MODEL_PATH = os.environ["BENCH_MODEL_PATH"]
+PLACEMENT_STRATEGY = os.environ["BENCH_PLACEMENT_STRATEGY"]
+PARTITION_STRATEGY = os.environ["BENCH_PARTITION_STRATEGY"]
 
 
 @dataclass
@@ -85,7 +89,19 @@ async def perf_benchmark(dut):
             f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}"
         )
 
-    await monitor.stop(report_path=Path(PERF_OUT))
+    SUPERSCALAR_EXECUTION = bool(dut.forest_top.USE_SUPERSCALAR.value)
+    VOTE_FIFO_DEPTH = int(dut.forest_top.VOTE_FIFO_DEPTH.value)
+    extra_data = {
+        "used_cells": USED_CELLS,
+        "model_path": MODEL_PATH,
+        "test_vecs": TEST_VEC_FILE,
+        "placement_strategy": PLACEMENT_STRATEGY,
+        "partition_strategy": PARTITION_STRATEGY,
+        "superscalar_execution": SUPERSCALAR_EXECUTION,
+        "vote_fifo_depth": VOTE_FIFO_DEPTH,
+    }
+
+    await monitor.stop(report_path=Path(PERF_OUT), extra_data=extra_data)
 
 
 VERYL_SOURCES = [

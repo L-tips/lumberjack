@@ -71,10 +71,12 @@ run: all
 		-k test_run_benchmark \
 		--model=$(MODEL) \
 		--model-out=$(MODEL_OUT) \
+		--model-path=$(MODEL_PATH) \
+		--placement-strategy=$(PLACEMENT_STRATEGY) \
+		--partition-strategy=$(PARTITION_STRATEGY) \
 		--test-vecs=$(TEST_VECS_OUT) \
 		--cache-files=$(subst $(space),$(comma),$(CACHE_OUTS)) \
-		--num-cells=$(NUM_CELLS) \
-		--perf-file=$(MODEL)_perf.yml
+		--perf-file=../perf_$(MODEL).yml
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build
