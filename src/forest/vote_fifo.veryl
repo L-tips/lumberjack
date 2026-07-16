@@ -1,6 +1,6 @@
 module VoteFifo::<L: Layout> #(
     param DEPTH     : u8  = 8            ,
-    const ADDR_WIDTH: u32 = $clog2(DEPTH),
+    
 ) (
     clk: input clock,
     rst: input reset,
@@ -12,6 +12,8 @@ module VoteFifo::<L: Layout> #(
     empty       : output lbool        ,
     full        : output lbool        ,
 ) {
+    const ADDR_WIDTH: u32 = if DEPTH >: 1 ? $clog2(DEPTH): 1;
+
     var mem: L::Prediction [DEPTH];
 
     var write_ptr     : logic<ADDR_WIDTH>    ;
