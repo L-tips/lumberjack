@@ -11,6 +11,7 @@ from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMiss
 from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
 from perf_monitor import PerfMonitor
 import ml_dtypes
+import numpy as np
 
 TOP = "lumberjack_Benchmark"
 MODULE = "benchmark"
@@ -43,7 +44,9 @@ def load_test_vectors(path: str) -> list[TestVector]:
         for row in reader:
             prediction = int(row.pop("prediction"))
             num_votes = int(row.pop("num_votes"))
-            features = [ml_dtypes.bfloat16(v) for v in row.values()]
+            features = features = [
+                np.uint16(int(v, 16)).view(ml_dtypes.bfloat16) for v in row.values()
+            ]
             vectors.append(
                 TestVector(
                     features=features,
@@ -78,7 +81,6 @@ async def perf_benchmark(dut):
     test_vectors = load_test_vectors(f"../{TEST_VEC_FILE}")
 
     for i, vec in enumerate(test_vectors):
-        print(vec)
         await driver.start(vec.features)
         await First(RisingEdge(dut.forest_top.ready), RisingEdge(dut.forest_top.error))
 
@@ -87,10 +89,10 @@ async def perf_benchmark(dut):
         pred = await driver.prediction()
         pred_num_votes = await driver.num_votes()
         assert pred == vec.expected_prediction, (
-            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}"
+            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}. Features: {vec.features}"
         )
-        assert pred == vec.expected_prediction, (
-            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}"
+        assert pred_num_votes == vec.expected_num_votes, (
+            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}. Features: {vec.features}"
         )
 
     SUPERSCALAR_EXECUTION = bool(dut.forest_top.USE_SUPERSCALAR.value)
