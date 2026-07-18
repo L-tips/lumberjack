@@ -1,6 +1,7 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
+
 
 def assert_ack(dut, index):
     assert (dut.ack.value.to_unsigned() & 0b1 << index) >> index == 1
@@ -23,9 +24,8 @@ async def arbiter_test(dut):
 
     dut.valid.value = 0b1111
     dut.classes.value = list(range(0, 4))
-    
+
     for i in range(0, 4):
         await RisingEdge(dut.clk)
         assert_ack(dut, i)
-        assert dut.votes_arbiter.increment_addr.value == i
-
+        assert dut.votes_arbiter.class_idx.value == i

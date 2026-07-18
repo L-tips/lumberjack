@@ -2,13 +2,14 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles, Combine
+from cocotb.triggers import RisingEdge, Combine
 
 from typing import Sequence
 from test_cases import TestCase
 
 import utils
-from utils import n_cycles, read_hex
+from utils import read_hex
+
 
 async def reset(dut):
     await RisingEdge(dut.clk)
@@ -23,6 +24,7 @@ async def reset(dut):
     dut.rst.value = 1
 
     await RisingEdge(dut.clk)
+
 
 async def fill_tree_cache(dut, tree_idx, mem_file, rng):
     mem_data = read_hex(mem_file)
@@ -57,6 +59,7 @@ async def fill_tree_cache(dut, tree_idx, mem_file, rng):
     port.write_data.value = 0
     port.byte_write_enable.value = 0
 
+
 async def write_feature_word(dut, word_idx, word_value):
     dut.feature_write_bus.write_enable.value = True
     dut.feature_write_bus.address.value = word_idx
@@ -64,6 +67,7 @@ async def write_feature_word(dut, word_idx, word_value):
     await RisingEdge(dut.clk)
     dut.feature_write_bus.write_enable.value = False
     dut.feature_write_bus.data.value = 0
+
 
 async def test_forest(dut, test_cases: Sequence[TestCase]):
     # Start a 10 ns clock
@@ -75,7 +79,9 @@ async def test_forest(dut, test_cases: Sequence[TestCase]):
         # Write forest to tree evaluator cells
         tasks = []
         for cell_idx, mem_range in enumerate(tc.cache_mem_ranges):
-            tasks.append(cocotb.start_soon(fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range)))
+            tasks.append(
+                cocotb.start_soon(fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range))
+            )
         await Combine(*tasks)
 
         # Write features to forest's caches, packed 2x16-bit per 32-bit word
@@ -116,8 +122,9 @@ async def test_forest(dut, test_cases: Sequence[TestCase]):
 
         print(f"{tc.hexfile}: Completed in {cycle_count} cycles.")
 
+
 async def test_restart(dut, test_cases: Sequence[TestCase]):
-     # Start a 10 ns clock
+    # Start a 10 ns clock
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
     for tc in test_cases:
@@ -127,7 +134,9 @@ async def test_restart(dut, test_cases: Sequence[TestCase]):
         tasks = []
         for cell_idx, mem_range in enumerate(tc.cache_mem_ranges):
             print(f"hex: {tc.hexfile}, range: {mem_range}")
-            tasks.append(cocotb.start_soon(fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range)))
+            tasks.append(
+                cocotb.start_soon(fill_tree_cache(dut, cell_idx, tc.hexfile, mem_range))
+            )
         await Combine(*tasks)
 
         # Write features to forest's caches, packed 2x16-bit per 32-bit word
@@ -167,6 +176,8 @@ async def test_restart(dut, test_cases: Sequence[TestCase]):
                 await RisingEdge(dut.clk)
 
             if not completed:
-                raise TimeoutError(f"{tc.hexfile}: timed out after {tc.max_cycles} cycles")
+                raise TimeoutError(
+                    f"{tc.hexfile}: timed out after {tc.max_cycles} cycles"
+                )
 
             print(f"{tc.hexfile}: Completed in {cycle_count} cycles.")

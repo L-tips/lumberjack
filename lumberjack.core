@@ -18,12 +18,11 @@ filesets:
       - target/veryl/ram2wb.sv
       - target/veryl/ibex_bus/ibex_bus.sv
       - target/veryl/ibex_bus/wb2ibex_bus.sv
-      - target/veryl/forest/ram_counter.sv
+      - target/veryl/forest/votes_counter.sv
       - target/veryl/tree/node_evaluator.sv
       - target/veryl/tree/tree_cell.sv
-      - target/veryl/forest/types.sv
       - target/veryl/forest/votes_arbiter.sv
-      - target/veryl/forest/cell_driver.sv
+      - target/veryl/forest/cell_controller.sv
       - target/veryl/csr_types.sv
       - target/veryl/forest/forest.sv
       - target/veryl/csr.sv

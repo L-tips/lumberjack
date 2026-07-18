@@ -80,20 +80,20 @@ async def _cell_perf_task(
             ):
                 stats.vote_pending += 1
 
-            if cell_dut.orchestrator.vote_stall.value:
-                stats.vote_stall += 1
+            # if cell_dut.orchestrator.vote_stall.value:
+            #     stats.vote_stall += 1
 
             if cell_dut.tree.state.value == 0:
                 stats.cell_idle += 1
                 continue
 
-            if (
-                cell_dut.tree.state.value == 1
-                and cell_dut.tree.pre_start_reg.value
-                and not cell_dut.tree.start.value
-            ):
-                stats.cell_idle += 1
-                continue
+            # if (
+            #     cell_dut.tree.state.value == 1
+            #     and cell_dut.tree.pre_start_reg.value
+            #     and not cell_dut.tree.start.value
+            # ):
+            #     stats.cell_idle += 1
+            #     continue
 
             if (
                 cell_dut.tree.busy.value

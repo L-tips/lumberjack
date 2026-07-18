@@ -9,19 +9,21 @@ module TestVotesArbiter #(
     classes: input  logic<ADDR_WIDTH>     [NUM_REQUESTERS],
     ack    : output logic<NUM_REQUESTERS>                 ,
 
-    votes: output forest_types::VoteResult::<test_layout>,
+    winning_class: output test_layout::Prediction,
+    winning_votes: output test_layout::NumVotes  ,
 ) {
 
     inst votes_arbiter: VotesArbiter::<test_layout> #(
         NUM_REQUESTERS  ,
         ADDR_WIDTH      ,
     ) (
-        clk      ,
-        rst      ,
-        valid    ,
-        classes  ,
-        ack      ,
-        votes    ,
+        clk            ,
+        rst            ,
+        valid          ,
+        classes        ,
+        ack            ,
+        winning_class  ,
+        winning_votes  ,
     );
 }
 

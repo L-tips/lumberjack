@@ -10,12 +10,13 @@ module VotesArbiter::<L: Layout> #(
     classes: input  logic<ADDR_WIDTH>     [NUM_REQUESTERS],
     ack    : output logic<NUM_REQUESTERS>                 ,
 
-    votes: output forest_types::VoteResult::<L>,
+    winning_class: output L::Prediction,
+    winning_votes: output L::NumVotes  ,
 ) {
-    var increment     : lbool            ;
-    var increment_addr: logic<ADDR_WIDTH>;
+    var increment_en: lbool            ;
+    var class_idx   : logic<ADDR_WIDTH>;
 
-    let read_addr: logic     <ADDR_WIDTH> = increment_addr;
+    let read_addr: logic     <ADDR_WIDTH> = class_idx;
     var read_data: L::TreeIdx            ;
 
     var priority_mask     : logic<NUM_REQUESTERS>;
@@ -34,15 +35,15 @@ module VotesArbiter::<L: Layout> #(
 
     always_comb {
         next_priority_mask = priority_mask;
-        increment          = false;
-        increment_addr     = 0;
+        increment_en       = false;
+        class_idx          = 0;
 
         if |grant {
-            increment = true;
+            increment_en = true;
 
             for i in 0..NUM_REQUESTERS {
                 if grant[i] {
-                    increment_addr     = classes[i];
+                    class_idx          = classes[i];
                     next_priority_mask = ~((1 << (i + 1)) - 1);
                     if next_priority_mask == 0 {
                         next_priority_mask = '1;
@@ -60,34 +61,12 @@ module VotesArbiter::<L: Layout> #(
         }
     }
 
-    // Voting logic
-    always_ff {
-        if_reset {
-            votes.max_vote       = 0;
-            votes.max_vote_class = 0;
-        } else {
-            if increment {
-                // Record max voted class, with a tie breaker that prefers the lowest class index
-                if (read_data + 1 >: votes.max_vote)
-                    || ((read_data + 1 == votes.max_vote) && (increment_addr <: votes.max_vote_class)) {
-                    votes.max_vote       = read_data + 1;
-                    votes.max_vote_class = increment_addr;
-                }
-            }
-        }
-    }
-
-    inst votes_ram: RamCounter #(
-        // Max # of trees
-        DATA_WIDTH: L::TREE_IDX_WIDTH,
-        // Max number of classes
-        DEPTH: L::MAX_NUM_CLASSES,
-    ) (
-        clk                         ,
-        rst                         ,
-        inc_en      : increment     ,
-        inc_address : increment_addr,
-        read_address: read_addr     ,
-        read_data   : read_data     ,
+    inst votes_counter: VotesCounter::<L> (
+        clk                        ,
+        rst                        ,
+        inc_en       : increment_en,
+        class_idx                  ,
+        winning_class              ,
+        winning_votes              ,
     );
 }

@@ -1,0 +1,60 @@
+/// A votes counter, which always exposes the highest counted class and its number of votes as output.
+/// Reads are asynchronous; even when inc_en is true, the correct number of votes is returned of the
+/// winning class this cycle. The vote counter breaks ties by selecting the lowest class index.
+/// Votes will saturate if incrementing would exceed the data width.
+module VotesCounter::<L: Layout> #(
+    param DATA_WIDTH: u32 = L::TREE_IDX_WIDTH ,
+    param DEPTH     : u32 = L::MAX_NUM_CLASSES,
+    const ADDR_WIDTH: u32 = $clog2(DEPTH)     ,
+) (
+    clk: input clock,
+    rst: input reset,
+
+    /// Synchronous input, active high. Increments the votes for `class_idx`.
+    inc_en   : input lbool            ,
+    class_idx: input logic<ADDR_WIDTH>,
+
+    /// Asynchronous output. The class with the most votes, or lowest class
+    /// index amongst the classes with the most votes in case of a tie.
+    winning_class: output L::Prediction,
+    /// Asynchronous output. The number of votes for the winning class.
+    winning_votes: output L::NumVotes,
+) {
+    var mem: logic<DATA_WIDTH> [DEPTH];
+
+    var winning_class_q: L::Prediction;
+    var winning_votes_q: L::NumVotes  ;
+
+    let class_vote    : logic<DATA_WIDTH> = mem[class_idx];
+    let update_winning: lbool             = inc_en
+        && (class_vote + 1 >: winning_votes_q || (class_vote + 1 == winning_votes_q && class_idx <: winning_class_q));
+    let overflow      : lbool             = class_vote == {1'b1 repeat DATA_WIDTH};
+
+    always_comb {
+        winning_class = winning_class_q;
+        winning_votes = winning_votes_q;
+
+        if inc_en {
+            if update_winning && !overflow {
+                winning_votes = class_vote + 1;
+                winning_class = class_idx;
+            }
+        }
+    }
+
+    always_ff {
+        if_reset {
+            winning_class_q = 0;
+            winning_votes_q = 0;
+            for i in 0..DEPTH {
+                mem[i] = 0;
+            }
+        } else {
+            winning_class_q = winning_class;
+            winning_votes_q = winning_votes;
+            if inc_en {
+                mem[class_idx] += 1;
+            }
+        }
+    }
+}

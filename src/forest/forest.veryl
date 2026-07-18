@@ -13,6 +13,8 @@ pub module Forest::<L: Layout> #(
     /// Size of the tree caches in 64 bit dwords
     param CELL_CACHE_SIZE: u64 = 1024,
 
+    param VOTE_FIFO_DEPTH: u32 = 2,
+
     /// Inhibit model checking. Should only be used for development purposes.
     param INHIBIT_ERR: bbool = false,
 
@@ -80,18 +82,20 @@ pub module Forest::<L: Layout> #(
 
     var vote_classes: L::Prediction [CELL_INSTANCES];
 
-    var votes: forest_types::VoteResult::<L>;
+    var winning_class: L::Prediction;
+    var winning_votes: L::NumVotes  ;
 
     inst vote_arbiter: VotesArbiter::<L> #(
         NUM_REQUESTERS: CELL_INSTANCES            ,
         ADDR_WIDTH    : $clog2(L::MAX_NUM_CLASSES),
     ) (
-        clk                  ,
-        rst    : rst_votes   ,
-        valid  : vote_valid  ,
-        classes: vote_classes,
-        ack    : vote_ack    ,
-        votes                ,
+        clk                        ,
+        rst          : rst_votes   ,
+        valid        : vote_valid  ,
+        classes      : vote_classes,
+        ack          : vote_ack    ,
+        winning_class              ,
+        winning_votes              ,
     );
 
     var cells_error_posedge    : lbool          ;
@@ -130,7 +134,7 @@ pub module Forest::<L: Layout> #(
         var tree_header_data: node_layout::TreeHeader;
         var header_valid    : lbool                  ;
 
-        inst orchestrator: CellOrchestrator::<L> #(
+        inst cell_controller: CellController::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
         ) (
             clk                                  ,
@@ -174,8 +178,8 @@ pub module Forest::<L: Layout> #(
         );
     }
 
-    assign prediction = votes.max_vote_class;
-    assign num_votes  = votes.max_vote;
+    assign prediction = winning_class;
+    assign num_votes  = winning_votes;
 
     assign busy  = |cells_busy & !error;
     assign ready = &cells_ready;

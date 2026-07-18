@@ -1,0 +1,15 @@
+module TestVotesCounter #(
+    const ADDR_WIDTH: u32 = $clog2(test_layout::MAX_NUM_CLASSES),
+) (
+    clk          : input  clock                              ,
+    rst          : input  reset                              ,
+    inc_en       : input  logic                              ,
+    class_idx    : input  logic                  <ADDR_WIDTH>,
+    winning_class: output test_layout::Prediction            ,
+    winning_votes: output test_layout::NumVotes              ,
+) {
+    inst votes_counter: VotesCounter::<test_layout> ( clk, rst, inc_en, class_idx, winning_class, winning_votes );
+}
+
+#[test(test_votes_counter, TestVotesCounter)]
+include (cocotb, "../tb/test_votes_counter.py");

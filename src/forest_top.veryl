@@ -23,6 +23,8 @@ module ForestTop::<L: Layout> #(
     const WB_DATA_WIDTH: u8 = 32,
     const WB_ADDR_WIDTH: u8 = 32,
 
+    param VOTE_FIFO_DEPTH: u32 = 2,
+
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE),
 ) (
     clk      : input clock           ,

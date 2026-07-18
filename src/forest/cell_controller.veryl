@@ -1,5 +1,6 @@
-module CellOrchestrator::<L: Layout> #(
+module CellController::<L: Layout> #(
     param CELL_CACHE_ADDR_WIDTH: u32 = 16,
+    param VOTE_FIFO_DEPTH      : u32 = 2 ,
 ) (
     clk: input clock,
     rst: input reset,
