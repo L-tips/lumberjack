@@ -10,21 +10,29 @@ from cocotb.triggers import RisingEdge, First
 from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMissingImports]
 from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
 from perf_monitor import PerfMonitor
+import ml_dtypes
+import numpy as np
 
 TOP = "lumberjack_Benchmark"
 MODULE = "benchmark"
 
 CLK_PERIOD_NS = 1
 
-NUM_CELLS = int(os.environ["BENCH_NUM_CELLS"])
 CACHE_FILES = os.environ["BENCH_CACHE_FILES"].split(",")
+USED_CELLS = len(CACHE_FILES)
 PERF_OUT = os.environ["BENCH_PERF_FILE"]
 TEST_VEC_FILE = os.environ["BENCH_TEST_VECS"]
+MODEL_NAME = os.environ["BENCH_MODEL"]
+MODEL_PATH = os.environ["BENCH_MODEL_PATH"]
+PLACEMENT_STRATEGY = os.environ["BENCH_PLACEMENT_STRATEGY"]
+PARTITION_STRATEGY = os.environ["BENCH_PARTITION_STRATEGY"]
+NUM_TREES = int(os.environ["BENCH_NUM_TREES"])
+MAX_NODE = int(os.environ["BENCH_MAX_NODE"])
 
 
 @dataclass
 class TestVector:
-    features: list[float]
+    features: list[any]
     expected_prediction: int
     expected_num_votes: int
 
@@ -36,7 +44,9 @@ def load_test_vectors(path: str) -> list[TestVector]:
         for row in reader:
             prediction = int(row.pop("prediction"))
             num_votes = int(row.pop("num_votes"))
-            features = [float(v) for v in row.values()]
+            features = features = [
+                np.uint16(int(v, 16)).view(ml_dtypes.bfloat16) for v in row.values()
+            ]
             vectors.append(
                 TestVector(
                     features=features,
@@ -79,13 +89,29 @@ async def perf_benchmark(dut):
         pred = await driver.prediction()
         pred_num_votes = await driver.num_votes()
         assert pred == vec.expected_prediction, (
-            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}"
+            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}. Features: {vec.features}"
         )
-        assert pred == vec.expected_prediction, (
-            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}"
+        assert pred_num_votes == vec.expected_num_votes, (
+            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}. Features: {vec.features}"
         )
 
-    await monitor.stop(report_path=Path(PERF_OUT))
+    SUPERSCALAR_EXECUTION = bool(dut.forest_top.USE_SUPERSCALAR.value)
+    VOTE_FIFO_DEPTH = int(dut.forest_top.VOTE_FIFO_DEPTH.value)
+    NUM_TEST_VECTORS = len(test_vectors)
+    extra_data = {
+        "used_cells": USED_CELLS,
+        "model_path": MODEL_PATH,
+        "test_vecs": TEST_VEC_FILE,
+        "num_test_vectors": NUM_TEST_VECTORS,
+        "placement_strategy": PLACEMENT_STRATEGY,
+        "partition_strategy": PARTITION_STRATEGY,
+        "superscalar_execution": SUPERSCALAR_EXECUTION,
+        "vote_fifo_depth": VOTE_FIFO_DEPTH,
+        "num_trees": NUM_TREES,
+        "maxnode": MAX_NODE,
+    }
+
+    await monitor.stop(report_path=Path(PERF_OUT), extra_data=extra_data)
 
 
 VERYL_SOURCES = [
@@ -99,6 +125,7 @@ VERYL_SOURCES = [
     "types.sv",
     "common/test_layout.sv",
     "forest/cell_driver.sv",
+    "forest/vote_fifo.sv",
     "forest/forest.sv",
     "forest/ram_counter.sv",
     "forest/types.sv",

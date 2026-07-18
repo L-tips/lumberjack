@@ -22,6 +22,8 @@ MODEL_PATH   := $(call _yq,model_path)
 TEST_VECTORS := $(call _yq,test_vectors)
 PLACEMENT_STRATEGY := $(call _yq,placement_strategy)
 PARTITION_STRATEGY := $(call _yq,partition_strategy)
+NUM_TREEs := $(call _yq,num_trees)
+MAX_NODE  := $(call _yq,maxnode)
 
 ifeq ($(NUM_CELLS),null)
 $(error Model '$(MODEL)' not found in $(TESTS_CONFIG))
@@ -71,10 +73,14 @@ run: all
 		-k test_run_benchmark \
 		--model=$(MODEL) \
 		--model-out=$(MODEL_OUT) \
+		--model-path=$(MODEL_PATH) \
+		--placement-strategy=$(PLACEMENT_STRATEGY) \
+		--partition-strategy=$(PARTITION_STRATEGY) \
 		--test-vecs=$(TEST_VECS_OUT) \
 		--cache-files=$(subst $(space),$(comma),$(CACHE_OUTS)) \
-		--num-cells=$(NUM_CELLS) \
-		--perf-file=$(MODEL)_perf.yml
+		--perf-file=../perf_$(MODEL).yml \
+		--num-trees=$(NUM_TREEs) \
+		--max-node=$(MAX_NODE)
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build

@@ -10,7 +10,7 @@ class CellStats:
     cell_idx: int
     busy_cycles: int = 0
     vote_pending: int = 0
-    stall_vote: int = 0
+    vote_stall: int = 0
     total_vote_commits: int = 0
     superscalar_hits: int = 0
     mem_fetches: int = 0
@@ -30,14 +30,21 @@ class PerfStats:
     cells: list[CellStats]
     globals: GlobalStats
 
-    def report(self, path: Path | None = None):
-        d = {
-            "cells": {
-                c.cell_idx: {k: v for k, v in asdict(c).items() if k != "cell_idx"}
-                for c in self.cells
-            },
+    def report(self, path: Path | None = None, extra_data: dict | None = None):
+        perf_data = {
+            # "cells": {
+            #     c.cell_idx: {k: v for k, v in asdict(c).items() if k != "cell_idx"}
+            #     for c in self.cells
+            # },
+            "cells": [asdict(c) for c in self.cells],
             "globals": asdict(self.globals),
         }
+
+        if extra_data:
+            d = extra_data
+            d.update(perf_data)
+        else:
+            d = extra_data
 
         # Log to cocotb
         for c in self.cells:
@@ -73,14 +80,20 @@ async def _cell_perf_task(
             ):
                 stats.vote_pending += 1
 
-            if (
-                cell_dut.orchestrator.vote_pending.value
-                and not cell_dut.orchestrator.next_start_cell.value
-            ):
-                stats.stall_vote += 1
+            if cell_dut.orchestrator.vote_stall.value:
+                stats.vote_stall += 1
 
             if cell_dut.tree.state.value == 0:
                 stats.cell_idle += 1
+                continue
+
+            if (
+                cell_dut.tree.state.value == 1
+                and cell_dut.tree.pre_start_reg.value
+                and not cell_dut.tree.start.value
+            ):
+                stats.cell_idle += 1
+                continue
 
             if (
                 cell_dut.tree.busy.value
@@ -99,13 +112,17 @@ async def _cell_perf_task(
                 # TODO
                 assert True
 
+            try:
+                low_points_to_high = (
+                    cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
+                )
+            except AttributeError:
+                low_points_to_high = False
+
             if (
                 cell_dut.tree.state.value == 1
                 and cell_dut.tree.header_points_to_node_high.value
-            ) or (
-                cell_dut.tree.state.value == 2
-                and cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
-            ):
+            ) or (cell_dut.tree.state.value == 2 and low_points_to_high):
                 stats.superscalar_hits += 1
                 stats.useful_evaluations += superscalar_stages
                 stats.total_evaluations += superscalar_stages
@@ -183,12 +200,14 @@ class PerfMonitor:
             )
         )
 
-    async def stop(self, report_path: Path | None = None) -> PerfStats:
+    async def stop(
+        self, report_path: Path | None = None, extra_data: dict | None = None
+    ) -> PerfStats:
         self._stop_event.set()
         for t in self._tasks:
             t.cancel()
         self._tasks.clear()
 
         stats = PerfStats(cells=self._cell_stats, globals=self._global_stats)
-        stats.report(path=report_path)
+        stats.report(path=report_path, extra_data=extra_data)
         return stats
