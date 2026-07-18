@@ -244,6 +244,14 @@ module TreeCell::<L: Layout> #(
                             next_busy       = false;
                             next_state      = State::idle;
                             next_prediction = eval_prediction as L::Prediction;
+
+                            // // Prefetch next tree header
+                            // if pre_start {
+                            //     next_state            = State::read_header;
+                            //     next_read_addr        = pre_start_header_addr;
+                            //     next_busy             = true;
+                            //     tree_cache_bus.enable = true;
+                            // }
                         } else {
                             tree_cache_bus.enable = true;
                             next_read_addr        = eval_next_idx as NodePtr + read_addr;

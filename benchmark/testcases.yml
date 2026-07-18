@@ -8,6 +8,15 @@ models:
     num_trees: 2
     maxnode: 3
 
+  single_nodes:
+    num_cells: 4
+    model_path: bench-data/single_nodes.csv
+    test_vectors: bench-data/single_nodes_data.csv
+    placement_strategy: execution-aware
+    partition_strategy: equal-sorted
+    num_trees: 40
+    maxnode: 3
+
   iris:
     num_cells: 4
     model_path: bench-data/iris_200_100.csv

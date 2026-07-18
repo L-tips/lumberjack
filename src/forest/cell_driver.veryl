@@ -49,14 +49,15 @@ module CellOrchestrator::<L: Layout> #(
     inst vote_fifo: VoteFifo::<L> #(
         DEPTH: VOTE_FIFO_DEPTH,
     ) (
-        clk                                               ,
-        rst                                               ,
-        write_enable: cell_prediction_arrived && !vote_ack,
-        write_data  : cell_prediction                     ,
+        clk  ,
+        rst  ,
+        // write_enable: cell_prediction_arrived && !vote_ack,
+        write_enable: cell_prediction_arrived && !(vote_ack && vote_fifo_empty),
+        write_data  : cell_prediction                                          ,
         read_enable : vote_ack && !vote_fifo_empty,
-        read_data   : vote_fifo_rdata                     ,
-        empty       : vote_fifo_empty                     ,
-        full        : vote_fifo_full                      ,
+        read_data   : vote_fifo_rdata                                          ,
+        empty       : vote_fifo_empty                                          ,
+        full        : vote_fifo_full                                           ,
     );
 
     // Bypass: if prediction arrives and is acked same cycle and FIFO is empty,
@@ -64,6 +65,13 @@ module CellOrchestrator::<L: Layout> #(
     let bypass: lbool = cell_prediction_arrived && vote_ack && vote_fifo_empty;
     assign vote_valid = !vote_fifo_empty || cell_prediction_arrived;
     assign vote_class = if bypass ? cell_prediction : vote_fifo_rdata;
+
+    // A vote is secured this cycle iff it entered the FIFO or was bypassed.
+    let vote_enqueued: lbool = (cell_prediction_arrived && !vote_fifo_full) || bypass;
+
+    // Overflow must be structurally impossible. If this ever asserts, a vote
+    // was produced that could neither enter the FIFO nor bypass — a real drop.
+    let vote_overflow: lbool = cell_prediction_arrived && vote_fifo_full && !bypass;
 
     let all_votes_registered: lbool = !cell_prediction_arrived && vote_fifo_empty;
 
@@ -110,7 +118,7 @@ module CellOrchestrator::<L: Layout> #(
         } else if cell_prediction_arrived {
             // Only advance to next tree if vote buffer is clear or being
             // cleared this cycle, so we don't overwrite an unserviced vote
-            if !vote_stall && next_tree_idx as L::TreeIdx <: num_trees_in_cell - 1 {
+            if vote_enqueued && next_tree_idx as L::TreeIdx <: num_trees_in_cell - 1 {
                 next_tree_idx += 1;
                 // Tree header contains the tree's length
                 next_tree_header_addr = tree_header_addr + tree_header_data.tree_len as NodePtr;

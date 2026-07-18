@@ -13,10 +13,17 @@ module RamCounter #(
     inc_address: input logic<ADDR_WIDTH>,
     inc_en     : input lbool            ,
 
-    read_address: input  logic<ADDR_WIDTH>,
-    read_data   : output logic<DATA_WIDTH>,
+    read_address: input logic<ADDR_WIDTH>,
+    read_data: output logic<DATA_WIDTH>,
 ) {
     var mem: logic<DATA_WIDTH> [DEPTH];
+
+    // let raw_read: logic<DATA_WIDTH> = mem[read_address];
+
+    // // Bypass: if we're writing to the same address we're reading,
+    // // forward the post-increment value instead of the stale RAM output
+    // let write_read_collision: lbool = inc_en && (inc_address == read_address);
+    // assign read_data = if write_read_collision ? raw_read + 1 : raw_read;
 
     assign read_data = mem[read_address];
 

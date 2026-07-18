@@ -27,6 +27,8 @@ module VoteFifo::<L: Layout> #(
     assign full      = count == DEPTH[ADDR_WIDTH:0];
     assign read_data = mem[read_ptr];
 
+     let fifo_overflow: lbool = full && write_enable;
+
     always_comb {
         next_write_ptr = write_ptr;
         next_read_ptr  = read_ptr;
