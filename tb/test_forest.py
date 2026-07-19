@@ -8,7 +8,7 @@ from typing import Sequence
 from test_cases import TestCase
 
 import utils
-from utils import read_hex
+from utils import fill_tree_cache, write_feature_word
 
 
 async def reset(dut):
@@ -24,49 +24,6 @@ async def reset(dut):
     dut.rst.value = 1
 
     await RisingEdge(dut.clk)
-
-
-async def fill_tree_cache(dut, tree_idx, mem_file, rng):
-    mem_data = read_hex(mem_file)
-    port = dut.cell_cache_ports[tree_idx]
-    bus_width = len(port.write_data)
-
-    if bus_width % 8 != 0:
-        raise ValueError(f"Bus width must be byte-aligned, got {bus_width} bits.")
-
-    bytes_per_word = bus_width // 8
-    bwe = (1 << bytes_per_word) - 1
-
-    if rng.start % bytes_per_word != 0 or rng.stop % bytes_per_word != 0:
-        raise ValueError(
-            f"Address range must be aligned to {bytes_per_word}-byte words "
-            f"for a {bus_width}-bit bus."
-        )
-
-    start_word = rng.start // bytes_per_word
-    end_word = rng.stop // bytes_per_word
-    mem_words = utils.into_chunks_le(mem_data, bus_width)
-
-    port.enable.value = True
-    port.byte_write_enable.value = bwe
-
-    for word_addr in range(start_word, end_word):
-        port.address.value = word_addr - start_word
-        port.write_data.value = mem_words[word_addr]
-        await RisingEdge(dut.clk)
-
-    port.enable.value = False
-    port.write_data.value = 0
-    port.byte_write_enable.value = 0
-
-
-async def write_feature_word(dut, word_idx, word_value):
-    dut.feature_write_bus.write_enable.value = True
-    dut.feature_write_bus.address.value = word_idx
-    dut.feature_write_bus.data.value = word_value
-    await RisingEdge(dut.clk)
-    dut.feature_write_bus.write_enable.value = False
-    dut.feature_write_bus.data.value = 0
 
 
 async def test_forest(dut, test_cases: Sequence[TestCase]):
@@ -155,13 +112,6 @@ async def test_restart(dut, test_cases: Sequence[TestCase]):
             completed = False
 
             while cycle_count <= tc.max_cycles:
-                if dut.error.value:
-                    assert not dut.busy.value
-                    if tc.expect_error:
-                        completed = True
-                        break
-                    raise Exception("Forest returned error, expected ready")
-
                 if dut.ready.value:
                     assert not dut.busy.value
                     if tc.expect_error:

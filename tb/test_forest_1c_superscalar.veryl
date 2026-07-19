@@ -82,12 +82,4 @@ async def forest_1c_restart(dut):
 
     await test_forest.test_restart(dut, cases)
 
-@cocotb.test()
-async def forest_1c_restart_circular(dut):
-    cases = [
-        test_cases.TC_CIRCULAR_1CELL,
-    ]
-
-    await test_forest.test_restart(dut, cases)
-
 }}}

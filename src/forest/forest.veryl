@@ -52,7 +52,7 @@ pub module Forest::<L: Layout> #(
         ADDR_WIDTH: L::FEAT_IDX_WIDTH         ,
     );
 
-    for i in 0..NUM_FEAT_BUF :inst_caches {
+    for i in 0..NUM_FEAT_BUF :inst_feature_caches {
         const BASE_PORT: u32 = i * READ_PORTS_PER_CACHE_U32;
         inst feature_cache: memutils::ScratchpadRam #(
             READ_PORTS: READ_PORTS_PER_CACHE,

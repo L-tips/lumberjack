@@ -1,0 +1,87 @@
+module TestTreeCellV3 #(
+    const TREE_CACHE_SIZE      : u32 = 1024                   ,
+    const TREE_CACHE_ADDR_WIDTH: u32 = $clog2(TREE_CACHE_SIZE),
+) (
+    clk: input clock,
+    rst: input reset,
+
+    rst_cache        : input  reset                  ,
+    start            : input  lbool                  ,
+    restart          : input  lbool                  ,
+    pred_valid       : output lbool                  ,
+    prediction       : output test_layout::Prediction,
+    pred_ack         : input  lbool                  ,
+    num_trees_in_cell: output node_layout::NumTrees  ,
+    busy             : output lbool                  ,
+) {
+    const USE_SUPERSCALAR: bbool = false;
+    const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
+
+    inst feature_write_bus: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
+    );
+
+    inst feature_buses: memutils::ScratchpadRamPort [FEATURE_PORTS] #(
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
+    );
+
+    inst feature_cache: memutils::ScratchpadRam #(
+        READ_PORTS: FEATURE_PORTS,
+        // 32b wide, but features are 16b each
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
+        DEPTH     : test_layout::MAX_NUM_FEATURES       ,
+    ) (
+        clk                     ,
+        rst                     ,
+        write: feature_write_bus,
+        // Each cache gets its appropriate slice of read ports
+        read: feature_buses,
+    );
+
+    inst cell_cache_ports: memutils::BramPort [1] #( NUM_COL: 8, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
+
+    inst tree_cell: TreeCellV3::<test_layout> #(
+        USE_SUPERSCALAR  ,
+    ) (
+        clk                                   ,
+        rst                                   ,
+        rst_cache        : rst                ,
+        start                                 ,
+        restart                               ,
+        pred_valid                            ,
+        prediction                            ,
+        pred_ack                              ,
+        num_trees_in_cell                     ,
+        busy                                  ,
+        feature_ports    : feature_buses      ,
+        ram_port         : cell_cache_ports[0],
+    );
+}
+
+#[test(test_cell_v3, TestTreeCellV3)]
+embed (cocotb) py{{{
+
+import cocotb
+from test_tree_cell_v3 import test_cell
+import test_cases
+
+@cocotb.test()
+async def cell_aligned(dut):
+    cases = [
+        test_cases.TC_ALIGNED_1CELL,
+    ]
+
+    await test_cell(dut, cases)
+
+
+@cocotb.test()
+async def cell_misaligned(dut):
+    cases = [
+        test_cases.TC_MISALIGNED_1CELL,
+    ]
+
+    await test_cell(dut, cases)
+
+}}}

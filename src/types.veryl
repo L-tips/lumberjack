@@ -62,6 +62,9 @@ package node_layout {
 
     type ClassPtr = logic<CLASS_PTR_WIDTH>;
 
+    type NumTrees = logic<16>;
+    type TreeLen  = logic<32>;
+
     struct Flags {
         left_predict : logic    ,
         right_predict: logic    ,
@@ -78,8 +81,8 @@ package node_layout {
 
     // Field order inverted - little-endian memory
     struct TreeHeader {
-        trees_in_cell : logic<16>,
-        first_node_ptr: logic<16>,
-        tree_len      : logic<32>,
+        trees_in_cell : NumTrees    ,
+        first_node_ptr: logic   <16>,
+        tree_len      : TreeLen     ,
     }
 }
