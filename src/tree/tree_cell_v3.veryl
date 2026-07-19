@@ -61,7 +61,7 @@ module TreeCellV3::<L: Layout> #(
         idle = 0,
         read_header = 1,
         evaluating = 2,
-        hold = 3,
+        hold_result = 3,
     }
 
     var state     : State;
@@ -233,7 +233,7 @@ module TreeCellV3::<L: Layout> #(
                 // If the header points to node index 1, the node data is already available.
                 // We can directly evaluate it.
                 if header_points_to_node_high && eval_is_prediction {
-                    next_state = State::hold;
+                    next_state = State::hold_result;
                 } else if num_trees_in_cell == 0 && restart_q {
                     tree_cache_bus.enable = false;
                     next_state            = State::idle;
@@ -246,7 +246,7 @@ module TreeCellV3::<L: Layout> #(
             State::evaluating: {
                 // Leaf node reached - use prediction
                 if eval_is_prediction {
-                    next_state = State::hold;
+                    next_state = State::hold_result;
                 } else {
                     // Continue on with another read
                     tree_cache_bus.enable = true;
@@ -255,7 +255,7 @@ module TreeCellV3::<L: Layout> #(
             }
 
             State::idle: {}
-            State::hold: {}
+            State::hold_result: {}
         }
 
         if pred_ack {

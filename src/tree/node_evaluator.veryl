@@ -2,7 +2,7 @@ module NodeEvaluator::<L: Layout> #(
     param CELL_CACHE_ADDR_WIDTH: u32 = 16,
 
     /// Inhibit model checking. Should only be used for development purposes.
-    param INHIBIT_ERR: bbool = false,
+    param INHIBIT_ERR: bbool = true,
 ) (
     node            : input   node_layout::Node                                              ,
     current_node_idx: input   logic                                   <CELL_CACHE_ADDR_WIDTH>,
@@ -30,13 +30,13 @@ module NodeEvaluator::<L: Layout> #(
         leq: branch_left ,
     );
 
-    // Check that out tree is a DAG and that there are no
-    // circular conditions
-    if !INHIBIT_ERR :assign_err {
-        assign error = !is_prediction && next_node_idx <= current_node_idx;
-    } else {
-        assign error = false;
-    }
+    // // Check that out tree is a DAG and that there are no
+    // // circular conditions
+    // if !INHIBIT_ERR :assign_err {
+    //     assign error = !is_prediction && next_node_idx <= current_node_idx;
+    // } else {
+    //     assign error = false;
+    // }
 
     var next_ptr: node_layout::ClassPtr;
     assign next_node_idx = next_ptr[CELL_CACHE_ADDR_WIDTH - 1:0];

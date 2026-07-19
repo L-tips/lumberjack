@@ -60,7 +60,7 @@ module TestTreeCellV3 #(
     );
 }
 
-#[test(test_tree_cell_v3, TestTreeCellV3)]
+#[test(test_cell_v3, TestTreeCellV3)]
 embed (cocotb) py{{{
 
 import cocotb

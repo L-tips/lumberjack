@@ -25,7 +25,7 @@ class TestCase:
         object.__setattr__(self, "num_trees", sum(self.expected_votes.values()))
         winner, votes = get_winner(self.expected_votes)
         object.__setattr__(self, "expected_prediction", winner)
-        object.__setattr__(self, "expected_votes", votes)
+        object.__setattr__(self, "max_votes", votes)
 
     def winning_vote(self):
         get_winner(self.expected_votes)
