@@ -64,7 +64,7 @@ module TestTreeCellSuperscalarV3 #(
 embed (cocotb) py{{{
 
 import cocotb
-from test_cell_v3 import test_cell
+from test_tree_cell_v3 import test_cell
 import test_cases
 
 @cocotb.test()

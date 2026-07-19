@@ -25,7 +25,7 @@ include_files = [
     "tb/wb_driver.py",
     "tb/test_cases.py",
     "tb/test_forest.py",
-    "tb/test_cell_v3.py",
+    "tb/test_tree_cell_v3.py",
     "tb/test_data/tree_2n_aligned.hex",
     "tb/test_data/tree_2n_misaligned.hex",
     "tb/test_data/tree_2n_circular.hex",
