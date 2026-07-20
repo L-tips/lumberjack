@@ -1,4 +1,4 @@
-module TestForest_2Cells_Superscalar (
+module TestForest_1Cell_Superscalar (
     clk: input clock,
     rst: input reset,
 
@@ -6,15 +6,17 @@ module TestForest_2Cells_Superscalar (
 
     busy : output lbool,
     ready: output lbool,
-    error: output lbool,
 
     prediction: output test_layout::Prediction,
     num_votes : output test_layout::NumVotes  ,
+
+    dbg_fault: input  lbool    ,
+    dbg_cycle: output logic<16>,
 ) {
     const CELL_CACHE_SIZE      : u64 = 4096;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
 
-    const CELL_INSTANCES      : u32   = 2;
+    const CELL_INSTANCES      : u32   = 1;
     const READ_PORTS_PER_CACHE: u32   = 2;
     const USE_SUPERSCALAR     : bbool = true;
     const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
@@ -44,16 +46,23 @@ module TestForest_2Cells_Superscalar (
         enable                               ,
         busy                                 ,
         ready                                ,
-        error                                ,
         prediction                           ,
         num_votes                            ,
         feature_write_port: feature_write_bus,
         cell_cache_ports                     ,
         cells_busy        : _                ,
     );
+
+    always_ff (clk, rst) {
+        if_reset {
+            dbg_cycle = 0;
+        } else {
+            dbg_cycle += 1;
+        }
+    }
 }
 
-#[test(test_forest_2c_superscalar, TestForest_2Cells_Superscalar)]
+#[test(test_forest_1c_superscalar, TestForest_1Cell_Superscalar)]
 embed (cocotb) py{{{
 
 import cocotb
@@ -61,35 +70,25 @@ import test_forest
 import test_cases
 
 @cocotb.test()
-async def forest_2c_aligned_sc(dut):
+async def forest_1c_aligned_sc(dut):
     cases = [
-        test_cases.TC_ALIGNED_2CELLS,
-    ]
-
-    await test_forest.test_forest(dut, cases)
-
-
-@cocotb.test()
-async def forest_2c_misaligned_sc(dut):
-    cases = [
-        test_cases.TC_MISALIGNED_2CELLS,
+        test_cases.TC_ALIGNED_1CELL,
     ]
 
     await test_forest.test_forest(dut, cases)
 
 @cocotb.test()
-async def forest_2c_asymmetrical_sc(dut):
+async def forest_1c_misaligned_sc(dut):
     cases = [
-        test_cases.TC_2CELLS_ASYMMETRICAL,
+        test_cases.TC_MISALIGNED_1CELL,
     ]
 
     await test_forest.test_forest(dut, cases)
 
-
 @cocotb.test()
-async def forest_2c_restart_sc(dut):
+async def forest_1c_restart(dut):
     cases = [
-        test_cases.TC_ALIGNED_2CELLS,
+        test_cases.TC_ALIGNED_1CELL,
     ]
 
     await test_forest.test_restart(dut, cases)

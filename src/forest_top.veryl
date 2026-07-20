@@ -46,7 +46,6 @@ module ForestTop::<L: Layout> #(
     var start_stb : logic        ;
     var busy      : logic        ;
     var ready     : logic        ;
-    var error     : logic        ;
     var prediction: L::Prediction;
     var num_votes : L::NumVotes  ;
 
@@ -94,7 +93,6 @@ module ForestTop::<L: Layout> #(
         enable            : start_stb        ,
         busy                                 ,
         ready                                ,
-        error                                ,
         prediction                           ,
         num_votes                            ,
         feature_write_port: feature_write_bus,
@@ -125,7 +123,6 @@ module ForestTop::<L: Layout> #(
         start_stb                            ,
         ready                                ,
         busy                                 ,
-        error                                ,
         prediction                           ,
         num_votes                            ,
         interrupt                            ,

@@ -6,10 +6,12 @@ module TestForest_2Cells (
 
     busy : output lbool,
     ready: output lbool,
-    error: output lbool,
 
     prediction: output test_layout::Prediction,
     num_votes : output test_layout::NumVotes  ,
+
+    dbg_fault: input  lbool    ,
+    dbg_cycle: output logic<16>,
 ) {
     const CELL_CACHE_SIZE      : u64 = 4096;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
@@ -44,13 +46,20 @@ module TestForest_2Cells (
         enable                               ,
         busy                                 ,
         ready                                ,
-        error                                ,
         prediction                           ,
         num_votes                            ,
         feature_write_port: feature_write_bus,
         cell_cache_ports                     ,
         cells_busy        : _                ,
     );
+
+    always_ff (clk, rst) {
+        if_reset {
+            dbg_cycle = 0;
+        } else {
+            dbg_cycle += 1;
+        }
+    }
 }
 
 #[test(test_forest_2c, TestForest_2Cells)]

@@ -28,7 +28,7 @@ class TestCase:
         object.__setattr__(self, "max_votes", votes)
 
     def winning_vote(self):
-        get_winner(self.expected_votes)
+        return get_winner(self.expected_votes)
 
 
 TC_ALIGNED_1CELL = TestCase(

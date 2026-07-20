@@ -48,7 +48,7 @@ module TestTreeCellSuperscalar #(
     #[allow(unassign_variable)]
     inst cell_cache_ports: memutils::BramPort [1] #( NUM_COL: 16, COL_WIDTH: 8, ADDR_WIDTH: TREE_CACHE_ADDR_WIDTH );
 
-    inst tree_cell: TreeCellV3::<test_layout> #(
+    inst tree_cell: TreeCell::<test_layout> #(
         USE_SUPERSCALAR  ,
     ) (
         clk                                         ,

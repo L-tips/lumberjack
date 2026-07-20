@@ -11,13 +11,14 @@ module CellController::<L: Layout> #(
     start_forest: input lbool,
 
     // Cell control signals
-    cell_start       : output lbool                ,
-    cell_restart     : output lbool                ,
-    cell_pred_valid  : input  lbool                ,
-    cell_prediction  : input  L::Prediction        ,
-    cell_pred_ack    : output lbool                ,
-    num_trees_in_cell: input  node_layout::NumTrees,
-    cell_busy        : input  lbool                ,
+    cell_start             : output lbool                ,
+    cell_restart           : output lbool                ,
+    cell_pred_valid        : input  lbool                ,
+    cell_prediction        : input  L::Prediction        ,
+    cell_pred_ack          : output lbool                ,
+    num_trees_in_cell      : input  node_layout::NumTrees,
+    num_trees_in_cell_valid: input  lbool                ,
+    cell_busy              : input  lbool                ,
 
     // Vote arbiter signals
     vote_valid: output lbool        ,
@@ -31,8 +32,8 @@ module CellController::<L: Layout> #(
     ready_o: output lbool,
 ) {
 
-    var fifo_empty: lbool;
-    var fifo_full : lbool;
+    var fifo_empty      : lbool;
+    var fifo_full       : lbool;
     var fifo_nearly_full: lbool;
     // A vote is secured exactly when it is pushed.
     let fifo_push: lbool = cell_pred_ack;
@@ -48,9 +49,9 @@ module CellController::<L: Layout> #(
     var next_active  : lbool   ;
 
     inst votes_fifo: $std::fifo #(
-        TYPE : L::Prediction  ,
-        DEPTH: VOTE_FIFO_DEPTH,
-        THRESHOLD: VOTE_FIFO_DEPTH- 1,
+        TYPE     : L::Prediction      ,
+        DEPTH    : VOTE_FIFO_DEPTH    ,
+        THRESHOLD: VOTE_FIFO_DEPTH - 1,
         // combinational o_full/o_empty
         FLAG_FF_OUT: false,
         // registered o_data
@@ -63,22 +64,22 @@ module CellController::<L: Layout> #(
         i_clk: clk,
         i_rst: rst,
         // flush stale votes on a new forest eval
-        i_clear      : start_forest   ,
-        o_empty      : fifo_empty     ,
-        o_almost_full: fifo_nearly_full              ,
-        o_full       : fifo_full      ,
-        o_word_count : _              ,
-        i_push       : fifo_push      ,
-        i_data       : cell_prediction,
-        i_pop        : fifo_pop       ,
-        o_data       : vote_class     ,
+        i_clear      : start_forest    ,
+        o_empty      : fifo_empty      ,
+        o_almost_full: fifo_nearly_full,
+        o_full       : fifo_full       ,
+        o_word_count : _               ,
+        i_push       : fifo_push       ,
+        i_data       : cell_prediction ,
+        i_pop        : fifo_pop        ,
+        o_data       : vote_class      ,
     );
 
     // The cell is stalled only when the FIFO cannot accept the vote.
     // Ack is otherwise unconditional -- predictions go indiscriminately in.
     // Stall one slot early so the registered flag's staleness can never overflow.
-    assign cell_pred_ack = !fifo_nearly_full && cell_pred_valid;
-    assign vote_valid = !fifo_empty;
+    assign cell_pred_ack = !fifo_full && cell_pred_valid;
+    assign vote_valid    = !fifo_empty;
 
     // More trees remain after the one whose vote we are securing now.
     let more_trees: lbool = next_done <: trees_total;
@@ -97,19 +98,25 @@ module CellController::<L: Layout> #(
     assign ready_o = forest_active && fifo_empty && !cell_busy && (all_trees_done || empty_cache);
 
     always_comb {
-        next_total  = trees_total;
-        next_done   = trees_done;
-        next_active = forest_active;
+        next_total       = trees_total;
+        next_done        = trees_done;
+        next_active      = forest_active;
+        next_empty_cache = empty_cache;
 
         if start_forest {
-            next_total  = 0;
-            next_done   = 0;
-            next_active = true;
+            next_total       = 0;
+            next_done        = 0;
+            next_active      = true;
+            next_empty_cache = false;
         } else {
-            // trees_in_cell is valid the cycle after start && restart, and the
-            // cell holds it thereafter. Latch it once while it is nonzero.
-            if forest_active && trees_total == 0 {
-                next_total = num_trees_in_cell;
+            // trees_in_cell is valid 2 cycles after start && restart, and the
+            // cell holds it thereafter. Latch it once it becomes valid
+            if forest_active && num_trees_in_cell_valid {
+                if num_trees_in_cell == 0 {
+                    next_empty_cache = true;
+                } else {
+                    next_total = num_trees_in_cell;
+                }
             }
 
             if fifo_push {
@@ -118,7 +125,7 @@ module CellController::<L: Layout> #(
 
             // Empty cache: the cell bails out and never predicts, so retire
             // the forest as soon as we know the count is zero.
-            if forest_active && !cell_busy && num_trees_in_cell == 0 && trees_total == 0 {
+            if forest_active && !cell_busy && trees_total == 0 {
                 next_active = false;
             }
         }
@@ -129,10 +136,12 @@ module CellController::<L: Layout> #(
             trees_total   = 0;
             trees_done    = 0;
             forest_active = false;
+            empty_cache   = false;
         } else {
             trees_total   = next_total;
             trees_done    = next_done;
             forest_active = next_active;
+            empty_cache   = next_empty_cache;
         }
 
     }

@@ -19,7 +19,6 @@ module CsrInterface::<L: Layout> #(
     // --- Input control signals ---
     ready     : input logic        ,
     busy      : input logic        ,
-    error     : input logic        ,
     prediction: input L::Prediction,
     num_votes : input L::NumVotes  ,
 
@@ -56,7 +55,6 @@ module CsrInterface::<L: Layout> #(
     assign enable = enable_reg;
 
     struct Intflag {
-        error: logic,
         ready: logic,
     }
 
@@ -67,18 +65,15 @@ module CsrInterface::<L: Layout> #(
     var next_intflag: Intflag;
 
     var prev_ready: logic;
-    var prev_error: logic;
 
     var cyccnt: csr_types::<L>::Data;
 
     always_ff {
         if_reset {
             prev_ready = 0;
-            prev_error = 0;
             cyccnt     = 0;
         } else {
             prev_ready = ready;
-            prev_error = error;
 
             if enable {
                 cyccnt += 1;
@@ -88,7 +83,7 @@ module CsrInterface::<L: Layout> #(
         }
     }
 
-    assign interrupt = (intflag_reg.ready && inten_reg.ready) || (intflag_reg.error && inten_reg.error);
+    assign interrupt = intflag_reg.ready && inten_reg.ready;
 
     var busy_negedge: lbool;
     inst busy_edge: $std::edge_detector #(
@@ -166,15 +161,9 @@ module CsrInterface::<L: Layout> #(
             next_intflag.ready = 1;
         }
 
-        // Set the interrupt flag if error
-        if error && !prev_error {
-            next_intflag.error = 1;
-        }
-
         // Clear the interrupt flags when the user reenables the evaluator
         if next_user_enable {
             next_intflag.ready = 0;
-            next_intflag.error = 0;
         }
     }
 

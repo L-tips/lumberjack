@@ -28,7 +28,6 @@ pub module Forest::<L: Layout> #(
 
     busy      : output lbool        ,
     ready     : output lbool        ,
-    error     : output lbool        ,
     prediction: output L::Prediction,
     num_votes : output L::NumVotes  ,
 
@@ -105,11 +104,12 @@ pub module Forest::<L: Layout> #(
         var cell_start  : lbool;
         var cell_restart: lbool;
 
-        var pred_valid       : lbool                ;
-        var cell_prediction  : L::Prediction        ;
-        var pred_ack         : lbool                ;
-        var num_trees_in_cell: node_layout::NumTrees;
-        var cell_busy        : lbool                ;
+        var pred_valid             : lbool                ;
+        var cell_prediction        : L::Prediction        ;
+        var pred_ack               : lbool                ;
+        var num_trees_in_cell      : node_layout::NumTrees;
+        var num_trees_in_cell_valid: lbool                ;
+        var cell_busy              : lbool                ;
 
         inst cell_controller: CellController::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
@@ -118,13 +118,14 @@ pub module Forest::<L: Layout> #(
             rst                     ,
             start_forest: start_eval,
 
-            cell_start                   ,
-            cell_restart                 ,
-            cell_pred_valid  : pred_valid,
-            cell_prediction              ,
-            cell_pred_ack    : pred_ack  ,
-            num_trees_in_cell            ,
-            cell_busy                    ,
+            cell_start                         ,
+            cell_restart                       ,
+            cell_pred_valid        : pred_valid,
+            cell_prediction                    ,
+            cell_pred_ack          : pred_ack  ,
+            num_trees_in_cell                  ,
+            num_trees_in_cell_valid            ,
+            cell_busy                          ,
 
             vote_valid: vote_valid[i]  ,
             vote_ack  : vote_ack[i]    ,
@@ -135,20 +136,21 @@ pub module Forest::<L: Layout> #(
 
         );
 
-        inst tree: TreeCellV3::<L> #(
+        inst tree: TreeCell::<L> #(
             USE_SUPERSCALAR  ,
             CELL_CACHE_SIZE  ,
         ) (
-            clk                               ,
-            rst                               ,
-            rst_cache        : rst_cell_caches,
-            start            : cell_start     ,
-            restart          : cell_restart   ,
-            pred_valid                        ,
-            prediction       : cell_prediction,
-            pred_ack                          ,
-            num_trees_in_cell                 ,
-            busy             : cell_busy      ,
+            clk                                     ,
+            rst                                     ,
+            rst_cache              : rst_cell_caches,
+            start                  : cell_start     ,
+            restart                : cell_restart   ,
+            pred_valid                              ,
+            prediction             : cell_prediction,
+            pred_ack                                ,
+            num_trees_in_cell                       ,
+            num_trees_in_cell_valid                 ,
+            busy                   : cell_busy      ,
 
             feature_ports: feature_read_port[BASE_PORT+:PORTS_PER_TREE],
             ram_port     : cell_cache_ports[i]                         ,
@@ -158,13 +160,12 @@ pub module Forest::<L: Layout> #(
     assign prediction = winning_class;
     assign num_votes  = winning_votes;
 
-    assign busy  = |cells_busy & !error;
+    assign busy  = |cells_busy;
     assign ready = &cells_ready;
 
     always_ff (clk, rst) {
         if_reset {
             start_eval_reg = false;
-            error          = false;
         } else {
             start_eval_reg = enable && !busy;
         }

@@ -54,20 +54,13 @@ async def test_forest(dut, test_cases: Sequence[TestCase]):
         completed = False
 
         while cycle_count <= tc.max_cycles:
-            if dut.error.value:
-                assert not dut.busy.value
-                if tc.expect_error:
-                    completed = True
-                    break
-                raise Exception("Forest returned error, expected ready")
-
             if dut.ready.value:
                 assert not dut.busy.value
-                if tc.expect_error:
-                    raise Exception("Forest returned ready, expected error")
 
-                assert int(dut.prediction.value) == tc.expected_prediction
-                assert int(dut.num_votes.value) == tc.expected_votes
+                winner, votes = tc.winning_vote()
+                assert int(dut.prediction.value) == winner
+                assert int(dut.num_votes.value) == votes
+
                 completed = True
                 break
 
@@ -114,11 +107,11 @@ async def test_restart(dut, test_cases: Sequence[TestCase]):
             while cycle_count <= tc.max_cycles:
                 if dut.ready.value:
                     assert not dut.busy.value
-                    if tc.expect_error:
-                        raise Exception("Forest returned ready, expected error")
 
-                    assert int(dut.prediction.value) == tc.expected_prediction
-                    assert int(dut.num_votes.value) == tc.expected_votes
+                    winner, votes = tc.winning_vote()
+                    assert int(dut.prediction.value) == winner
+                    assert int(dut.num_votes.value) == votes
+
                     completed = True
                     break
 

@@ -5,9 +5,6 @@ module TreeCell::<L: Layout> #(
     /// Size of the tree cache in 64 bit dwords
     param CELL_CACHE_SIZE: u64 = 1024,
 
-    /// Inhibit model checking. Should only be used for development purposes.
-    param INHIBIT_ERR: bbool = false,
-
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE)   ,
     const FEAT_PORTS_PER_TREE  : u32 = if USE_SUPERSCALAR ? 2 : 1,
 ) (
@@ -16,19 +13,43 @@ module TreeCell::<L: Layout> #(
 
     rst_cache: input reset,
 
-    /// Strobe signalling the start of an evaluation
+    /// Synchronous input, active high strobe. Signals the start of a full tree traversal evaluation.
+    /// The cell will launch a read at the next header address asynchronously on `start` going high.
+    /// A new `start` strobe may be asserted on the same cycle as `pred_ack`, but no earlier.
     start: input lbool,
-    /// Tree index within the cache, aka the address of the first node in the tree
-    tree_header_addr: input logic<CELL_CACHE_ADDR_WIDTH>,
 
-    /// Data inside the evaluated tree's header
-    tree_header_data: output node_layout::TreeHeader,
-    header_valid    : output lbool                  ,
+    /// Synchronous input, active high strobe. May only be asserted on the same cycles as `start`.
+    /// A tree cell retains its traversal state and remembers which header address to fetch next.
+    /// When `restart` is asserted, the next tree header will be fetched in cache at address 0
+    /// (ie, restarting a brand new forest evaluation.)
+    restart: input lbool,
 
-    ready     : output lbool        ,
-    busy      : output lbool        ,
-    error     : output lbool        ,
+    /// Synchronous output, active high. When `pred_valid` is asserted, a new prediction
+    /// is ready to be read. This signal may be asserted as early as the cycle following a
+    /// `start` strobe. Every `start` will eventually be paired with a `pred_valid`.
+    /// `pred_valid` and `prediction` will be held stable until `pred_ack` is asserted.
+    /// Exception: if num_trees_in_cell == 0 after a start && restart strobe, no prediction
+    /// will be output.
+    pred_valid: output lbool,
+
+    /// Synchronous output. The evaluated tree's predicted class
     prediction: output L::Prediction,
+
+    /// Asynchronous input, active high. The prediction has been registered. May be asserted on
+    /// the same cycle as `pred_valid`.
+    pred_ack: input lbool,
+
+    /// Synchronous output. The number of trees in this cell's cache. This output is guaranteed to
+    /// be valid the cycle following a `start && restart` assertion.
+    num_trees_in_cell: output node_layout::NumTrees,
+
+    /// Signals the `num_trees_in_cell` output is valid. Typically, it is guaranteed to be valid exactly
+    /// two cycles after a `start && restart` strobe.
+    num_trees_in_cell_valid: output lbool,
+
+    /// Asynchronous output. The cell is currently evaluating a tree. This also entails that
+    /// the cell's cache is occupied.
+    busy: output lbool,
 
     feature_ports: modport memutils::ScratchpadRamPort::read_master [FEAT_PORTS_PER_TREE],
     ram_port     : modport memutils::BramPort::slave                                     ,
@@ -44,21 +65,23 @@ module TreeCell::<L: Layout> #(
         idle = 0,
         read_header = 1,
         evaluating = 2,
+        hold_result = 3,
+        prefetch_header = 4,
     }
 
     var state     : State;
     var next_state: State;
 
-    var ready_reg : lbool;
-    var next_ready: lbool;
+    var header_addr        : NodePtr;
+    var current_header_addr: NodePtr;
 
-    var busy_reg : lbool;
-    var next_busy: lbool;
+    var current_tree_len  : node_layout::TreeLen;
+    var current_tree_len_q: node_layout::TreeLen;
 
-    var err_reg : lbool;
-    var next_err: lbool;
+    let master_select: lbool = !busy;
 
-    var next_prediction: L::Prediction;
+    var start_q  : lbool;
+    var restart_q: lbool;
 
     inst tree_cache_bus: memutils::BramPort #(
         NUM_COL   : CACHE_NUM_COL        ,
@@ -78,7 +101,7 @@ module TreeCell::<L: Layout> #(
         master_0     : tree_cache_bus        ,
         master_1     : ram_port              ,
         slave        : tree_cache_bus_demuxed,
-        master_select: !busy                 ,
+        master_select                        ,
     );
 
     // RAM with 64b wide data so we can fetch a node in a single cycle
@@ -95,10 +118,7 @@ module TreeCell::<L: Layout> #(
     var read_addr     : NodePtr;
     var next_read_addr: NodePtr;
 
-    let current_node_idx: NodePtr = read_addr - tree_header_addr;
-
-    var next_tree_header_data: node_layout::TreeHeader;
-    assign header_valid = state == State::evaluating || state == State::read_header;
+    let current_node_idx: NodePtr = read_addr - current_header_addr;
 
     // Node indices are relative, mapping directly to a dword index
     // in the RAM.
@@ -110,28 +130,23 @@ module TreeCell::<L: Layout> #(
     var eval_is_prediction_0: lbool        ;
     var eval_prediction_0   : L::Prediction;
     var eval_next_idx_0     : NodePtr      ;
-    var eval_error_0        : lbool        ;
 
     inst evaluator_0: NodeEvaluator::<L> #(
         CELL_CACHE_ADDR_WIDTH  ,
-        INHIBIT_ERR            ,
     ) (
         node            : node_low            ,
         current_node_idx: current_node_idx    ,
         is_prediction   : eval_is_prediction_0,
         prediction      : eval_prediction_0   ,
         next_node_idx   : eval_next_idx_0     ,
-        error           : eval_error_0        ,
         feature_port    : feature_ports[0]    ,
     );
 
     var eval_is_prediction: lbool        ;
     var eval_prediction   : L::Prediction;
     var eval_next_idx     : NodePtr      ;
-    var eval_error        : lbool        ;
 
-    var header_data         : node_layout::TreeHeader;
-    var tree_header_data_reg: node_layout::TreeHeader;
+    var header_data: node_layout::TreeHeader;
 
     // When fetching the header, if the first node is at index 1, we already have the result available
     // in the high data bits. Only relevant when using superscalar evaluation.
@@ -147,18 +162,15 @@ module TreeCell::<L: Layout> #(
         var eval_is_prediction_1: lbool        ;
         var eval_prediction_1   : L::Prediction;
         var eval_next_idx_1     : NodePtr      ;
-        var eval_error_1        : lbool        ;
 
         inst evaluator_1: NodeEvaluator::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
-            INHIBIT_ERR            ,
         ) (
             node            : node_high           ,
             current_node_idx: node_idx            ,
             is_prediction   : eval_is_prediction_1,
             prediction      : eval_prediction_1   ,
             next_node_idx   : eval_next_idx_1     ,
-            error           : eval_error_1        ,
             feature_port    : feature_ports[1]    ,
         );
 
@@ -174,12 +186,10 @@ module TreeCell::<L: Layout> #(
                 eval_is_prediction = eval_is_prediction_1;
                 eval_prediction    = eval_prediction_1;
                 eval_next_idx      = eval_next_idx_1;
-                eval_error         = eval_error_1;
             } else {
                 eval_is_prediction = eval_is_prediction_0;
                 eval_prediction    = eval_prediction_0;
                 eval_next_idx      = eval_next_idx_0;
-                eval_error         = eval_error_0;
             }
 
         }
@@ -197,20 +207,23 @@ module TreeCell::<L: Layout> #(
         assign eval_is_prediction         = eval_is_prediction_0;
         assign eval_prediction            = eval_prediction_0;
         assign eval_next_idx              = eval_next_idx_0;
-        assign eval_error                 = eval_error_0;
         assign header_data                = node_low as node_layout::TreeHeader;
         assign header_points_to_node_high = false;
     }
 
+    let discard_prefetch: lbool   = state == State::prefetch_header && !start_q;
+    let prefetch_miss   : lbool   = state == State::prefetch_header && restart_q && start_q;
+    let next_header_addr: NodePtr = current_header_addr + current_tree_len as NodePtr;
+
     always_comb {
         // Default: maintain current state
-        next_state            = state;
-        next_read_addr        = read_addr;
-        next_ready            = ready_reg;
-        next_busy             = busy_reg;
-        next_err              = err_reg;
-        next_prediction       = prediction;
-        next_tree_header_data = tree_header_data_reg;
+        next_state        = state;
+        next_read_addr    = read_addr;
+        header_addr       = current_header_addr;
+        current_tree_len  = current_tree_len_q;
+        num_trees_in_cell = 0;
+
+        pred_valid = state != State::idle && eval_is_prediction;
 
         tree_cache_bus.enable            = false;
         tree_cache_bus.byte_write_enable = 0;
@@ -219,33 +232,37 @@ module TreeCell::<L: Layout> #(
 
         // State machine
         case state {
-            State::read_header: {
-                tree_cache_bus.enable =  true;
-                next_read_addr        += header_data.first_node_ptr as NodePtr;
-                next_tree_header_data =  header_data;
-                next_state            =  State::evaluating;
+            State::read_header, State::prefetch_header: {
 
-                // If the header points to node index 1, the node data is already available.
-                // We can directly evaluate it.
-                if header_points_to_node_high {
-                    // Same logic as State::evaluating
-                    // Leaf node reached - use prediction
-                    if eval_is_prediction {
-                        next_ready      = true;
-                        next_busy       = false;
-                        next_state      = State::idle;
-                        next_prediction = eval_prediction as L::Prediction;
+                if discard_prefetch {
+                    // Don't start a new evaluation. Fetched line discarded
+                    tree_cache_bus.enable = false;
+                    next_state            = State::idle;
+                    pred_valid            = false;
+                } else if prefetch_miss {
+                    // Prefetch miss. Fetch the header at address 0 and restart evaluation from there
+                    next_state            = State::read_header;
+                    next_read_addr        = 0;
+                    header_addr           = 0;
+                    tree_cache_bus.enable = true;
+                    pred_valid            = false;
+                } else {
+                    // Fetch hit. Directly evaluate prefetched cache line
+                    next_read_addr    += header_data.first_node_ptr as NodePtr;
+                    current_tree_len  =  header_data.tree_len;
+                    num_trees_in_cell =  header_data.trees_in_cell;
+
+                    // If the header points to node index 1, the node data is already available.
+                    // We can directly evaluate it.
+                    if header_points_to_node_high && eval_is_prediction {
+                        next_state = State::hold_result;
+                    } else if num_trees_in_cell == 0 && num_trees_in_cell_valid {
+                        // If cell is empty, go back to idle without committing anything
+                        tree_cache_bus.enable = false;
+                        next_state            = State::idle;
                     } else {
-                        // Continue on with another read
                         tree_cache_bus.enable = true;
-                        // tree_header_addr will become available next cycle. Instead, here we use
-                        // read_addr, which points to the header address this cycle.
-                        next_read_addr = eval_next_idx as NodePtr + read_addr;
-                        next_err       = eval_error;
-                        if next_err {
-                            next_busy  = false;
-                            next_state = State::idle;
-                        }
+                        next_state            = State::evaluating;
                     }
                 }
             }
@@ -253,61 +270,72 @@ module TreeCell::<L: Layout> #(
             State::evaluating: {
                 // Leaf node reached - use prediction
                 if eval_is_prediction {
-                    next_ready      = true;
-                    next_busy       = false;
-                    next_state      = State::idle;
-                    next_prediction = eval_prediction as L::Prediction;
+                    next_state = State::hold_result;
                 } else {
                     // Continue on with another read
                     tree_cache_bus.enable = true;
-                    next_read_addr        = eval_next_idx as NodePtr + tree_header_addr;
-                    next_err              = eval_error;
-                    if next_err {
-                        next_busy  = false;
-                        next_state = State::idle;
-                    }
+                    next_read_addr        = eval_next_idx as NodePtr + current_header_addr;
                 }
             }
 
-            // Default is idle
-            default: {
-                if start {
-                    next_state     = State::read_header;
-                    next_read_addr = tree_header_addr;
-                    next_ready     = false;
-                    next_busy      = true;
-                    next_err       = false;
+            State::idle: {
+                // As per the interface definition, a start may not occur
+                // earlier than an ack for the previous start.
+                if start_q {
+                    // At this state, the current header is known (has been set during the ack cycle).
+                    // Exception is if restart_q is set, then we need to fetch at addr 0.
+                    next_state = State::read_header;
+                    // next_read_addr = start_base_addr;
+                    // header_addr    = start_base_addr;
+
+                    if restart_q {
+                        next_read_addr = 0;
+                        header_addr    = 0;
+                    }
 
                     // Start to read 1st node from tree cache
-                    tree_cache_bus.enable     = true;
-                    tree_cache_bus.write_data = 0;
+                    tree_cache_bus.enable = true;
                 }
             }
+            State::hold_result: {}
+
+            // NOTE: Default should be unreachable: explicitly handle other states if adding
+            // more states to the State enum
+            default: {}
         }
+
+        if pred_ack {
+            tree_cache_bus.enable = true;
+            next_read_addr        = next_header_addr;
+            header_addr           = next_header_addr;
+            next_state            = State::prefetch_header;
+        }
+        // pred_ack low: hold. No state change, outputs stand.
+
     }
 
     always_ff (clk, rst) {
         if_reset {
-            read_addr            = 0;
-            ready_reg            = false;
-            busy_reg             = false;
-            err_reg              = false;
-            prediction           = 0;
-            state                = State::idle;
-            tree_header_data_reg = 0;
+            start_q                 = false;
+            restart_q               = false;
+            num_trees_in_cell_valid = false;
+
+            read_addr           = 0;
+            current_header_addr = 0;
+            current_tree_len_q  = 0;
+            state               = State::idle;
         } else {
-            read_addr            = next_read_addr;
-            ready_reg            = next_ready;
-            busy_reg             = next_busy;
-            err_reg              = next_err;
-            prediction           = next_prediction;
-            state                = next_state;
-            tree_header_data_reg = next_tree_header_data;
+            start_q                 = start;
+            restart_q               = restart;
+            num_trees_in_cell_valid = restart_q && start_q;
+
+            read_addr           = next_read_addr;
+            current_header_addr = header_addr;
+            current_tree_len_q  = current_tree_len;
+            state               = next_state;
         }
     }
 
-    assign busy             = busy_reg || start;
-    assign ready            = ready_reg && !start;
-    assign error            = err_reg;
-    assign tree_header_data = next_tree_header_data;
+    assign busy       = start_q || state != State::idle;
+    assign prediction = eval_prediction;
 }
