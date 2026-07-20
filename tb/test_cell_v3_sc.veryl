@@ -72,6 +72,7 @@ import test_cases
 CASES = [
     test_cases.TC_ALIGNED_1CELL,
     test_cases.TC_MISALIGNED_1CELL,
+    test_cases.TC_SINGLE_NODE_1CELL,
 ]
 
 @cocotb.test()
@@ -79,23 +80,23 @@ async def cell_min_latency(dut):
     for tc in CASES:
         await test_tree_cell_v3.run_case_min_latency(dut, tc)
 
-#@cocotb.test()
-#async def cell_with_holds(dut):
-#    for tc in CASES:
-#        for hold in (1,2,5,17):
-#            await test_tree_cell_v3.run_case_with_holds(dut, tc, hold)
-#            await test_tree_cell_v3.run_case_delayed_start(dut, tc, hold)
-#
-#        await test_tree_cell_v3.run_case_random_holds(dut, tc)
-#
-#@cocotb.test()
-#async def cell_two_forests(dut):
-#    for tc in CASES:
-#        await test_tree_cell_v3.run_case_two_forests(dut, tc)
-#
-#@cocotb.test()
-#async def cell_empty(dut):
-#    await test_tree_cell_v3.test_cell_empty_cache(dut)
-#    await test_tree_cell_v3.test_cell_empty_then_populated(dut, CASES[0])
+@cocotb.test()
+async def cell_with_holds(dut):
+    for tc in CASES:
+        for hold in (1,2,5,17):
+            await test_tree_cell_v3.run_case_with_holds(dut, tc, hold)
+            await test_tree_cell_v3.run_case_delayed_start(dut, tc, hold)
+
+        await test_tree_cell_v3.run_case_random_holds(dut, tc)
+
+@cocotb.test()
+async def cell_two_forests(dut):
+    for tc in CASES:
+        await test_tree_cell_v3.run_case_two_forests(dut, tc)
+
+@cocotb.test()
+async def cell_empty(dut):
+    await test_tree_cell_v3.test_cell_empty_cache(dut)
+    await test_tree_cell_v3.test_cell_empty_then_populated(dut, CASES[0])
 
 }}}

@@ -1,0 +1,17 @@
+// Tree 0: Cell 0
+// Tree length=2, first node ptr=1
+// trees in cell = null
+// Attention: this tree should result in an instant prediction for superscalar node issues
+02000000 01000100
+
+// | left: class=0 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=1 |
+0000 0200 2041 01c0
+
+// Tree 1: Cell 1
+// Tree length=2, first node ptr=1
+// trees in cell = null
+// Attention: this tree should result in an instant prediction for superscalar node issues
+02000000 01000100
+
+// | left: class=1 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=0 |
+0100 0200 2041 01c0

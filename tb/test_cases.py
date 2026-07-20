@@ -42,34 +42,40 @@ TC_MISALIGNED_1CELL = TestCase(
     hexfile="forest_1c_2t_6n_misaligned.hex",
     features=[0x4110, 0x4130, 0x4110],
     cache_mem_ranges=[range(0x10, 0x60)],
-    # expected_prediction=1,
     expected_votes=Counter({1: 2}),
-    # num_trees=2,
+)
+
+TC_SINGLE_NODE_1CELL = TestCase(
+    hexfile="forest_1c_1t_1n.hex",
+    features=[0x4110, 0x4130, 0x4110],
+    cache_mem_ranges=[range(0x00, 0x10)],
+    expected_votes=Counter({2: 1}),
 )
 
 TC_ALIGNED_2CELLS = TestCase(
     hexfile="forest_2c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
     cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x70)],
-    # expected_prediction=1,
     expected_votes=Counter({1: 2, 2: 2}),
-    # num_trees=2,
 )
 
 TC_2CELLS_ASYMMETRICAL = TestCase(
     hexfile="forest_1c_2t_6n_aligned.hex",
     features=[0x4110, 0x4130, 0x4110],
     cache_mem_ranges=[range(0x10, 0x60), range(0x60, 0xF0)],
-    # expected_prediction=1,
     expected_votes=Counter({1: 2, 2: 1}),
-    # num_trees=2,
 )
 
 TC_MISALIGNED_2CELLS = TestCase(
     hexfile="forest_2c_2t_6n_misaligned.hex",
     features=[0x4110, 0x4130, 0x4110],
     cache_mem_ranges=[range(0x10, 0x40), range(0x40, 0x60)],
-    # expected_prediction=1,
     expected_votes=Counter({1: 2}),
-    # num_trees=2,
+)
+
+TC_SINGLE_NODE_2CELLS = TestCase(
+    hexfile="forest_2c_2t_2n.hex",
+    features=[0x4110, 0x4130, 0x4110],
+    cache_mem_ranges=[range(0x00, 0x10), range(0x10, 0x20)],
+    expected_votes=Counter({1: 1, 2: 1}),
 )

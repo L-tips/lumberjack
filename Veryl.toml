@@ -29,6 +29,8 @@ include_files = [
     "tb/test_data/tree_2n_aligned.hex",
     "tb/test_data/tree_2n_misaligned.hex",
     "tb/test_data/tree_2n_circular.hex",
+    "tb/test_data/forest_1c_1t_1n.hex",
+    "tb/test_data/forest_2c_2t_2n.hex",
     "tb/test_data/forest_1c_2t_6n_aligned.hex",
     "tb/test_data/forest_2c_2t_6n_aligned.hex",
     "tb/test_data/forest_1c_2t_6n_misaligned.hex",
