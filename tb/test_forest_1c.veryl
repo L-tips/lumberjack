@@ -19,11 +19,13 @@ module TestForest_1Cell (
     const USE_SUPERSCALAR     : bbool = false;
     const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
+    #[allow(unassign_variable)]
     inst feature_write_bus: memutils::ScratchpadRamPort #(
         DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
         ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
     );
 
+    #[allow(unassign_variable)]
     inst cell_cache_ports: memutils::BramPort [CELL_INSTANCES] #(
         NUM_COL   : CELL_CACHE_NUM_COL   ,
         COL_WIDTH : 8                    ,

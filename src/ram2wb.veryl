@@ -35,7 +35,13 @@ module Bram2Wishbone #(
     // Width is $clog2(SUBWORD_COUNT); zero when SUBWORD_COUNT == 1.
     const SUBWORD_IDX_WIDTH: u32 = RAM_ADDR_SHIFT - ADDR_SHIFT;
 
-    let sub_word_idx: logic<SUBWORD_IDX_WIDTH> = if SUBWORD_COUNT >: 1 ? wb.addr[RAM_ADDR_SHIFT - 1:ADDR_SHIFT] : 0;
+    var sub_word_idx: logic<SUBWORD_IDX_WIDTH>;
+
+    if SUBWORD_COUNT >: 1 :assign_subword_idx {
+        assign sub_word_idx = wb.addr[RAM_ADDR_SHIFT - 1:ADDR_SHIFT];
+    } else {
+        assign sub_word_idx = '0;
+    }
 
     // Bit offset of the WB word within the RAM word
     let subword_bit_offset: logic<32> = sub_word_idx * DATA_WIDTH;

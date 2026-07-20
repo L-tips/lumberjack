@@ -19,11 +19,13 @@ module Benchmark (
     const WB_DATA_WIDTH: u8 = 32;
     const WB_ADDR_WIDTH: u8 = 32;
 
+    #[allow(unassign_variable)]
     inst cell_cache_ports: memutils::Wishbone [CELL_INSTANCES] #(
         DATA_WIDTH: WB_DATA_WIDTH,
         ADDR_WIDTH: WB_ADDR_WIDTH,
     );
 
+    #[allow(unassign_variable)]
     inst control_bus: memutils::Wishbone #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
 
     inst forest_top: ForestTop::<test_layout> #(
