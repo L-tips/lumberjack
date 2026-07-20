@@ -4,7 +4,7 @@ from cocotb.triggers import RisingEdge, FallingEdge, ClockCycles, Combine
 
 from wb_driver import Transaction, WbMaster
 
-from test_cases import TC_ALIGNED_2CELLS, TC_MISALIGNED_2CELLS, TC_CIRCULAR_2CELLS
+from test_cases import TC_ALIGNED_2CELLS, TC_MISALIGNED_2CELLS
 
 import utils
 from utils import read_hex
@@ -117,8 +117,9 @@ async def forest_top_test(dut):
         await RisingEdge(dut.clk)
 
         # Forest should predict class #1 with 2 votes
-        assert dut.forest_top.prediction.value == tc.expected_prediction
-        assert dut.forest_top.num_votes.value == tc.expected_votes
+        winner, votes = tc.winning_vote()
+        assert dut.forest_top.prediction.value == winner
+        assert dut.forest_top.num_votes.value == votes
 
         # Interrupt line should be set
         assert dut.interrupt_line.value == 1
@@ -126,7 +127,7 @@ async def forest_top_test(dut):
         # Clear the interrupt by reading prediction
         _, _, prediction = await control_port.transaction(Transaction(addr=0x1C))
 
-        assert prediction == tc.expected_prediction
+        assert prediction == winner
         assert dut.interrupt_line.value == 0
 
         # Also read the number of votes
@@ -172,72 +173,3 @@ async def forest_top_test(dut):
             assert dut.forest_top.busy.value == 0
             assert dut.forest_top.ready.value == 1
             assert dut.forest_top.start_stb.value == 0
-
-
-@cocotb.test()
-async def rejects_circular_forests(dut):
-    # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
-    await RisingEdge(dut.clk)
-
-    control_port = WbMaster(dut.clk, dut.control_bus)
-    cell_cache_ports = list(
-        map(lambda bus: WbMaster(dut.clk, bus), dut.cell_cache_ports)
-    )
-
-    test_cases = [TC_CIRCULAR_2CELLS]
-
-    for tc in test_cases:
-        print(f"RUNNING TEST CASE: {tc.hexfile}")
-
-        # Init and reset
-        await do_reset(dut, control_port, cell_cache_ports)
-
-        # Write forest to tree evaluator cells
-        tasks = []
-        for cell_idx, mem_range in enumerate(tc.cache_mem_ranges):
-            tasks.append(
-                cocotb.start_soon(
-                    fill_tree_cache(cell_cache_ports[cell_idx], tc.hexfile, mem_range)
-                )
-            )
-        await Combine(*tasks)
-
-        # Write features
-        txns = []
-        for word_idx, word in enumerate(utils.pack_16b_to_32b(tc.features)):
-            txns.append(Transaction(addr=0x40 + word_idx * 4, wdata=word, we=True))
-        await control_port.pipelined(txns)
-
-        txns = [
-            # Enable the ERROR interrupt, but not the READY bit
-            Transaction(addr=0x24, wdata=0b10, sel=0b1, we=True),
-            # enable
-            Transaction(addr=0x0, wdata=1, sel=0b1, we=True),
-        ]
-        await control_port.pipelined(txns)
-
-        await FallingEdge(dut.forest_top.busy)
-        await RisingEdge(dut.clk)
-        await RisingEdge(dut.clk)
-
-        assert dut.interrupt_line.value == 1
-
-        await ClockCycles(dut.clk, 4)
-
-        # Check that the interrupt is still on
-        # a few cycles later
-        assert dut.interrupt_line.value == 1
-
-        _, _, rdata = await control_port.transaction(Transaction(addr=0x2C))
-
-        # Check that only the ERROR bit is set
-        assert rdata == 0b10
-
-        # Enable
-        await control_port.transaction(Transaction(addr=0x0, wdata=1, sel=0b1, we=True))
-        await FallingEdge(dut.forest_top.busy)
-        await RisingEdge(dut.clk)
-
-        # Reenabling the evaluator should have cleared the interrupts
-        assert dut.interrupt_line.value == 0

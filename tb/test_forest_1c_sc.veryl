@@ -86,6 +86,14 @@ async def forest_1c_misaligned_sc(dut):
     await test_forest.test_forest(dut, cases)
 
 @cocotb.test()
+async def forest_1c_single_node(dut):
+    cases = [
+        test_cases.TC_SINGLE_NODE_1CELL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
 async def forest_1c_restart(dut):
     cases = [
         test_cases.TC_ALIGNED_1CELL,

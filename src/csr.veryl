@@ -128,20 +128,20 @@ module CsrInterface::<L: Layout> #(
 
         // Set INTEN register bits
         if write && (address == INTEN_SET) {
-            // Can only write to first 2 bits
-            next_inten |= wdata[1:0];
+            // Can only write to first bit
+            next_inten |= wdata[0];
         }
 
         // Clear INTEN register bits
         if write && (address == INTEN_CLR) {
-            // Can only write to first 2 bits
-            next_inten &= ~wdata[1:0];
+            // Can only write to first bit
+            next_inten &= ~wdata[0];
         }
 
         // Clear INTFLAG register bits
         if write && (address == INTFLAG) {
-            // Can only write to first 2 bits
-            next_intflag &= ~wdata[1:0];
+            // Can only write to first bit
+            next_intflag &= ~wdata[0];
         }
 
         // Clear the enable bit if the forest

@@ -82,7 +82,7 @@ module CellController::<L: Layout> #(
     assign vote_valid    = !fifo_empty;
 
     // More trees remain after the one whose vote we are securing now.
-    let more_trees: lbool = next_done <: trees_total;
+    let more_trees: lbool = next_done <: next_total;
 
     // Launch the next traversal coincidentally with the ack, unless this was
     // the last tree. `restart` only on a fresh forest.
@@ -95,7 +95,7 @@ module CellController::<L: Layout> #(
     let all_trees_done: lbool = forest_active && trees_total != 0 && trees_done >= trees_total;
 
     assign busy_o  = forest_active && !ready_o;
-    assign ready_o = forest_active && fifo_empty && !cell_busy && (all_trees_done || empty_cache);
+    assign ready_o = fifo_empty && !cell_busy && !start_forest && (all_trees_done || empty_cache);
 
     always_comb {
         next_total       = trees_total;
