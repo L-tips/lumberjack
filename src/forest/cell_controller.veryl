@@ -1,164 +1,139 @@
+import node_layout::NumTrees;
+
 module CellController::<L: Layout> #(
     param CELL_CACHE_ADDR_WIDTH: u32 = 16,
-    param VOTE_FIFO_DEPTH      : u32 = 2 ,
+    param VOTE_FIFO_DEPTH      : u32 = 4 ,
 ) (
     clk: input clock,
     rst: input reset,
 
+    // Start a brand new evaluation
     start_forest: input lbool,
 
-    cell_busy      : input lbool        ,
-    cell_ready     : input lbool        ,
-    cell_error     : input lbool        ,
-    cell_prediction: input L::Prediction,
-    cell_rst       : input lbool        ,
+    // Cell control signals
+    cell_start       : output lbool                ,
+    cell_restart     : output lbool                ,
+    cell_pred_valid  : input  lbool                ,
+    cell_prediction  : input  L::Prediction        ,
+    cell_pred_ack    : output lbool                ,
+    num_trees_in_cell: input  node_layout::NumTrees,
+    cell_busy        : input  lbool                ,
 
+    // Vote arbiter signals
     vote_valid: output lbool        ,
     vote_ack  : input  lbool        ,
     vote_class: output L::Prediction,
 
-    busy_o : output lbool,
+    // Output signals to CSRs
+    /// Evaluation is in progress. Goes low when all trees in cache have been evaluated.
+    busy_o: output lbool,
+    /// Evaluation ready. Goes high when all trees in cache have been evaluated.
     ready_o: output lbool,
-    error_o: output lbool,
-
-    start_cell      : output lbool                                         ,
-    tree_header_addr: output logic                  <CELL_CACHE_ADDR_WIDTH>,
-    tree_header_data: input  node_layout::TreeHeader                       ,
-    header_valid    : input  lbool                                         ,
 ) {
-    type NodePtr = logic<CELL_CACHE_ADDR_WIDTH>;
 
-    var tree_idx             : NodePtr;
-    var next_tree_idx        : NodePtr;
-    var next_tree_header_addr: NodePtr;
+    var fifo_empty: lbool;
+    var fifo_full : lbool;
+    var fifo_nearly_full: lbool;
+    // A vote is secured exactly when it is pushed.
+    let fifo_push: lbool = cell_pred_ack;
+    let fifo_pop : lbool = vote_ack && !fifo_empty;
 
-    var next_start_cell: lbool;
-    var prev_cell_ready: lbool;
+    // Tree accounting. `trees_total` is latched from the cell the cycle after
+    // start && restart; `trees_done` counts secured votes.
+    var trees_total  : NumTrees;
+    var next_total   : NumTrees;
+    var trees_done   : NumTrees;
+    var next_done    : NumTrees;
+    var forest_active: lbool   ;
+    var next_active  : lbool   ;
 
-    // Converts the potentially latched cell_ready signal into a strobe
-    let cell_prediction_arrived: lbool = cell_ready && !prev_cell_ready;
+    inst votes_fifo: $std::fifo #(
+        TYPE : L::Prediction  ,
+        DEPTH: VOTE_FIFO_DEPTH,
+        THRESHOLD: VOTE_FIFO_DEPTH- 1,
+        // combinational o_full/o_empty
+        FLAG_FF_OUT: false,
+        // registered o_data
+        DATA_FF_OUT  : true ,
+        RESET_RAM    : false,
+        RESET_DATA_FF: true ,
+        CLEAR_DATA   : false,
+        PUSH_ON_CLEAR: false,
+    ) (
+        i_clk: clk,
+        i_rst: rst,
+        // flush stale votes on a new forest eval
+        i_clear      : start_forest   ,
+        o_empty      : fifo_empty     ,
+        o_almost_full: fifo_nearly_full              ,
+        o_full       : fifo_full      ,
+        o_word_count : _              ,
+        i_push       : fifo_push      ,
+        i_data       : cell_prediction,
+        i_pop        : fifo_pop       ,
+        o_data       : vote_class     ,
+    );
 
-    var vote_valid_reg : lbool        ;
-    var next_vote_valid: lbool        ;
-    var vote_class_reg : L::Prediction;
-    var next_vote_class: L::Prediction;
+    // The cell is stalled only when the FIFO cannot accept the vote.
+    // Ack is otherwise unconditional -- predictions go indiscriminately in.
+    // Stall one slot early so the registered flag's staleness can never overflow.
+    assign cell_pred_ack = !fifo_nearly_full && cell_pred_valid;
+    assign vote_valid = !fifo_empty;
 
-    assign vote_valid = cell_prediction_arrived || vote_valid_reg;
-    assign vote_class = if cell_prediction_arrived ? cell_prediction : vote_class_reg;
+    // More trees remain after the one whose vote we are securing now.
+    let more_trees: lbool = next_done <: trees_total;
 
-    // Vote has been acked
-    var vote_ready: lbool;
+    // Launch the next traversal coincidentally with the ack, unless this was
+    // the last tree. `restart` only on a fresh forest.
+    assign cell_start   = (fifo_push && more_trees) || start_forest;
+    assign cell_restart = start_forest;
 
-    // Cell is stalled if a vote is pending and not being acked this cycle
-    let vote_pending: lbool = vote_valid_reg && !vote_ack;
+    var empty_cache     : lbool;
+    var next_empty_cache: lbool;
 
-    // Return ready immediately when the cell is empty
-    var empty_forest_ready     : lbool;
-    var next_empty_forest_ready: lbool;
+    let all_trees_done: lbool = forest_active && trees_total != 0 && trees_done >= trees_total;
 
-    var num_trees_in_cell     : L::TreeIdx;
-    var next_num_trees_in_cell: L::TreeIdx;
-
-    let first_header_valid: lbool = header_valid && tree_idx == 0;
-
-    assign busy_o  = (cell_busy || next_start_cell || !vote_ready) && !empty_forest_ready;
-    assign ready_o = (cell_ready && !next_start_cell && vote_ready) || empty_forest_ready;
-    assign error_o = cell_error && num_trees_in_cell != 0;
+    assign busy_o  = forest_active && !ready_o;
+    assign ready_o = forest_active && fifo_empty && !cell_busy && (all_trees_done || empty_cache);
 
     always_comb {
-        next_tree_idx         = tree_idx;
-        next_tree_header_addr = tree_header_addr;
-        next_start_cell       = false;
-
-        next_vote_valid = vote_valid_reg;
-        next_vote_class = vote_class_reg;
-
-        next_num_trees_in_cell = num_trees_in_cell;
-
-        next_empty_forest_ready = empty_forest_ready;
-
-        if first_header_valid {
-            next_num_trees_in_cell = tree_header_data.trees_in_cell as L::TreeIdx;
-        }
-
-        if start_cell {
-            next_start_cell = false;
-        }
-
-        if cell_error {
-            next_start_cell = false;
-        } else if cell_prediction_arrived {
-
-            if !vote_ack {
-                // Vote arrived but not yet acked, buffer it
-                next_vote_valid = true;
-                next_vote_class = cell_prediction;
-            }
-            // else: acked same cycle it arrived, no need to buffer
-
-            // Latch the vote if a prediction just arrived
-            next_vote_valid = true;
-            next_vote_class = cell_prediction;
-
-            // Only advance to next tree if vote buffer is clear or being
-            // cleared this cycle, so we don't overwrite an unserviced vote
-            if !vote_pending && next_tree_idx as L::TreeIdx <: num_trees_in_cell - 1 {
-                next_tree_idx += 1;
-                // Tree header contains the tree's length
-                next_tree_header_addr = tree_header_addr + tree_header_data.tree_len as NodePtr;
-                next_start_cell       = true;
-            }
-        }
+        next_total  = trees_total;
+        next_done   = trees_done;
+        next_active = forest_active;
 
         if start_forest {
-            next_tree_idx         = 0;
-            next_tree_header_addr = 0;
-            next_start_cell       = true;
-        }
+            next_total  = 0;
+            next_done   = 0;
+            next_active = true;
+        } else {
+            // trees_in_cell is valid the cycle after start && restart, and the
+            // cell holds it thereafter. Latch it once while it is nonzero.
+            if forest_active && trees_total == 0 {
+                next_total = num_trees_in_cell;
+            }
 
-        // If num_trees == 0, we're done
-        if first_header_valid && next_num_trees_in_cell == 0 {
-            next_empty_forest_ready = true;
-            next_start_cell         = false;
-        }
+            if fifo_push {
+                next_done = trees_done + 1;
+            }
 
-        if next_start_cell || cell_rst {
-            next_empty_forest_ready = false;
-        }
-
-        // Clear vote_valid when acked
-        if vote_ack {
-            next_vote_valid = false;
+            // Empty cache: the cell bails out and never predicts, so retire
+            // the forest as soon as we know the count is zero.
+            if forest_active && !cell_busy && num_trees_in_cell == 0 && trees_total == 0 {
+                next_active = false;
+            }
         }
     }
 
     always_ff (clk, rst) {
         if_reset {
-            tree_idx         = 0;
-            tree_header_addr = 0;
-            // tree_rst   = false;
-            start_cell         = false;
-            vote_valid_reg     = false;
-            vote_class_reg     = 0;
-            prev_cell_ready    = false;
-            vote_ready         = true;
-            empty_forest_ready = false;
-            num_trees_in_cell  = 0;
+            trees_total   = 0;
+            trees_done    = 0;
+            forest_active = false;
         } else {
-            tree_idx           = next_tree_idx;
-            tree_header_addr   = next_tree_header_addr;
-            start_cell         = next_start_cell;
-            vote_valid_reg     = next_vote_valid;
-            vote_class_reg     = next_vote_class;
-            prev_cell_ready    = cell_ready;
-            empty_forest_ready = next_empty_forest_ready;
-            num_trees_in_cell  = next_num_trees_in_cell;
-
-            if vote_ack {
-                vote_ready = true;
-            } else if start_cell {
-                vote_ready = false;
-            }
+            trees_total   = next_total;
+            trees_done    = next_done;
+            forest_active = next_active;
         }
+
     }
 }

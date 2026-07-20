@@ -38,3 +38,6 @@ include_files = [
     "tb/test_data/forest_1c_2t_6n_circular.hex",
     "tb/test_data/forest_2c_2t_6n_circular.hex",
 ]
+
+[test.verilator]
+compile_args = ["-Wno-WIDTHEXPAND"]

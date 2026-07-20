@@ -69,7 +69,6 @@ pub module Forest::<L: Layout> #(
     }
 
     var cells_ready: logic<CELL_INSTANCES>;
-    var cells_error: logic<CELL_INSTANCES>;
 
     // Start a new evaluation when enabled and not already running or done
     var start_eval_reg: lbool;
@@ -98,83 +97,61 @@ pub module Forest::<L: Layout> #(
         winning_votes              ,
     );
 
-    var cells_error_posedge    : lbool          ;
-    var cells_error_posedge_reg: lbool          ;
-    let rst_cells_low          : reset_async_low = !(cells_error_posedge_reg as reset_async_high
-        || !rst as reset_async_low);
-    let rst_cells              : reset           = rst_cells_low as reset;
-
-    inst detect_error_edge: $std::edge_detector #(
-        WIDTH        : 1    ,
-        INITIAL_VALUE: false,
-    ) (
-        i_clk    : clk                ,
-        i_rst    : rst                ,
-        i_clear  : false              ,
-        i_data   : |cells_error       ,
-        o_posedge: cells_error_posedge,
-        o_negedge: _                  ,
-        o_edge   : _                  ,
-    );
-
     for i in 0..CELL_INSTANCES :inst_tree_cells {
         const CACHE_IDX: u32 = i / CELL_INSTANCES_PER_CACHE;
         const SLOT_IDX : u32 = i % CELL_INSTANCES_PER_CACHE;
         const BASE_PORT: u32 = CACHE_IDX * READ_PORTS_PER_CACHE_U32 + SLOT_IDX * PORTS_PER_TREE;
 
-        var start_cell: lbool;
+        var cell_start  : lbool;
+        var cell_restart: lbool;
 
-        var cell_busy      : lbool        ;
-        var cell_ready     : lbool        ;
-        var cell_error     : lbool        ;
-        var cell_prediction: L::Prediction;
-
-        var tree_header_addr: logic<CELL_CACHE_ADDR_WIDTH>;
-
-        var tree_header_data: node_layout::TreeHeader;
-        var header_valid    : lbool                  ;
+        var pred_valid       : lbool                ;
+        var cell_prediction  : L::Prediction        ;
+        var pred_ack         : lbool                ;
+        var num_trees_in_cell: node_layout::NumTrees;
+        var cell_busy        : lbool                ;
 
         inst cell_controller: CellController::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
         ) (
-            clk                                  ,
-            rst             : rst_cells          ,
-            start_forest    : start_eval         ,
-            cell_busy                            ,
-            cell_ready                           ,
-            cell_error                           ,
-            cell_prediction                      ,
-            cell_rst        : cells_error_posedge,
-            start_cell                           ,
-            tree_header_addr                     ,
-            tree_header_data                     ,
-            header_valid                         ,
-            ready_o         : cells_ready[i]     ,
-            busy_o          : cells_busy[i]      ,
-            error_o         : cells_error[i]     ,
-            vote_valid      : vote_valid[i]      ,
-            vote_class      : vote_classes[i]    ,
-            vote_ack        : vote_ack[i]        ,
+            clk                     ,
+            rst                     ,
+            start_forest: start_eval,
+
+            cell_start                   ,
+            cell_restart                 ,
+            cell_pred_valid  : pred_valid,
+            cell_prediction              ,
+            cell_pred_ack    : pred_ack  ,
+            num_trees_in_cell            ,
+            cell_busy                    ,
+
+            vote_valid: vote_valid[i]  ,
+            vote_ack  : vote_ack[i]    ,
+            vote_class: vote_classes[i],
+
+            ready_o: cells_ready[i],
+            busy_o : cells_busy[i] ,
+
         );
 
-        inst tree: TreeCell::<L> #(
+        inst tree: TreeCellV3::<L> #(
             USE_SUPERSCALAR  ,
             CELL_CACHE_SIZE  ,
-            INHIBIT_ERR      ,
         ) (
-            clk                                                           ,
-            rst             : rst_cells                                   ,
-            rst_cache       : rst_cell_caches                             ,
-            tree_header_addr                                              ,
-            tree_header_data                                              ,
-            header_valid                                                  ,
-            ready           : cell_ready                                  ,
-            busy            : cell_busy                                   ,
-            error           : cell_error                                  ,
-            start           : start_cell                                  ,
-            prediction      : cell_prediction                             ,
-            feature_ports   : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
-            ram_port        : cell_cache_ports[i]                         ,
+            clk                               ,
+            rst                               ,
+            rst_cache        : rst_cell_caches,
+            start            : cell_start     ,
+            restart          : cell_restart   ,
+            pred_valid                        ,
+            prediction       : cell_prediction,
+            pred_ack                          ,
+            num_trees_in_cell                 ,
+            busy             : cell_busy      ,
+
+            feature_ports: feature_read_port[BASE_PORT+:PORTS_PER_TREE],
+            ram_port     : cell_cache_ports[i]                         ,
         );
     }
 
@@ -186,17 +163,10 @@ pub module Forest::<L: Layout> #(
 
     always_ff (clk, rst) {
         if_reset {
-            start_eval_reg          = false;
-            error                   = false;
-            cells_error_posedge_reg = false;
+            start_eval_reg = false;
+            error          = false;
         } else {
-            start_eval_reg          = enable && !busy;
-            cells_error_posedge_reg = cells_error_posedge;
-            if cells_error_posedge {
-                error = true;
-            } else if enable {
-                error = false;
-            }
+            start_eval_reg = enable && !busy;
         }
     }
 
