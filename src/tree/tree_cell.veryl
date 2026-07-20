@@ -200,8 +200,8 @@ module TreeCell::<L: Layout> #(
             node_low as node_layout::TreeHeader
         ;
 
-        assign header_points_to_node_high = state == State::read_header && header_data.first_node_ptr == 1
-            && !eval_high_bits;
+        assign header_points_to_node_high = (state == State::read_header || state == State::prefetch_header)
+            && header_data.first_node_ptr == 1 && !eval_high_bits;
 
     } else {
         assign eval_is_prediction         = eval_is_prediction_0;
