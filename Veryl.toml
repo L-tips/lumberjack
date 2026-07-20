@@ -37,7 +37,8 @@ include_files = [
     "tb/test_data/forest_2c_2t_6n_misaligned.hex",
     "tb/test_data/forest_1c_2t_6n_circular.hex",
     "tb/test_data/forest_2c_2t_6n_circular.hex",
+    "verilator_config.vlt",
 ]
 
 [test.verilator]
-compile_args = ["-Wno-WIDTHEXPAND"]
+compile_args = ["verilator_config.vlt"]

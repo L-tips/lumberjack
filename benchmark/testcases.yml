@@ -52,21 +52,3 @@ models:
     partition_strategy: greedy
     num_trees: 200
     maxnode: 100
-
-  skydive_small:
-    num_cells: 4
-    model_path: bench-data/skydive_200_100.csv
-    test_vectors: bench-data/skydive_test_vectors_50.csv
-    placement_strategy: execution-aware
-    partition_strategy: greedy
-    num_trees: 200
-    maxnode: 100
-
-  covertype_small:
-    num_cells: 4
-    model_path: bench-data/covertype_200_100.csv
-    test_vectors: bench-data/covertype_test_vectors_50.csv
-    placement_strategy: execution-aware
-    partition_strategy: greedy
-    num_trees: 200
-    maxnode: 100

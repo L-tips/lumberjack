@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, First
+from cocotb.triggers import RisingEdge
 from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMissingImports]
 from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
 from perf_monitor import PerfMonitor
@@ -82,9 +82,7 @@ async def perf_benchmark(dut):
 
     for i, vec in enumerate(test_vectors):
         await driver.start(vec.features)
-        await First(RisingEdge(dut.forest_top.ready), RisingEdge(dut.forest_top.error))
-
-        assert not dut.forest_top.error.value, "Unexpected evaluation error"
+        await RisingEdge(dut.forest_top.ready)
 
         pred = await driver.prediction()
         pred_num_votes = await driver.num_votes()
@@ -125,7 +123,6 @@ VERYL_SOURCES = [
     "types.sv",
     "common/test_layout.sv",
     "forest/cell_controller.sv",
-    "forest/vote_fifo.sv",
     "forest/forest.sv",
     "forest/votes_counter.sv",
     "forest/votes_arbiter.sv",
@@ -150,6 +147,9 @@ DEPENDENCY_SOURCES = [
     "memutils/src/wb/wb_ram.sv",
     "memutils/src/wb/wishbone_if.sv",
     "std/edge_detector/edge_detector.sv",
+    "std/fifo/fifo.sv",
+    "std/fifo/fifo_controller.sv",
+    "std/ram/ram.sv",
 ]
 
 
@@ -174,6 +174,7 @@ def test_run_benchmark():
             "--trace",
             "--trace-fst",
             "--trace-structs",
+            "../../verilator_config.vlt",
         ],
         always=True,
     )

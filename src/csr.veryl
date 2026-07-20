@@ -189,12 +189,12 @@ module CsrInterface::<L: Layout> #(
 
         // Read INTEN register
         if read && (address == INTEN_SET || address == INTEN_CLR) {
-            rdata = {30'b0, next_inten};
+            rdata = {31'b0, next_inten};
         }
 
         // Read INTFLAG register
         if read && address == INTFLAG {
-            rdata = {30'b0, next_intflag};
+            rdata = {31'b0, next_intflag};
         }
 
         if read && address == PERF {

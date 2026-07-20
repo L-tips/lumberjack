@@ -11,6 +11,9 @@ filesets:
       - dependencies/memutils/src/bram/bram_bus.sv
       - dependencies/memutils/src/bram/sp_bram.sv
       - dependencies/std/edge_detector/edge_detector.sv
+      - dependencies/std/fifo/fifo.sv
+      - dependencies/std/fifo/fifo_controller.sv
+      - dependencies/std/ram/ram.sv
       - target/veryl/types.sv
       - target/veryl/tree/float_leq.sv
       - target/veryl/tree/bram_demux.sv
