@@ -23,34 +23,36 @@
 0200 0300 2041 02c0
 
 // --- Tree 1, header, idx 0 ---
+// Tree length=2, first node ptr=1
+// trees in cell = null
+// Attention: this tree should result in an instant prediction for superscalar node issues
+02000000 01000000
+
+// --- Tree 1, Node 0, idx 1 ---
+// | left: class=0 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=1 |
+0000 0200 2041 01c0
+
+// --- Tree 2, header, idx 0 ---
 // Tree length=4, first node ptr=1
 // trees in cell = null
 04000000 01000000
 
-// --- Tree 1, Node 0, idx 1 ---
+// --- Tree 2, Node 0, idx 1 ---
 // | left: ptr=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |
 0200 0300 2041 0100
 
-// --- Tree 1, Node 1, idx 2 ---
+// --- Tree 2, Node 1, idx 2 ---
 // | left: class=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
 0200 0300 2041 0080
 
-// --- Tree 1, Node 2, idx 3 ---
+// --- Tree 2, Node 2, idx 3 ---
 // | left: class=1 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, righ=true, split feat=2 |
 0100 0200 2041 02c0
 
-// --- Tree 2, header, idx 0 ---
-// Tree length=2, first node ptr=1
-// trees in cell = null
-// Attention: this tree should result in an instant prediction for superscalar node issues
-04000000 01000000
-
-// --- Tree 2, Node 0, idx 1 ---
-// | left: class=0 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=1 |
-0000 0200 2041 01c0
-
 
 // Extra zeros for the asymmetrical tests - just there to zero out the cache
+00000000 00000000
+00000000 00000000
 00000000 00000000
 00000000 00000000
 00000000 00000000

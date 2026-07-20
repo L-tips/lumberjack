@@ -6,9 +6,9 @@
 00000000 00000000
 
 // --- Tree 0, header 0 ---
-// Tree length=4 (including padding), first node ptr=2
-// Trees in cell  = 1
-04000000 01000100
+// Tree length=4 (including padding), first node ptr=1
+// Trees in cell  = 2
+04000000 01000200
 
 // --- Tree 0, Node 0 ---
 // | left: ptr=2 | right: class=0 | split: 10.0_bf16=0x4120 | flags: left=false, right=true, split feat=0 |
@@ -23,18 +23,38 @@
 0200 0300 2041 02c0
 
 // --- Tree 1, header, idx 0 ---
-// Tree length=4, first node ptr=1
-// Trees in cell  = 1
-04000000 01000100
+// Tree length=2, first node ptr=1
+// trees in cell = null
+// Attention: this tree should result in an instant prediction for superscalar node issues
+02000000 01000000
 
 // --- Tree 1, Node 0, idx 1 ---
+// | left: class=0 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=1 |
+0000 0200 2041 01c0
+
+// --- Tree 2, header, idx 0 ---
+// Tree length=2, first node ptr=1
+// trees in cell = 2
+// Attention: this tree should result in an instant prediction for superscalar node issues
+02000000 01000200
+
+// --- Tree 2, Node 0, idx 1 ---
+// | left: class=0 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, right=true, split feat=1 |
+0000 0200 2041 01c0
+
+// --- Tree 3, header, idx 0 ---
+// Tree length=4, first node ptr=1
+// Trees in cell  = null
+04000000 01000000
+
+// --- Tree 3, Node 0, idx 1 ---
 // | left: ptr=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=false, right=false, split feat=1 |
 0200 0300 2041 0100
 
-// --- Tree 1, Node 1, idx 2 ---
+// --- Tree 3, Node 1, idx 2 ---
 // | left: class=2 | right: ptr=3 | split: 10.0_bf16=0x4120 | flags: left=true, right=false, split feat=0 |
 0200 0300 2041 0080
 
-// --- Tree 1, Node 2, idx 3 ---
+// --- Tree 3, Node 2, idx 3 ---
 // | left: class=1 | right: class=2 | split: 10.0_bf16=0x4120 | flags: left=true, righ=true, split feat=2 |
 0100 0200 2041 02c0

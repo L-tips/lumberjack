@@ -9,6 +9,7 @@ from test_cases import TestCase
 
 # Settle delay after each clock edge: lets NBA updates land before we read.
 SETTLE_NS = 1
+CLOCK_PERIOD = 10
 
 
 class CellModel:
@@ -110,6 +111,9 @@ async def run_case_min_latency(dut, tc):
     """Ack each prediction as soon as it is valid, starting the next
     traversal on the same cycle. Covers pred_valid rising the cycle after
     start, and the coincident ack+start release."""
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
     model = CellModel(dut)
     await model.reset()
     await model.init_mem(tc)
@@ -133,6 +137,9 @@ async def run_case_min_latency(dut, tc):
 async def run_case_with_holds(dut, tc, hold_cycles):
     """Delay every ack by `hold_cycles`, asserting pred_valid, prediction and
     busy all stay stable for the whole hold."""
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
     model = CellModel(dut)
     await model.reset()
     await model.init_mem(tc)
@@ -174,6 +181,9 @@ async def run_case_delayed_start(dut, tc, gap_cycles):
     Exercises the hold -> idle -> read_header path (as opposed to the
     coincident ack+start hold -> read_header path), including the cache
     changing hands via master_select while the forest is mid-flight."""
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
     model = CellModel(dut)
     await model.reset()
     await model.init_mem(tc)
@@ -213,7 +223,7 @@ async def run_case_random_holds(dut, tc: TestCase):
     """Per-tree random hold lengths; seeded so failures reproduce."""
     import random
 
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
 
     rnd = random.Random(0xBEEF)
 
@@ -247,7 +257,7 @@ async def run_case_two_forests(dut, tc: TestCase):
 
     Exercises next_tree_addr chaining across a whole cell and the restart-to-0
     path independently of the initial reset."""
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
 
     model = CellModel(dut)
     await model.reset()
@@ -280,7 +290,7 @@ async def test_cell_empty_cache(dut):
       - deassert busy by 2 cycles after the restart strobe
       - never assert pred_valid
     """
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
 
     model = CellModel(dut)
     await model.reset()
@@ -320,7 +330,7 @@ async def test_cell_empty_then_populated(dut, tc: TestCase):
     Guards against the empty case leaving the cell wedged or corrupting
     next_tree_addr_q / current_header_addr_q for the following restart.
     """
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
 
     model = CellModel(dut)
     await model.reset()
@@ -342,22 +352,3 @@ async def test_cell_empty_then_populated(dut, tc: TestCase):
         await model.strobe(ack=True, start=not last)
 
     assert votes == tc.expected_votes
-
-
-async def test_cell(dut, cases):
-
-    # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
-
-    await test_cell_empty_cache(dut)
-    await test_cell_empty_then_populated(dut, cases[0])
-
-    for tc in cases:
-        await run_case_min_latency(dut, tc)
-
-        for hold in (1, 2, 5, 17):
-            await run_case_with_holds(dut, tc, hold)
-            await run_case_delayed_start(dut, tc, hold)
-
-        await run_case_random_holds(dut, tc)
-        await run_case_two_forests(dut, tc)

@@ -64,24 +64,36 @@ module TestTreeCellSuperscalarV3 #(
 embed (cocotb) py{{{
 
 import cocotb
-from test_tree_cell_v3 import test_cell
+import test_tree_cell_v3
 import test_cases
 
-@cocotb.test()
-async def cell_aligned_sc(dut):
-    cases = [
-        test_cases.TC_ALIGNED_1CELL,
-    ]
-
-    await test_cell(dut, cases)
-
+CASES = [
+    test_cases.TC_ALIGNED_1CELL,
+    test_cases.TC_MISALIGNED_1CELL,
+]
 
 @cocotb.test()
-async def cell_misaligned_sc(dut):
-    cases = [
-        test_cases.TC_MISALIGNED_1CELL,
-    ]
+async def cell_min_latency(dut):
+    for tc in CASES:
+        await test_tree_cell_v3.run_case_min_latency(dut, tc)
 
-    await test_cell(dut, cases)
+@cocotb.test()
+async def cell_with_holds(dut):
+    for tc in CASES:
+        for hold in (1,2,5,17):
+            await test_tree_cell_v3.run_case_with_holds(dut, tc, hold)
+            await test_tree_cell_v3.run_case_delayed_start(dut, tc, hold)
+
+        await test_tree_cell_v3.run_case_random_holds(dut, tc)
+
+@cocotb.test()
+async def cell_two_forests(dut):
+    for tc in CASES:
+        await test_tree_cell_v3.run_case_two_forests(dut, tc)
+
+@cocotb.test()
+async def cell_empty(dut):
+    await test_tree_cell_v3.test_cell_empty_cache(dut)
+    await test_tree_cell_v3.test_cell_empty_then_populated(dut, CASES[0])
 
 }}}
