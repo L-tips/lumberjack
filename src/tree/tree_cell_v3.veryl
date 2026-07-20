@@ -66,12 +66,13 @@ module TreeCellV3::<L: Layout> #(
         read_header = 1,
         evaluating = 2,
         hold_result = 3,
+        prefetch_header = 4,
     }
 
     var state     : State;
     var next_state: State;
 
-    var next_header_addr   : NodePtr;
+    var header_addr        : NodePtr;
     var current_header_addr: NodePtr;
 
     var current_tree_len  : node_layout::TreeLen;
@@ -146,7 +147,7 @@ module TreeCellV3::<L: Layout> #(
     var eval_prediction   : L::Prediction;
     var eval_next_idx     : NodePtr      ;
 
-    var header_data         : node_layout::TreeHeader;
+    var header_data: node_layout::TreeHeader;
 
     // When fetching the header, if the first node is at index 1, we already have the result available
     // in the high data bits. Only relevant when using superscalar evaluation.
@@ -212,35 +213,59 @@ module TreeCellV3::<L: Layout> #(
         assign header_points_to_node_high = false;
     }
 
+    let discard_prefetch: lbool   = state == State::prefetch_header && !start_q;
+    let prefetch_miss   : lbool   = state == State::prefetch_header && restart_q && start_q;
+    let next_header_addr: NodePtr = current_header_addr + current_tree_len as NodePtr;
+
     always_comb {
         // Default: maintain current state
         next_state        = state;
         next_read_addr    = read_addr;
-        next_header_addr  = current_header_addr;
+        header_addr       = current_header_addr;
         current_tree_len  = current_tree_len_q;
         num_trees_in_cell = 0;
+
+        pred_valid = state != State::idle && eval_is_prediction;
 
         tree_cache_bus.enable            = false;
         tree_cache_bus.byte_write_enable = 0;
         tree_cache_bus.write_data        = 0;
 
+
         // State machine
         case state {
-            State::read_header: {
-                next_read_addr    += header_data.first_node_ptr as NodePtr;
-                current_tree_len  =  header_data.tree_len;
-                num_trees_in_cell =  header_data.trees_in_cell;
+            State::read_header, State::prefetch_header: {
 
-                // If the header points to node index 1, the node data is already available.
-                // We can directly evaluate it.
-                if header_points_to_node_high && eval_is_prediction {
-                    next_state = State::hold_result;
-                } else if num_trees_in_cell == 0 && num_trees_in_cell_valid {
+                if discard_prefetch {
+                    // Don't start a new evaluation. Fetched line discarded
                     tree_cache_bus.enable = false;
                     next_state            = State::idle;
-                } else {
+                    pred_valid            = false;
+                } else if prefetch_miss {
+                    // Prefetch miss. Fetch the header at address 0 and restart evaluation from there
+                    next_state            = State::read_header;
+                    next_read_addr        = 0;
+                    header_addr           = 0;
                     tree_cache_bus.enable = true;
-                    next_state            = State::evaluating;
+                    pred_valid            = false;
+                } else {
+                    // Fetch hit. Directly evaluate prefetched cache line
+                    next_read_addr    += header_data.first_node_ptr as NodePtr;
+                    current_tree_len  =  header_data.tree_len;
+                    num_trees_in_cell =  header_data.trees_in_cell;
+
+                    // If the header points to node index 1, the node data is already available.
+                    // We can directly evaluate it.
+                    if header_points_to_node_high && eval_is_prediction {
+                        next_state = State::hold_result;
+                    } else if num_trees_in_cell == 0 && num_trees_in_cell_valid {
+                        // If cell is empty, go back to idle without committing anything
+                        tree_cache_bus.enable = false;
+                        next_state            = State::idle;
+                    } else {
+                        tree_cache_bus.enable = true;
+                        next_state            = State::evaluating;
+                    }
                 }
             }
 
@@ -255,28 +280,39 @@ module TreeCellV3::<L: Layout> #(
                 }
             }
 
-            State::idle: {}
+            State::idle: {
+                // As per the interface definition, a start may not occur
+                // earlier than an ack for the previous start.
+                if start_q {
+                    // At this state, the current header is known (has been set during the ack cycle).
+                    // Exception is if restart_q is set, then we need to fetch at addr 0.
+                    next_state = State::read_header;
+                    // next_read_addr = start_base_addr;
+                    // header_addr    = start_base_addr;
+
+                    if restart_q {
+                        next_read_addr = 0;
+                        header_addr    = 0;
+                    }
+
+                    // Start to read 1st node from tree cache
+                    tree_cache_bus.enable = true;
+                }
+            }
             State::hold_result: {}
+
+            // NOTE: Default should be unreachable: explicitly handle other states if adding
+            // more states to the State enum
+            default: {}
         }
 
         if pred_ack {
-            tree_cache_bus.enable = false;
-            next_state            = State::idle;
+            tree_cache_bus.enable = true;
+            next_read_addr        = next_header_addr;
+            header_addr           = next_header_addr;
+            next_state            = State::prefetch_header;
         }
         // pred_ack low: hold. No state change, outputs stand.
-
-        let start_base_addr: NodePtr = if restart_q ? 0 : current_header_addr + current_tree_len as NodePtr;
-
-        // As per the interface definition, a start may not occur
-        // earlier than an ack for the previous start.
-        if start_q {
-            next_state       = State::read_header;
-            next_read_addr   = start_base_addr;
-            next_header_addr = start_base_addr;
-
-            // Start to read 1st node from tree cache
-            tree_cache_bus.enable = true;
-        }
 
     }
 
@@ -296,13 +332,12 @@ module TreeCellV3::<L: Layout> #(
             num_trees_in_cell_valid = restart_q && start_q;
 
             read_addr           = next_read_addr;
-            current_header_addr = next_header_addr;
+            current_header_addr = header_addr;
             current_tree_len_q  = current_tree_len;
             state               = next_state;
         }
     }
 
     assign busy       = start_q || state != State::idle;
-    assign pred_valid = state != State::idle && eval_is_prediction;
     assign prediction = eval_prediction;
 }

@@ -1,217 +1,401 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Timer
+from collections import Counter
 
 import utils
-from utils import n_cycles, read_hex
+from utils import fill_tree_cache, write_feature_word
+from test_cases import TestCase
+
+# Settle delay after each clock edge: lets NBA updates land before we read.
+SETTLE_NS = 1
+CLOCK_PERIOD = 10
 
 
-async def reset(dut):
-    await RisingEdge(dut.clk)
-
-    # Init and reset
-    dut.rst.value = 0
-
-    dut.start.value = 0
-    dut.tree_header_addr.value = 0
-
-    await RisingEdge(dut.clk)
-    # Release reset
-    dut.rst.value = 1
-
-    await RisingEdge(dut.clk)
-
-async def init_memory(dut, mem_file):
-    mem_data = read_hex(mem_file)
-    mem_data = utils.into_chunks_le(mem_data, 64)
-
-    dut.ram_port.enable.value = True
-    dut.ram_port.byte_write_enable.value = 0xff
-
-    for addr, data in enumerate(mem_data):
-        dut.ram_port.address.value = addr
-        dut.ram_port.write_data.value = data
+async def assert_dbg(dut, condition, message=None):
+    try:
+        if message:
+            extra_str = f": {message}"
+        else:
+            extra_str = ""
+        message = f"Assertion failed at dbg cycle {int(dut.dbg_cycle.value)}{extra_str}"
+        assert condition, message
+    except AssertionError as e:
+        dut.dbg_fault.value = True
         await RisingEdge(dut.clk)
-
-    dut.ram_port.enable.value = False
-    dut.ram_port.write_data.value = 0
-    dut.ram_port.byte_write_enable.value = 0
-
-@cocotb.test()
-async def tree_test_aligned(dut):
-    # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
-
-    await reset(dut)
-    # Start by writing the data into the tree cache
-    # through the external RAM port
-    await init_memory(dut, "tree_2n_aligned.hex")
-
-    # Always return 11.0_f32 as the feature
-    dut.feature_buses[0].data.value = 0x41304130
-
-    # ...and start tree prediction
-    dut.start.value = 1
-    dut.tree_header_addr.value = 0
-
-    await RisingEdge(dut.clk)
-
-    dut.start.value = 0
-    assert dut.tree.busy.value == 1
-    # State = read_header
-    print(dut.tree.state.value)
-    # assert dut.tree.state.value == 1
-
-    # Test that we can't write data to the RAM while it's busy
-    dut.ram_port.byte_write_enable.value = 0xff
-
-    # Takes 2 cycles to fetch header + evaluate the full node
-    await n_cycles(dut.clk, 2)
-
-    # Writes should not be enabled
-    assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
-
-    # Which means we're going to be evaluating
-    # another node
-    assert dut.tree.next_ready.value == 0
-    assert dut.tree.next_busy.value == 1
-
-    # Now we're fetching the next node
-    await RisingEdge(dut.clk)
-
-    assert dut.tree.state.value == 2
-
-    # Writes should still not be enabled until no longer busy
-    assert dut.tree.tree_cache_bus_demuxed.byte_write_enable.value == 0
-    # Even though the RAM port is trying to write
-    assert dut.ram_port.byte_write_enable.value == 0xff
-
-    # Make sure we don't overwrite the RAM when busy goes low
-    dut.ram_port.byte_write_enable.value = 0
-
-    # Again, takes a total of 1 cycle to fetch + evaluate
-    # the node
-    await n_cycles(dut.clk, 1)
-
-    # Result should now be available
-    assert dut.ready.value == 1
-    assert dut.busy.value == 0
-    assert dut.tree.state.value == 0
-    # According to the tree and the input
-    # feature, predicted class should
-    # be 2
-    assert dut.prediction.value == 2
-
-    # Now let's try to take another branch.
-    # Always return 6.0_f32 as the input feature
-    dut.feature_buses[0].data.value = 0x40C040C0
-    dut.start.value = 1
-
-    await RisingEdge(dut.clk)
-
-    dut.start.value = 0
-
-    # The first node is directly a prediction.
-    # Entire prediction sequence should complete
-    # in a total of 3 cycles after START has been
-    # set.
-    await n_cycles(dut.clk, 3)
-
-    assert dut.ready.value == 1
-    assert dut.busy.value == 0
-    # Predicted class should be 0
-    assert dut.prediction.value == 0
-
-    # Intentionally don't reset start to 0.
-    # Prediction should never show ready.
-    dut.start.value = 1
-    await n_cycles(dut.clk, 7)
-
-    # Even though the state is idle,
-    assert dut.tree.state.value == 0
-    # the status still isn't ready
-    assert dut.ready.value == 0
-    assert dut.busy.value == 1
-
-    await n_cycles(dut.clk, 2)
-
-@cocotb.test()
-async def tree_test_misaligned(dut):
-    # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
-
-    await reset(dut)
-    # Start by writing the data into the tree cache
-    # through the external RAM port
-    await init_memory(dut, "tree_2n_misaligned.hex")
-
-    # Always return 11.0_f32 as the feature
-    dut.feature_buses[0].data.value = 0x41304130
-
-    # ...and start tree prediction
-    dut.start.value = 1
-    dut.tree_header_addr.value = 1
-
-    await RisingEdge(dut.clk)
-
-    dut.start.value = 0
-    assert dut.tree.busy.value == 1
-
-    # Takes 4 cycles to fetch header + evaluate the full tree
-    await n_cycles(dut.clk, 4)
-
-    # Result should now be available
-    assert dut.ready.value == 1
-    assert dut.busy.value == 0
-    assert dut.tree.state.value == 0
-    # According to the tree and the input
-    # feature, predicted class should
-    # be 2
-    assert dut.prediction.value == 2
+        dut.dbg_fault.value = False
+        raise e
 
 
-@cocotb.test()
-async def rejects_circular_trees(dut):
-    # Start a 10 ns clock
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+class CellModel:
+    def __init__(self, dut):
+        self.dut = dut
+        self.clk = dut.clk
 
-    await reset(dut)
-    await init_memory(dut, "tree_2n_circular.hex")
+    async def tick(self):
+        """Advance exactly one cycle and settle. Outputs are readable after."""
+        await RisingEdge(self.clk)
+        await Timer(SETTLE_NS, unit="ns")
 
-    # Always return 9.0_f32 as the feature
-    dut.feature_buses[0].data.value = 0x4110
-    dut.tree_header_addr.value = 0
+    async def reset(self):
+        self.dut.rst.value = 0
+        self.dut.start.value = 0
+        self.dut.restart.value = 0
+        self.dut.pred_ack.value = 0
+        await self.tick()
+        self.dut.rst.value = 1
+        await self.tick()
 
-    # ...and start tree prediction
-    dut.start.value = 1
+    async def init_mem(self, tc: TestCase):
+        await fill_tree_cache(self.dut, 0, tc.hexfile, tc.cache_mem_ranges[0])
+
+    async def load_features(self, tc: TestCase):
+        for word_idx, word in enumerate(utils.pack_16b_to_32b(tc.features)):
+            await write_feature_word(self.dut, word_idx, word)
+
+    # ---- control ---------------------------------------------------------
+    def drive(self, start=False, restart=False, ack=False):
+        """Set control inputs for the cycle about to be clocked in."""
+        self.dut.start.value = 1 if start else 0
+        self.dut.restart.value = 1 if restart else 0
+        self.dut.pred_ack.value = 1 if ack else 0
+
+    def idle(self):
+        self.drive()
+
+    async def strobe(self, start=False, restart=False, ack=False):
+        """Drive a one-cycle strobe, clock it in, then deassert."""
+        self.drive(start=start, restart=restart, ack=ack)
+        await self.tick()
+        self.idle()
+
+    async def zero_fill_cache(self):
+        # TODO: hardcoded
+        FILL_DEPTH = 20
+        port = self.dut.cell_cache_ports[0]
+
+        for addr in range(FILL_DEPTH):
+            port.address.value = addr
+            port.write_data.value = 0
+            port.byte_write_enable.value = -1  # all lanes
+            port.enable.value = 1
+            await RisingEdge(self.clk)
+        port.enable.value = 0
+        port.byte_write_enable.value = 0
+        await RisingEdge(self.clk)
+
+    # ---- observation -----------------------------------------------------
+    @property
+    def pred_valid(self):
+        return bool(self.dut.pred_valid.value)
+
+    @property
+    def prediction(self):
+        return int(self.dut.prediction.value)
+
+    @property
+    def busy(self):
+        return bool(self.dut.busy.value)
+
+    @property
+    def num_trees(self):
+        return int(self.dut.num_trees_in_cell.value)
+
+    @property
+    def dbg_cycle(self):
+        return int(self.dut.dbg_cycle.value)
+
+    async def await_valid(self, expected_num_trees, timeout=200):
+        """Advance until pred_valid is high. Returns cycles waited.
+
+        Leaves the sim settled just after an edge, so the caller may read
+        outputs and/or drive immediately.
+        """
+        for n in range(timeout):
+            if self.dut.num_trees_in_cell_valid.value:
+                assert self.num_trees == expected_num_trees, (
+                    f"num_trees_in_cell={self.num_trees}, expected {expected_num_trees}"
+                )
+            if self.pred_valid:
+                return n
+            await self.tick()
+        raise TimeoutError("pred_valid never asserted")
+
+    async def restart_forest(self):
+        """start+restart, then check num_trees_in_cell the following cycle."""
+        await self.strobe(start=True, restart=True)
+
+
+async def run_case_min_latency(dut, tc):
+    """Ack each prediction as soon as it is valid, starting the next
+    traversal on the same cycle. Covers pred_valid rising the cycle after
+    start, and the coincident ack+start release."""
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    model = CellModel(dut)
+    await model.reset()
+    await model.init_mem(tc)
+    await model.load_features(tc)
+
+    votes = Counter()
+    await model.restart_forest()
+
+    for tree_id in range(tc.num_trees):
+        await model.await_valid(tc.num_trees)
+        votes[model.prediction] += 1
+
+        last = tree_id == tc.num_trees - 1
+        # Ack now; coincidentally launch the next traversal.
+        await model.strobe(ack=True, start=not last)
+
+    await assert_dbg(
+        dut,
+        not model.pred_valid,
+        "pred_valid is registering an extra, invalid prediction",
+    )
+    await model.tick()
+    await assert_dbg(dut, not model.busy, "cell still busy after final ack")
+
+    assert votes == tc.expected_votes
 
     await RisingEdge(dut.clk)
 
-    dut.start.value = 0
-    assert dut.tree.busy.value == 1
 
-    # Takes 2 cycle to fetch header+evaluate the full node
-    await n_cycles(dut.clk, 2)
+async def run_case_with_holds(dut, tc, hold_cycles):
+    """Delay every ack by `hold_cycles`, asserting pred_valid, prediction and
+    busy all stay stable for the whole hold."""
 
-    assert dut.tree.state.value == 2
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
 
-    # Now we're fetching + evaluating the next node
-    await RisingEdge(dut.clk)
+    model = CellModel(dut)
+    await model.reset()
+    await model.init_mem(tc)
+    await model.load_features(tc)
 
-    assert dut.tree.state.value == 2
+    votes = Counter()
+    await model.restart_forest()
 
-    # Again, takes a total of 1 cycle to evaluate
-    # the node
-    await n_cycles(dut.clk, 1)
+    for tree_id in range(tc.num_trees):
+        await model.await_valid(tc.num_trees)
+        held = model.prediction
 
-    # Result should now be available
-    assert dut.ready.value == 0
-    assert dut.busy.value == 0
-    assert dut.error.value == 1
+        # Hold with ack low; nothing may move.
+        model.idle()
+        for c in range(hold_cycles):
+            await model.tick()
 
-    await n_cycles(dut.clk, 1)
+            await assert_dbg(
+                dut,
+                model.pred_valid,
+                f"tree {tree_id}: pred_valid dropped during hold (hold cycle {c}/global cycle {model.dbg_cycle})",
+            )
+            await assert_dbg(
+                dut,
+                model.prediction == held,
+                f"tree {tree_id}: prediction changed during hold (hold cycle {c}/global cycle {model.dbg_cycle}): "
+                f"{held} -> {model.prediction}",
+            )
+            await assert_dbg(
+                dut,
+                model.busy,
+                f"tree {tree_id}: busy deasserted while holding (hold cycle {c}/global cycle {model.dbg_cycle})",
+            )
 
-    # State won't change until next START
-    assert dut.ready.value == 0
-    assert dut.busy.value == 0
-    assert dut.error.value == 1
+        votes[held] += 1
+        last = tree_id == tc.num_trees - 1
+        await model.strobe(ack=True, start=not last)
+
+    await model.tick()
+    assert votes == tc.expected_votes
+    await assert_dbg(dut, not model.busy, "cell still busy after final ack")
+
+
+async def run_case_delayed_start(dut, tc, gap_cycles):
+    """Ack, then wait `gap_cycles` idle cycles before starting the next tree.
+
+    Exercises the hold -> idle -> read_header path (as opposed to the
+    coincident ack+start hold -> read_header path), including the cache
+    changing hands via master_select while the forest is mid-flight."""
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    model = CellModel(dut)
+    await model.reset()
+    await model.init_mem(tc)
+    await model.load_features(tc)
+
+    votes = Counter()
+    await model.restart_forest()
+
+    for tree_id in range(tc.num_trees):
+        await model.await_valid(tc.num_trees)
+        votes[model.prediction] += 1
+
+        last = tree_id == tc.num_trees - 1
+        # Ack alone -- no coincident start.
+        await model.strobe(ack=True)
+
+        if not last:
+            # Idle gap. The cell should be quiescent and not busy.
+            model.idle()
+            for c in range(gap_cycles):
+                await model.tick()
+                await assert_dbg(
+                    dut,
+                    not model.pred_valid,
+                    f"tree {tree_id}: pred_valid still high {c} cycles after ack",
+                )
+                await assert_dbg(
+                    dut,
+                    not model.busy,
+                    f"tree {tree_id}: busy still high {c} cycles after ack "
+                    f"(cache not released to ram_port)",
+                )
+            # Resume without restart: must continue from next_tree_addr_q.
+            await model.strobe(start=True)
+
+    await model.tick()
+    await assert_dbg(dut, not model.busy, "cell still busy after final ack")
+    assert votes == tc.expected_votes
+
+
+async def run_case_random_holds(dut, tc: TestCase):
+    """Per-tree random hold lengths; seeded so failures reproduce."""
+    import random
+
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    rnd = random.Random(0xBEEF)
+
+    model = CellModel(dut)
+    await model.reset()
+    await model.init_mem(tc)
+    await model.load_features(tc)
+
+    votes = Counter()
+    holds = [rnd.randint(0, 8) for _ in range(tc.num_trees)]
+    await model.restart_forest()
+
+    for tree_id in range(tc.num_trees):
+        await model.await_valid(tc.num_trees)
+        held = model.prediction
+        model.idle()
+        for c in range(holds[tree_id]):
+            await model.tick()
+            await assert_dbg(
+                dut,
+                model.pred_valid and model.prediction == held,
+                f"tree {tree_id} unstable during hold, holds={holds}",
+            )
+        votes[held] += 1
+        last = tree_id == tc.num_trees - 1
+        await model.strobe(ack=True, start=not last)
+
+    assert votes == tc.expected_votes
+
+
+async def run_case_two_forests(dut, tc: TestCase):
+    """Run a full forest, then restart and run it again.
+
+    Exercises next_tree_addr chaining across a whole cell and the restart-to-0
+    path independently of the initial reset."""
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    model = CellModel(dut)
+    await model.reset()
+    await model.init_mem(tc)
+    await model.load_features(tc)
+
+    results = []
+    for run in range(2):
+        predictions = Counter()
+        await model.restart_forest()
+        for tree_id in range(tc.num_trees):
+            await model.await_valid(tc.num_trees)
+            predictions[model.prediction] += 1
+            last = tree_id == tc.num_trees - 1
+            await model.strobe(ack=True, start=not last)
+        results.append(predictions)
+
+    assert results[0] == results[1], (
+        f"second forest differed: {dict(results[0])} vs {dict(results[1])}"
+    )
+    assert results[0] == tc.expected_votes
+
+
+async def test_cell_empty_cache(dut):
+    """A cell whose cache reports 0 trees must return to idle without predicting.
+
+    Drives the cache bus to return all-zero, so the header read yields
+    trees_in_cell == 0. The cell must:
+      - report num_trees_in_cell == 0 the cycle following start && restart
+      - deassert busy by 2 cycles after the restart strobe
+      - never assert pred_valid
+    """
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    model = CellModel(dut)
+    await model.reset()
+
+    # Force the cache to read back all zeros -> header with trees_in_cell == 0.
+    await model.zero_fill_cache()
+
+    # start + restart. model.strobe() drives for one cycle then ticks, so we
+    # are settled at (restart + 1) when it returns.
+    await model.strobe(start=True, restart=True)
+
+    # Cycle +1: num_trees_in_cell is guaranteed valid here per the spec.
+    assert model.num_trees == 0, (
+        f"num_trees_in_cell={model.num_trees}, expected 0 for an empty cache"
+    )
+    assert not model.pred_valid, "pred_valid asserted on an empty cache"
+
+    await model.tick()
+    assert not model.pred_valid, "pred_valid asserted on an empty cache"
+
+    # Cycle +3: the cell must have given up and returned to idle.
+    await model.tick()
+    assert not model.busy, (
+        "busy still asserted 3 cycles after restart with 0 trees in cache"
+    )
+    assert not model.pred_valid, "pred_valid asserted on an empty cache"
+
+    # Stay quiet: no late prediction, no spontaneous re-arming.
+    for c in range(20):
+        await model.tick()
+        assert not model.busy, f"busy re-asserted {c + 3} cycles after restart"
+        assert not model.pred_valid, (
+            f"pred_valid asserted {c + 3} cycles after restart on empty cache"
+        )
+
+
+async def test_cell_empty_then_populated(dut, tc: TestCase):
+    """After an empty-cache bailout, a normal forest must still run correctly.
+
+    Guards against the empty case leaving the cell wedged or corrupting
+    next_tree_addr_q / current_header_addr_q for the following restart.
+    """
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
+
+    model = CellModel(dut)
+    await model.reset()
+    await model.zero_fill_cache()
+    await model.strobe(start=True, restart=True)
+    await model.tick()
+    await model.tick()
+    assert not model.busy, "cell did not return to idle on empty cache"
+
+    # Now load a real case and run it end to end.
+    await model.init_mem(tc)
+    await model.load_features(tc)
+
+    votes = Counter()
+    await model.restart_forest()
+    for tree_id in range(tc.num_trees):
+        await model.await_valid(tc.num_trees)
+        votes[model.prediction] += 1
+        last = tree_id == tc.num_trees - 1
+        await model.strobe(ack=True, start=not last)
+
+    assert votes == tc.expected_votes
