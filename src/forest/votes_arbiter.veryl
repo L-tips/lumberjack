@@ -16,9 +16,6 @@ module VotesArbiter::<L: Layout> #(
     var increment_en: lbool            ;
     var class_idx   : logic<ADDR_WIDTH>;
 
-    let read_addr: logic     <ADDR_WIDTH> = class_idx;
-    var read_data: L::TreeIdx            ;
-
     var priority_mask     : logic<NUM_REQUESTERS>;
     var next_priority_mask: logic<NUM_REQUESTERS>;
 

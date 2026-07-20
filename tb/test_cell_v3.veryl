@@ -5,14 +5,15 @@ module TestTreeCellV3 #(
     clk: input clock,
     rst: input reset,
 
-    rst_cache        : input  reset                  ,
-    start            : input  lbool                  ,
-    restart          : input  lbool                  ,
-    pred_valid       : output lbool                  ,
-    prediction       : output test_layout::Prediction,
-    pred_ack         : input  lbool                  ,
-    num_trees_in_cell: output node_layout::NumTrees  ,
-    busy             : output lbool                  ,
+    rst_cache              : input  reset                  ,
+    start                  : input  lbool                  ,
+    restart                : input  lbool                  ,
+    pred_valid             : output lbool                  ,
+    prediction             : output test_layout::Prediction,
+    pred_ack               : input  lbool                  ,
+    num_trees_in_cell      : output node_layout::NumTrees  ,
+    num_trees_in_cell_valid: output lbool                  ,
+    busy                   : output lbool                  ,
 ) {
     const USE_SUPERSCALAR: bbool = false;
     const FEATURE_PORTS  : u32   = if USE_SUPERSCALAR ? 2 : 1;
@@ -45,18 +46,19 @@ module TestTreeCellV3 #(
     inst tree_cell: TreeCellV3::<test_layout> #(
         USE_SUPERSCALAR  ,
     ) (
-        clk                                   ,
-        rst                                   ,
-        rst_cache        : rst                ,
-        start                                 ,
-        restart                               ,
-        pred_valid                            ,
-        prediction                            ,
-        pred_ack                              ,
-        num_trees_in_cell                     ,
-        busy                                  ,
-        feature_ports    : feature_buses      ,
-        ram_port         : cell_cache_ports[0],
+        clk                                         ,
+        rst                                         ,
+        rst_cache              : rst                ,
+        start                                       ,
+        restart                                     ,
+        pred_valid                                  ,
+        prediction                                  ,
+        pred_ack                                    ,
+        num_trees_in_cell                           ,
+        num_trees_in_cell_valid                     ,
+        busy                                        ,
+        feature_ports          : feature_buses      ,
+        ram_port               : cell_cache_ports[0],
     );
 }
 

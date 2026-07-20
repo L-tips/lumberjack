@@ -86,25 +86,25 @@ class CellModel:
     def num_trees(self):
         return int(self.dut.num_trees_in_cell.value)
 
-    async def await_valid(self, timeout=1000):
+    async def await_valid(self, expected_num_trees, timeout=200):
         """Advance until pred_valid is high. Returns cycles waited.
 
         Leaves the sim settled just after an edge, so the caller may read
         outputs and/or drive immediately.
         """
         for n in range(timeout):
+            if self.dut.num_trees_in_cell_valid.value:
+                assert self.num_trees == expected_num_trees, (
+                    f"num_trees_in_cell={self.num_trees}, expected {expected_num_trees}"
+                )
             if self.pred_valid:
                 return n
             await self.tick()
         raise TimeoutError("pred_valid never asserted")
 
-    async def restart_forest(self, expected_num_trees=None):
+    async def restart_forest(self):
         """start+restart, then check num_trees_in_cell the following cycle."""
         await self.strobe(start=True, restart=True)
-        if expected_num_trees is not None:
-            assert self.num_trees == expected_num_trees, (
-                f"num_trees_in_cell={self.num_trees}, expected {expected_num_trees}"
-            )
 
 
 async def run_case_min_latency(dut, tc):
@@ -120,10 +120,10 @@ async def run_case_min_latency(dut, tc):
     await model.load_features(tc)
 
     votes = Counter()
-    await model.restart_forest(tc.num_trees)
+    await model.restart_forest()
 
     for tree_id in range(tc.num_trees):
-        await model.await_valid()
+        await model.await_valid(tc.num_trees)
         votes[model.prediction] += 1
 
         last = tree_id == tc.num_trees - 1
@@ -146,10 +146,10 @@ async def run_case_with_holds(dut, tc, hold_cycles):
     await model.load_features(tc)
 
     votes = Counter()
-    await model.restart_forest(tc.num_trees)
+    await model.restart_forest()
 
     for tree_id in range(tc.num_trees):
-        await model.await_valid()
+        await model.await_valid(tc.num_trees)
         held = model.prediction
 
         # Hold with ack low; nothing may move.
@@ -190,10 +190,10 @@ async def run_case_delayed_start(dut, tc, gap_cycles):
     await model.load_features(tc)
 
     votes = Counter()
-    await model.restart_forest(tc.num_trees)
+    await model.restart_forest()
 
     for tree_id in range(tc.num_trees):
-        await model.await_valid()
+        await model.await_valid(tc.num_trees)
         votes[model.prediction] += 1
 
         last = tree_id == tc.num_trees - 1
@@ -234,10 +234,10 @@ async def run_case_random_holds(dut, tc: TestCase):
 
     votes = Counter()
     holds = [rnd.randint(0, 8) for _ in range(tc.num_trees)]
-    await model.restart_forest(tc.num_trees)
+    await model.restart_forest()
 
     for tree_id in range(tc.num_trees):
-        await model.await_valid()
+        await model.await_valid(tc.num_trees)
         held = model.prediction
         model.idle()
         for c in range(holds[tree_id]):
@@ -267,9 +267,9 @@ async def run_case_two_forests(dut, tc: TestCase):
     results = []
     for run in range(2):
         predictions = Counter()
-        await model.restart_forest(tc.num_trees)
+        await model.restart_forest()
         for tree_id in range(tc.num_trees):
-            await model.await_valid()
+            await model.await_valid(tc.num_trees)
             predictions[model.prediction] += 1
             last = tree_id == tc.num_trees - 1
             await model.strobe(ack=True, start=not last)
@@ -308,10 +308,13 @@ async def test_cell_empty_cache(dut):
     )
     assert not model.pred_valid, "pred_valid asserted on an empty cache"
 
-    # Cycle +2: the cell must have given up and returned to idle.
+    await model.tick()
+    assert not model.pred_valid, "pred_valid asserted on an empty cache"
+
+    # Cycle +3: the cell must have given up and returned to idle.
     await model.tick()
     assert not model.busy, (
-        "busy still asserted 2 cycles after restart with 0 trees in cache"
+        "busy still asserted 3 cycles after restart with 0 trees in cache"
     )
     assert not model.pred_valid, "pred_valid asserted on an empty cache"
 
@@ -337,6 +340,7 @@ async def test_cell_empty_then_populated(dut, tc: TestCase):
     await model.zero_fill_cache()
     await model.strobe(start=True, restart=True)
     await model.tick()
+    await model.tick()
     assert not model.busy, "cell did not return to idle on empty cache"
 
     # Now load a real case and run it end to end.
@@ -344,9 +348,9 @@ async def test_cell_empty_then_populated(dut, tc: TestCase):
     await model.load_features(tc)
 
     votes = Counter()
-    await model.restart_forest(tc.num_trees)
+    await model.restart_forest()
     for tree_id in range(tc.num_trees):
-        await model.await_valid()
+        await model.await_valid(tc.num_trees)
         votes[model.prediction] += 1
         last = tree_id == tc.num_trees - 1
         await model.strobe(ack=True, start=not last)

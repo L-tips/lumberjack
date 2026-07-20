@@ -43,6 +43,10 @@ module TreeCellV3::<L: Layout> #(
     /// be valid the cycle following a `start && restart` assertion.
     num_trees_in_cell: output node_layout::NumTrees,
 
+    /// Signals the `num_trees_in_cell` output is valid. Typically, it is guaranteed to be valid exactly
+    /// two cycles after a `start && restart` strobe.
+    num_trees_in_cell_valid: output lbool,
+
     /// Asynchronous output. The cell is currently evaluating a tree. This also entails that
     /// the cell's cache is occupied.
     busy: output lbool,
@@ -75,6 +79,7 @@ module TreeCellV3::<L: Layout> #(
 
     let master_select: lbool = !busy;
 
+    var start_q  : lbool;
     var restart_q: lbool;
 
     inst tree_cache_bus: memutils::BramPort #(
@@ -114,9 +119,6 @@ module TreeCellV3::<L: Layout> #(
 
     let current_node_idx: NodePtr = read_addr - current_header_addr;
 
-    // var next_tree_header_data: node_layout::TreeHeader;
-    // assign header_valid = state == State::evaluating || state == State::read_header;
-
     // Node indices are relative, mapping directly to a dword index
     // in the RAM.
     assign tree_cache_bus.address = if USE_SUPERSCALAR ? next_read_addr >> 1 : next_read_addr;
@@ -145,7 +147,6 @@ module TreeCellV3::<L: Layout> #(
     var eval_next_idx     : NodePtr      ;
 
     var header_data         : node_layout::TreeHeader;
-    var tree_header_data_reg: node_layout::TreeHeader;
 
     // When fetching the header, if the first node is at index 1, we already have the result available
     // in the high data bits. Only relevant when using superscalar evaluation.
@@ -234,7 +235,7 @@ module TreeCellV3::<L: Layout> #(
                 // We can directly evaluate it.
                 if header_points_to_node_high && eval_is_prediction {
                     next_state = State::hold_result;
-                } else if num_trees_in_cell == 0 && restart_q {
+                } else if num_trees_in_cell == 0 && num_trees_in_cell_valid {
                     tree_cache_bus.enable = false;
                     next_state            = State::idle;
                 } else {
@@ -264,12 +265,11 @@ module TreeCellV3::<L: Layout> #(
         }
         // pred_ack low: hold. No state change, outputs stand.
 
-        let start_base_addr: NodePtr = if restart ? 0 : current_header_addr + current_tree_len as NodePtr;
+        let start_base_addr: NodePtr = if restart_q ? 0 : current_header_addr + current_tree_len as NodePtr;
 
         // As per the interface definition, a start may not occur
         // earlier than an ack for the previous start.
-        if start {
-
+        if start_q {
             next_state       = State::read_header;
             next_read_addr   = start_base_addr;
             next_header_addr = start_base_addr;
@@ -282,21 +282,27 @@ module TreeCellV3::<L: Layout> #(
 
     always_ff (clk, rst) {
         if_reset {
+            start_q                 = false;
+            restart_q               = false;
+            num_trees_in_cell_valid = false;
+
             read_addr           = 0;
             current_header_addr = 0;
             current_tree_len_q  = 0;
             state               = State::idle;
-            restart_q           = false;
         } else {
+            start_q                 = start;
+            restart_q               = restart;
+            num_trees_in_cell_valid = restart_q && start_q;
+
             read_addr           = next_read_addr;
             current_header_addr = next_header_addr;
             current_tree_len_q  = current_tree_len;
             state               = next_state;
-            restart_q           = restart;
         }
     }
 
-    assign busy       = start || state != State::idle;
+    assign busy       = start_q || state != State::idle;
     assign pred_valid = state != State::idle && eval_is_prediction;
     assign prediction = eval_prediction;
 }
