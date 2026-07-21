@@ -21,14 +21,14 @@ bench NAME:
     just build
     make run BENCH_NAME={{NAME}}
 
+# Run all declared benchmarks in parallel
 [working-directory: 'benchmark/']
 bench-all:
     #!/usr/bin/env bash
     set -euo pipefail
     just build
-    for bench in $(yq 'explode(.) | .benches | keys | .[]' testcases.yml); do
-        echo "Running bench: $bench"
-        just bench $bench
+    yq 'explode(.) | .benches | keys | .[]' testcases.yml --yaml-fix-merge-anchor-to-spec | \
+        parallel -j$(($(nproc) - 2)) just bench {} >/dev/null
     done
 
 [working-directory: 'benchmark/']

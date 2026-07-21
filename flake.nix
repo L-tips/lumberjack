@@ -31,6 +31,7 @@
               surfer
               zlib
               yq-go
+              parallel
 
               lz4 # seems like this version of verilator is broken without it
 

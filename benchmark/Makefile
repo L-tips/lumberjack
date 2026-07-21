@@ -2,7 +2,8 @@
 # Usage: make run MODEL=iris
 
 TESTS_CONFIG = testcases.yml
-BUILD_DIR    = build
+SIM_BUILD = sim_build/$(BENCH_NAME)
+BUILD_DIR    = $(SIM_BUILD)/build
 RESULTS_DIR  = results
 
 .DEFAULT_GOAL := all
@@ -18,7 +19,7 @@ space = $(empty) $(empty)
 GIT_SHA   := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
 GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo -dirty)
 UUID_FRAG := $(shell uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c 'import uuid; print(uuid.uuid4())')
-RUN_ID    ?= $(shell date -u +%Y%m%dT%H%M%SZ)-$(GIT_SHA)$(GIT_DIRTY)-$(shell echo $(UUID_FRAG) | cut -c1-8)
+RUN_ID    := $(BENCH_NAME)_$(shell date -u +%Y%m%dT%H%M%SZ)-$(GIT_SHA)$(GIT_DIRTY)-$(shell echo $(UUID_FRAG) | cut -c1-8)
 export RUN_ID
 
 # ---------------------------------------------------------------------------
@@ -28,7 +29,7 @@ ifndef BENCH_NAME
 $(error BENCH_NAME is not set. Usage: make run MODEL=iris)
 endif
 
-_yq = $(shell yq 'explode(.) | .benches.$(BENCH_NAME).$1' $(TESTS_CONFIG))
+_yq = $(shell yq 'explode(.) | .benches.$(BENCH_NAME).$1' $(TESTS_CONFIG) --yaml-fix-merge-anchor-to-spec)
 
 NUM_CELLS       := $(call _yq,num_cells)
 VOTE_FIFO_DEPTH := $(call _yq,vote_fifo_depth)
@@ -50,17 +51,22 @@ endif
 # ---------------------------------------------------------------------------
 # Derived paths
 # ---------------------------------------------------------------------------
-MODEL_OUT     = $(BUILD_DIR)/$(BENCH_NAME).ljmodel
-TEST_VECS_OUT = $(BUILD_DIR)/$(BENCH_NAME).ljdata
-CACHE_OUTS    = $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(BUILD_DIR)/$(BENCH_NAME)_$(i).ljcache)
+MODEL_OUT     := $(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME).ljmodel)
+TEST_VECS_OUT := $(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME).ljdata)
+CACHE_OUTS    := $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME)_$(i).ljcache))
+DUMP_PATH := $(shell realpath -m $(SIM_BUILD)/$(BENCH_NAME).fst)
 
 # One directory per run. RUN_OUT is relative to this makefile; RUN_OUT_INNER is
 # the same directory as seen from cocotb, which runs one level deeper.
 RUN_OUT       = $(RESULTS_DIR)/$(RUN_ID)
 RUN_OUT_INNER = ../$(RUN_OUT)
 
-STATS_OUT = $(RUN_OUT)/stats_$(BENCH_NAME).yml
-PERF_OUT  = $(RUN_OUT_INNER)/perf_$(BENCH_NAME).yml
+STATS_OUT     := $(shell realpath -m $(RUN_OUT)/stats_$(BENCH_NAME).yml)
+PERF_OUT      := $(shell realpath -m $(RUN_OUT)/perf_$(BENCH_NAME).yml)
+
+# Surfer files
+SURFER_TEMPLATE = surfer.template.ron
+SURFER_OUT      := $(shell realpath -m $(RUN_OUT)/surfer_$(BENCH_NAME).surf.ron)
 
 # ---------------------------------------------------------------------------
 # Targets
@@ -123,6 +129,8 @@ run: all | $(RUN_OUT)
 		--max-node=$(MAX_NODE) \
 		--vote-fifo-depth=$(VOTE_FIFO_DEPTH) \
 		--use-superscalar=$(USE_SUPERSCALAR)
+	sed 's|__DUMP_PATH__|$(DUMP_PATH)|g' $(SURFER_TEMPLATE) > $(SURFER_OUT)
+	@printf "\033[32mOpen dump with\033[0m: surfer $$(realpath --relative-to=. $(DUMP_PATH)) -s $$(realpath --relative-to=. $(SURFER_OUT))\n"
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build

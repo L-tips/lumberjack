@@ -82,7 +82,7 @@ async def perf_benchmark(dut):
         map(lambda bus: WbMaster(dut.clk, bus), dut.cell_cache_ports)
     )
 
-    cache_data = [ModelCache(f"../{f}") for f in CACHE_FILES]
+    cache_data = [ModelCache(f"{f}") for f in CACHE_FILES]
     model = Model(cache_data)
 
     monitor = PerfMonitor(clk=dut.clk, dut=dut.forest_top)
@@ -92,7 +92,7 @@ async def perf_benchmark(dut):
     await driver.reset(dut.rst, cycles=1)
     await driver.write_caches(model)
 
-    test_vectors = load_test_vectors(f"../{TEST_VEC_FILE}")
+    test_vectors = load_test_vectors(f"{TEST_VEC_FILE}")
 
     for i, vec in enumerate(test_vectors):
         await driver.start(vec.features)
@@ -180,22 +180,25 @@ def test_run_benchmark():
         deps / s for s in DEPENDENCY_SOURCES
     ]
 
-    print(f"superscalar bit: {int(USE_SUPERSCALAR)}, {USE_SUPERSCALAR}")
-
     runner = get_runner(sim)
     runner.build(
         sources=sources,
         hdl_toplevel=TOP,
         waves=True,
+        build_dir=f"sim_build/{BENCH_NAME}",
         build_args=[
             "--trace",
             "--trace-fst",
             "--trace-structs",
-            "../../verilator_config.vlt",
+            "../../../verilator_config.vlt",
             f"-GCELL_INSTANCES={NUM_CELLS}",
             f"-GVOTE_FIFO_DEPTH={VOTE_FIFO_DEPTH}",
             f"-GUSE_SUPERSCALAR={int(USE_SUPERSCALAR)}",
         ],
         always=True,
     )
-    runner.test(hdl_toplevel=TOP, test_module=MODULE)
+    runner.test(
+        hdl_toplevel=TOP,
+        test_module=MODULE,
+        build_dir=f"sim_build/{BENCH_NAME}",
+    )
