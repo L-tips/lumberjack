@@ -32,7 +32,7 @@ bench-all:
 
 [working-directory: 'benchmark/']
 clean-bench:
-    rm -rf sim-build
+    rm -rf sim_build
 
 [working-directory: 'benchmark/']
 clean-bench-results:

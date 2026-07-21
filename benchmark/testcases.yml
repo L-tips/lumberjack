@@ -55,7 +55,7 @@ benches:
     vote_fifo_depth: 4
     use_superscalar: true
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   single_nodes_4c_ss:
     <<: *single_nodes
@@ -79,7 +79,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   iris_1c_nss:
     <<: *iris
@@ -87,7 +87,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   iris_2c_ss:
     <<: *iris
@@ -95,7 +95,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   iris_2c_nss:
     <<: *iris
@@ -103,7 +103,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
   
   iris_4c_ss:
     <<: *iris
@@ -111,7 +111,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   iris_4c_nss:
     <<: *iris
@@ -119,7 +119,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_1c_ss:
     <<: *skydive
@@ -127,7 +127,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_1c_nss:
     <<: *skydive
@@ -135,7 +135,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_2c_ss:
     <<: *skydive
@@ -143,7 +143,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_2c_nss:
     <<: *skydive
@@ -151,7 +151,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
   
   skydive_4c_ss:
     <<: *skydive
@@ -159,15 +159,23 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
-  skydive_4c_ss_equal-random:
+  skydive_4c_ss_equal-sorted:
     <<: *skydive
     num_cells: 4
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: equal-random
+    partition_strategy: equal-sorted
+
+  skydive_4c_ss_greedy:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
 
   skydive_4c_nss:
     <<: *skydive
@@ -175,7 +183,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_ss_random:
     <<: *skydive
@@ -183,7 +191,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: random
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_ss_dfs:
     <<: *skydive
@@ -191,7 +199,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: depth-first
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_ss_bfs:
     <<: *skydive
@@ -199,7 +207,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: depth-first
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_nss_random:
     <<: *skydive
@@ -207,7 +215,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: random
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_nss_dfs:
     <<: *skydive
@@ -215,7 +223,7 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: depth-first
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   skydive_4c_nss_bfs:
     <<: *skydive
@@ -223,23 +231,39 @@ benches:
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: depth-first
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
-  skydive_8c_ss:
+  skydive_6c_ss:
     <<: *skydive
-    num_cells: 8
+    num_cells: 6
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
-  skydive_8c_nss:
+  skydive_6c_nss:
     <<: *skydive
-    num_cells: 8
+    num_cells: 6
     use_superscalar: false
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
+
+  skydive_7c_ss:
+    <<: *skydive
+    num_cells: 7
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
+
+  skydive_7c_nss:
+    <<: *skydive
+    num_cells: 7
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
 
   covertype_4c_ss:
     <<: *covertype
@@ -247,7 +271,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   breast_cancer_4c_ss:
     <<: *breast_cancer
@@ -255,7 +279,7 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
 
   wine_4c_ss:
     <<: *wine
@@ -263,4 +287,22 @@ benches:
     use_superscalar: true
     vote_fifo_depth: 4
     placement_strategy: execution-aware
-    partition_strategy: greedy
+    partition_strategy: equal-random
+
+_excluded:
+  skydive_8c_ss:
+    <<: *skydive
+    num_cells: 8
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
+
+  skydive_8c_nss:
+    <<: *skydive
+    num_cells: 8
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
+
