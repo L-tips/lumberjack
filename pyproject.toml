@@ -12,6 +12,7 @@ dependencies = [
     "numpy",
     "ml_dtypes",
     "pyyaml>=6.0.3",
+    "ruamel-yaml>=0.19.1",
 ]
 
 [dependency-groups]

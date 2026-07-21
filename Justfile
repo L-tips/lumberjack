@@ -29,11 +29,10 @@ bench-all:
     just build
     yq 'explode(.) | .benches | keys | .[]' testcases.yml --yaml-fix-merge-anchor-to-spec | \
         parallel -j$(($(nproc) - 2)) just bench {} >/dev/null
-    done
 
 [working-directory: 'benchmark/']
 clean-bench:
-    rm -rf build sim-build
+    rm -rf sim-build
 
 [working-directory: 'benchmark/']
 clean-bench-results:

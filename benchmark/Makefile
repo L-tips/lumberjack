@@ -54,19 +54,13 @@ endif
 MODEL_OUT     := $(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME).ljmodel)
 TEST_VECS_OUT := $(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME).ljdata)
 CACHE_OUTS    := $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(shell realpath -m $(BUILD_DIR)/$(BENCH_NAME)_$(i).ljcache))
-DUMP_PATH := $(shell realpath -m $(SIM_BUILD)/$(BENCH_NAME).fst)
+DUMP_PATH := $(SIM_BUILD)/dump.fst
 
-# One directory per run. RUN_OUT is relative to this makefile; RUN_OUT_INNER is
-# the same directory as seen from cocotb, which runs one level deeper.
+# One directory per run. RUN_OUT is relative to this makefile
 RUN_OUT       = $(RESULTS_DIR)/$(RUN_ID)
-RUN_OUT_INNER = ../$(RUN_OUT)
 
 STATS_OUT     := $(shell realpath -m $(RUN_OUT)/stats_$(BENCH_NAME).yml)
 PERF_OUT      := $(shell realpath -m $(RUN_OUT)/perf_$(BENCH_NAME).yml)
-
-# Surfer files
-SURFER_TEMPLATE = surfer.template.ron
-SURFER_OUT      := $(shell realpath -m $(RUN_OUT)/surfer_$(BENCH_NAME).surf.ron)
 
 # ---------------------------------------------------------------------------
 # Targets
@@ -129,8 +123,8 @@ run: all | $(RUN_OUT)
 		--max-node=$(MAX_NODE) \
 		--vote-fifo-depth=$(VOTE_FIFO_DEPTH) \
 		--use-superscalar=$(USE_SUPERSCALAR)
-	sed 's|__DUMP_PATH__|$(DUMP_PATH)|g' $(SURFER_TEMPLATE) > $(SURFER_OUT)
-	@printf "\033[32mOpen dump with\033[0m: surfer $$(realpath --relative-to=. $(DUMP_PATH)) -s $$(realpath --relative-to=. $(SURFER_OUT))\n"
+	cp $(DUMP_PATH) $(RUN_OUT)
+	@printf "\033[32mWave dump at with\033[0m: $(RUN_OUT)/dump.fst\n"
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build

@@ -9,9 +9,10 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from accel_driver import Driver, Model, ModelCache  # pyright: ignore[reportMissingImports]
 from wb_driver import WbMaster  # pyright: ignore[reportMissingImports]
-from perf_monitor import PerfMonitor
+from perf_monitor import PerfMonitor, PerfReport
 import ml_dtypes
 import numpy as np
+from datetime import datetime, timezone
 
 TOP = "lumberjack_Benchmark"
 MODULE = "benchmark"
@@ -73,58 +74,58 @@ def load_test_vectors(path: str) -> list[TestVector]:
 
 @cocotb.test()
 async def perf_benchmark(dut):
-    # Clock
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
 
-    # Wire up buses
     csr_bus = WbMaster(dut.clk, dut.control_bus)
-    cell_cache_ports = list(
-        map(lambda bus: WbMaster(dut.clk, bus), dut.cell_cache_ports)
-    )
-
-    cache_data = [ModelCache(f"{f}") for f in CACHE_FILES]
+    cell_cache_ports = [WbMaster(dut.clk, bus) for bus in dut.cell_cache_ports]
+    cache_data = [ModelCache(f) for f in CACHE_FILES]
     model = Model(cache_data)
-
     monitor = PerfMonitor(clk=dut.clk, dut=dut.forest_top)
-    monitor.start()
     driver = Driver(dut.clk, csr_bus, cell_cache_ports)
 
     await driver.reset(dut.rst, cycles=1)
     await driver.write_caches(model)
 
-    test_vectors = load_test_vectors(f"{TEST_VEC_FILE}")
+    test_vectors = load_test_vectors(TEST_VEC_FILE)
+
+    report = PerfReport(
+        metadata={
+            "bench_name": BENCH_NAME,
+            "model_name": MODEL_NAME,
+            "run_id": RUN_ID,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "num_cells": NUM_CELLS,
+            "model_path": MODEL_PATH,
+            "test_vecs": TEST_VEC_FILE,
+            "num_test_vectors": len(test_vectors),
+            "placement_strategy": PLACEMENT_STRATEGY,
+            "partition_strategy": PARTITION_STRATEGY,
+            "superscalar": USE_SUPERSCALAR,
+            "vote_fifo_depth": VOTE_FIFO_DEPTH,
+            "num_trees": NUM_TREES,
+            "maxnode": MAX_NODE,
+        }
+    )
 
     for i, vec in enumerate(test_vectors):
+        monitor.start()
         await driver.start(vec.features)
         await RisingEdge(dut.forest_top.ready)
 
         pred = await driver.prediction()
         pred_num_votes = await driver.num_votes()
+
         assert pred == vec.expected_prediction, (
-            f"Wrong prediction at feature {i}! Got: {pred}, expected: {vec.expected_prediction}. Features: {vec.features}"
+            f"[{i}] Wrong prediction! Got: {pred}, expected: {vec.expected_prediction}. Features: {vec.features}"
         )
         assert pred_num_votes == vec.expected_num_votes, (
-            f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}. Features: {vec.features}"
+            f"[{i}] Wrong votes! Got: {pred_num_votes}, expected: {vec.expected_num_votes}. Features: {vec.features}"
         )
 
-    NUM_TEST_VECTORS = len(test_vectors)
-    extra_data = {
-        "bench_name": BENCH_NAME,
-        "model_name": MODEL_NAME,
-        "run_id": RUN_ID,
-        "num_cells": NUM_CELLS,
-        "model_path": MODEL_PATH,
-        "test_vecs": TEST_VEC_FILE,
-        "num_test_vectors": NUM_TEST_VECTORS,
-        "placement_strategy": PLACEMENT_STRATEGY,
-        "partition_strategy": PARTITION_STRATEGY,
-        "superscalar_execution": USE_SUPERSCALAR,
-        "vote_fifo_depth": VOTE_FIFO_DEPTH,
-        "num_trees": NUM_TREES,
-        "maxnode": MAX_NODE,
-    }
+        run = await monitor.stop(vec, sample_idx=i)
+        report.samples.append(run)
 
-    await monitor.stop(report_path=Path(PERF_OUT), extra_data=extra_data)
+    report.write(Path(PERF_OUT))
 
 
 VERYL_SOURCES = [
