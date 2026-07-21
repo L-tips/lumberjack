@@ -28,6 +28,7 @@ PLACEMENT_STRATEGY = os.environ["BENCH_PLACEMENT_STRATEGY"]
 PARTITION_STRATEGY = os.environ["BENCH_PARTITION_STRATEGY"]
 NUM_TREES = int(os.environ["BENCH_NUM_TREES"])
 MAX_NODE = int(os.environ["BENCH_MAX_NODE"])
+RUN_ID = os.environ["BENCH_RUN_ID"]
 
 
 @dataclass
@@ -97,6 +98,7 @@ async def perf_benchmark(dut):
     VOTE_FIFO_DEPTH = int(dut.forest_top.VOTE_FIFO_DEPTH.value)
     NUM_TEST_VECTORS = len(test_vectors)
     extra_data = {
+        "run_id": RUN_ID,
         "used_cells": USED_CELLS,
         "model_path": MODEL_PATH,
         "test_vecs": TEST_VEC_FILE,

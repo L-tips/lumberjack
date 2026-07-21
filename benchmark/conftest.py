@@ -15,6 +15,7 @@ def pytest_addoption(parser):
     parser.addoption("--perf-file", default=None)
     parser.addoption("--num-trees", default=None)
     parser.addoption("--max-node", default=None)
+    parser.addoption("--run-id", default=None)
 
 
 def pytest_configure(config):
@@ -36,3 +37,4 @@ def pytest_configure(config):
         os.environ["BENCH_PERF_FILE"] = config.getoption("--perf-file")
         os.environ["BENCH_NUM_TREES"] = config.getoption("--num-trees")
         os.environ["BENCH_MAX_NODE"] = config.getoption("--max-node")
+        os.environ["BENCH_RUN_ID"] = config.getoption("--run-id")

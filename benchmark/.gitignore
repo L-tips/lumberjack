@@ -1,3 +1,4 @@
 build/
 sim_build/
 perf_*.yml
+results/

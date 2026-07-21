@@ -8,15 +8,21 @@ import yaml
 @dataclass
 class CellStats:
     cell_idx: int
-    busy_cycles: int = 0
+    accelerator_busy: int = 0
+    cell_busy: int = 0
     vote_pending: int = 0
-    vote_stall: int = 0
     total_vote_commits: int = 0
     superscalar_hits: int = 0
+    superscalar_misses: int = 0
+    superscalar_hits_header: int = 0
+    superscalar_hits_midtree: int = 0
     mem_fetches: int = 0
-    useful_evaluations: int = 0
-    total_evaluations: int = 0
-    cell_idle: int = 0
+    useful_node_evaluations: int = 0
+    total_node_evaluations: int = 0
+    idle: int = 0
+    stall: int = 0
+    fetch_discards: int = 0
+    branch_pred_miss: int = 0
 
 
 @dataclass
@@ -32,12 +38,8 @@ class PerfStats:
 
     def report(self, path: Path | None = None, extra_data: dict | None = None):
         perf_data = {
-            # "cells": {
-            #     c.cell_idx: {k: v for k, v in asdict(c).items() if k != "cell_idx"}
-            #     for c in self.cells
-            # },
             "cells": [asdict(c) for c in self.cells],
-            "globals": asdict(self.globals),
+            "global": asdict(self.globals),
         }
 
         if extra_data:
@@ -59,7 +61,7 @@ class PerfStats:
 
 
 async def _cell_perf_task(
-    clk, cell_dut, superscalar_stages, stats: CellStats, stop_event
+    clk, busy, cell_dut, superscalar_stages, stats: CellStats, stop_event
 ):
     """
     Counts cycles where busy_signal is high.
@@ -68,49 +70,39 @@ async def _cell_perf_task(
     while not stop_event.is_set():
         # Sample on falling edge to get the correctly registered values
         await FallingEdge(clk)
-        if cell_dut.orchestrator.busy_o.value:
-            stats.busy_cycles += 1
+        if busy.value:
+            stats.accelerator_busy += 1
 
-            if cell_dut.orchestrator.vote_ack.value:
+            if cell_dut.cell_controller.busy_o.value:
+                stats.cell_busy += 1
+
+            if cell_dut.cell_controller.vote_ack.value:
                 stats.total_vote_commits += 1
 
             if (
-                cell_dut.orchestrator.vote_valid.value
-                and not cell_dut.orchestrator.vote_ack.value
+                cell_dut.cell_controller.vote_valid.value
+                and not cell_dut.cell_controller.vote_ack.value
             ):
                 stats.vote_pending += 1
 
-            # if cell_dut.orchestrator.vote_stall.value:
-            #     stats.vote_stall += 1
-
+            # State::idle
             if cell_dut.tree.state.value == 0:
-                stats.cell_idle += 1
+                stats.idle += 1
                 continue
 
-            # if (
-            #     cell_dut.tree.state.value == 1
-            #     and cell_dut.tree.pre_start_reg.value
-            #     and not cell_dut.tree.start.value
-            # ):
-            #     stats.cell_idle += 1
-            #     continue
+            # State::hold_prediction
+            if cell_dut.tree.state.value == 3:
+                stats.stall += 1
+                continue
 
-            if (
-                cell_dut.tree.busy.value
-                and cell_dut.tree.tree_cache_bus.enable.value
-                and cell_dut.tree.tree_cache_bus.byte_write_enable.value == 0
-            ):
-                stats.mem_fetches += 1
+            # Any non-idle or hold cycle is a new mem fetch
+            stats.mem_fetches += 1
 
-            # State::evaluating
-            if cell_dut.tree.state.value == 2:
-                # TODO
-                assert True
+            if cell_dut.tree.discard_prefetch.value:
+                stats.fetch_discards += 1
 
-            # State::read_header
-            if cell_dut.tree.state.value == 1:
-                # TODO
-                assert True
+            if cell_dut.tree.prefetch_miss.value:
+                stats.branch_pred_miss += 1
 
             try:
                 low_points_to_high = (
@@ -119,16 +111,34 @@ async def _cell_perf_task(
             except AttributeError:
                 low_points_to_high = False
 
-            if (
-                cell_dut.tree.state.value == 1
-                and cell_dut.tree.header_points_to_node_high.value
-            ) or (cell_dut.tree.state.value == 2 and low_points_to_high):
+            useful_prefetch = (
+                cell_dut.tree.state.value == 4
+                and not cell_dut.tree.discard_prefetch.value
+                and not cell_dut.tree.prefetch_miss.value
+            )
+
+            header_superscalar_hit = (
+                cell_dut.tree.state.value == 1 or useful_prefetch
+            ) and cell_dut.tree.header_points_to_node_high.value
+
+            if header_superscalar_hit:
+                stats.superscalar_hits_header += 1
+
+            mid_tree_superscalar_hit = (
+                cell_dut.tree.state.value == 2 and low_points_to_high
+            )
+
+            if mid_tree_superscalar_hit:
+                stats.superscalar_hits_midtree += 1
+
+            if header_superscalar_hit or mid_tree_superscalar_hit:
                 stats.superscalar_hits += 1
-                stats.useful_evaluations += superscalar_stages
-                stats.total_evaluations += superscalar_stages
-            elif cell_dut.tree.state.value == 1 or cell_dut.tree.state.value == 2:
-                stats.useful_evaluations += 1
-                stats.total_evaluations += superscalar_stages
+                stats.useful_node_evaluations += superscalar_stages
+                stats.total_node_evaluations += superscalar_stages
+            elif cell_dut.tree.state.value == 1 or useful_prefetch:
+                stats.superscalar_misses += 1
+                stats.useful_node_evaluations += 1
+                stats.total_node_evaluations += superscalar_stages
 
 
 async def _global_perf_task(clk, dut, stats: GlobalStats, stop_event):
@@ -184,6 +194,7 @@ class PerfMonitor:
                 cocotb.start_soon(
                     _cell_perf_task(
                         self.clk,
+                        self.dut.evaluator.busy,
                         cell,
                         self.superscalar_stages,
                         self._cell_stats[i],

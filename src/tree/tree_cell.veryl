@@ -284,17 +284,14 @@ module TreeCell::<L: Layout> #(
                 if start_q {
                     // At this state, the current header is known (has been set during the ack cycle).
                     // Exception is if restart_q is set, then we need to fetch at addr 0.
-                    next_state = State::read_header;
-                    // next_read_addr = start_base_addr;
-                    // header_addr    = start_base_addr;
+                    next_state            = State::read_header;
+                    tree_cache_bus.enable = true;
 
                     if restart_q {
                         next_read_addr = 0;
                         header_addr    = 0;
                     }
 
-                    // Start to read 1st node from tree cache
-                    tree_cache_bus.enable = true;
                 }
             }
             State::hold_result: {}

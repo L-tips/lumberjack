@@ -1,12 +1,25 @@
 # Benchmark pipeline
 # Usage: make run MODEL=iris
+
 TESTS_CONFIG = testcases.yml
 BUILD_DIR    = build
+RESULTS_DIR  = results
 
 .DEFAULT_GOAL := all
 
 comma = ,
 space = $(empty) $(empty)
+
+# ---------------------------------------------------------------------------
+# Run identity: timestamp + git state + short uuid.
+# `?=` so a recursive submake inherits the exported value instead of
+# generating a fresh one. `:=` inside so the shell runs exactly once.
+# ---------------------------------------------------------------------------
+GIT_SHA   := $(shell git rev-parse --short HEAD 2>/dev/null || echo nogit)
+GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo -dirty)
+UUID_FRAG := $(shell uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c 'import uuid; print(uuid.uuid4())')
+RUN_ID    ?= $(shell date -u +%Y%m%dT%H%M%SZ)-$(GIT_SHA)$(GIT_DIRTY)-$(shell echo $(UUID_FRAG) | cut -c1-8)
+export RUN_ID
 
 # ---------------------------------------------------------------------------
 # Parse YAML for the selected model
@@ -36,20 +49,34 @@ MODEL_OUT     = $(BUILD_DIR)/$(MODEL).ljmodel
 TEST_VECS_OUT = $(BUILD_DIR)/$(MODEL).ljdata
 CACHE_OUTS    = $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(BUILD_DIR)/$(MODEL)_$(i).ljcache)
 
+# One directory per run. RUN_OUT is relative to this makefile; RUN_OUT_INNER is
+# the same directory as seen from cocotb, which runs one level deeper.
+RUN_OUT       = $(RESULTS_DIR)/$(RUN_ID)
+RUN_OUT_INNER = ../$(RUN_OUT)
+
+STATS_OUT = $(RUN_OUT)/stats_$(MODEL).yml
+PERF_OUT  = $(RUN_OUT_INNER)/perf_$(MODEL).yml
+
 # ---------------------------------------------------------------------------
 # Targets
 # ---------------------------------------------------------------------------
-.PHONY: all run compile-model compile-caches compile-vectors clean
+.PHONY: all run compile-model compile-caches compile-vectors clean clean-results run-id
 
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(MODEL_OUT): $(TESTS_CONFIG) | $(BUILD_DIR)
+$(RUN_OUT):
+	mkdir -p $@
+
+$(MODEL_OUT): $(TESTS_CONFIG) $(RUN_OUT) | $(BUILD_DIR)
 	lumberjack-compiler build $(MODEL_PATH) \
 		--output $(MODEL_OUT) \
 		--num-cells $(NUM_CELLS) \
 		--placement-strategy $(PLACEMENT_STRATEGY) \
-		--partition-strategy $(PARTITION_STRATEGY)
+		--partition-strategy $(PARTITION_STRATEGY) \
+		--write-results $(STATS_OUT)
+	# Add run_id to the generated file
+	yq -i '{"run_id": "$(RUN_ID)"} * .' $(STATS_OUT)
 
 $(CACHE_OUTS): $(TESTS_CONFIG) | $(BUILD_DIR)
 	lumberjack-compiler build-cache-data $(MODEL_PATH) -a \
@@ -68,8 +95,14 @@ compile-vectors: $(TEST_VECS_OUT)
 
 all: compile-model compile-caches compile-vectors
 
-run: all
-	WAVES=1 uv run pytest benchmark.py -s \
+# Print the id for this invocation (useful for scripting / CI).
+run-id:
+	@echo $(RUN_ID)
+
+run: all | $(RUN_OUT)
+	@echo "RUN_ID=$(RUN_ID)"
+	@echo "results -> $(RUN_OUT)/"
+	WAVES=1 RUN_ID=$(RUN_ID) uv run pytest benchmark.py -s \
 		-k test_run_benchmark \
 		--model=$(MODEL) \
 		--model-out=$(MODEL_OUT) \
@@ -78,9 +111,13 @@ run: all
 		--partition-strategy=$(PARTITION_STRATEGY) \
 		--test-vecs=$(TEST_VECS_OUT) \
 		--cache-files=$(subst $(space),$(comma),$(CACHE_OUTS)) \
-		--perf-file=../perf_$(MODEL).yml \
+		--perf-file=$(PERF_OUT) \
+		--run-id=$(RUN_ID) \
 		--num-trees=$(NUM_TREEs) \
 		--max-node=$(MAX_NODE)
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build
+
+clean-results:
+	rm -rf $(RESULTS_DIR)
