@@ -40,7 +40,7 @@ clean-bench-results:
 
 [working-directory: 'benchmark/']
 wave-bench:
-    surfer sim_build/dump.fst -s benchmark.surf.ron >&/dev/null &
+    surfer sim_build/bench.fst -s benchmark.surf.ron >&/dev/null &
 
 test TEST *extra_args:
     uv run veryl test tb/test_{{TEST}}.veryl \

@@ -124,6 +124,7 @@ run: all | $(RUN_OUT)
 		--vote-fifo-depth=$(VOTE_FIFO_DEPTH) \
 		--use-superscalar=$(USE_SUPERSCALAR)
 	cp $(DUMP_PATH) $(RUN_OUT)
+	cp $(DUMP_PATH) sim_build/bench.fst
 	@printf "\033[32mWave dump at with\033[0m: $(RUN_OUT)/dump.fst\n"
 
 clean:
