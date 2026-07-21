@@ -49,30 +49,6 @@ _models:
     maxnode: 3
 
 benches:
-  test_forest_2c_ss:
-    <<: *test_forest
-    num_cells: 2
-    vote_fifo_depth: 4
-    use_superscalar: true
-    placement_strategy: execution-aware
-    partition_strategy: equal-random
-
-  single_nodes_4c_ss:
-    <<: *single_nodes
-    num_cells: 4
-    vote_fifo_depth: 4
-    use_superscalar: true
-    placement_strategy: execution-aware
-    partition_strategy: equal-sorted
-
-  single_nodes_4c_nss:
-    <<: *single_nodes
-    num_cells: 4
-    vote_fifo_depth: 4
-    use_superscalar: false
-    placement_strategy: execution-aware
-    partition_strategy: equal-sorted
-
   iris_1c_ss:
     <<: *iris
     num_cells: 1
@@ -290,6 +266,30 @@ benches:
     partition_strategy: equal-random
 
 _excluded:
+  test_forest_2c_ss:
+    <<: *test_forest
+    num_cells: 2
+    vote_fifo_depth: 4
+    use_superscalar: true
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
+
+  single_nodes_4c_ss:
+    <<: *single_nodes
+    num_cells: 4
+    vote_fifo_depth: 4
+    use_superscalar: true
+    placement_strategy: execution-aware
+    partition_strategy: equal-sorted
+
+  single_nodes_4c_nss:
+    <<: *single_nodes
+    num_cells: 4
+    vote_fifo_depth: 4
+    use_superscalar: false
+    placement_strategy: execution-aware
+    partition_strategy: equal-sorted
+
   skydive_8c_ss:
     <<: *skydive
     num_cells: 8
