@@ -24,38 +24,43 @@ export RUN_ID
 # ---------------------------------------------------------------------------
 # Parse YAML for the selected model
 # ---------------------------------------------------------------------------
-ifndef MODEL
-$(error MODEL is not set. Usage: make run MODEL=iris)
+ifndef BENCH_NAME
+$(error BENCH_NAME is not set. Usage: make run MODEL=iris)
 endif
 
-_yq = $(shell yq '.models.$(MODEL).$1' $(TESTS_CONFIG))
+_yq = $(shell yq 'explode(.) | .benches.$(BENCH_NAME).$1' $(TESTS_CONFIG))
 
-NUM_CELLS    := $(call _yq,num_cells)
+NUM_CELLS       := $(call _yq,num_cells)
+VOTE_FIFO_DEPTH := $(call _yq,vote_fifo_depth)
+USE_SUPERSCALAR := $(call _yq,use_superscalar)
+
+MODEL_NAME   := $(call _yq,model_name)
 MODEL_PATH   := $(call _yq,model_path)
 TEST_VECTORS := $(call _yq,test_vectors)
 PLACEMENT_STRATEGY := $(call _yq,placement_strategy)
 PARTITION_STRATEGY := $(call _yq,partition_strategy)
+
 NUM_TREEs := $(call _yq,num_trees)
 MAX_NODE  := $(call _yq,maxnode)
 
 ifeq ($(NUM_CELLS),null)
-$(error Model '$(MODEL)' not found in $(TESTS_CONFIG))
+$(error Bench '$(BENCH_NAME)' not found in $(TESTS_CONFIG))
 endif
 
 # ---------------------------------------------------------------------------
 # Derived paths
 # ---------------------------------------------------------------------------
-MODEL_OUT     = $(BUILD_DIR)/$(MODEL).ljmodel
-TEST_VECS_OUT = $(BUILD_DIR)/$(MODEL).ljdata
-CACHE_OUTS    = $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(BUILD_DIR)/$(MODEL)_$(i).ljcache)
+MODEL_OUT     = $(BUILD_DIR)/$(BENCH_NAME).ljmodel
+TEST_VECS_OUT = $(BUILD_DIR)/$(BENCH_NAME).ljdata
+CACHE_OUTS    = $(foreach i,$(shell seq 0 $(shell echo $$(($(NUM_CELLS)-1)))),$(BUILD_DIR)/$(BENCH_NAME)_$(i).ljcache)
 
 # One directory per run. RUN_OUT is relative to this makefile; RUN_OUT_INNER is
 # the same directory as seen from cocotb, which runs one level deeper.
 RUN_OUT       = $(RESULTS_DIR)/$(RUN_ID)
 RUN_OUT_INNER = ../$(RUN_OUT)
 
-STATS_OUT = $(RUN_OUT)/stats_$(MODEL).yml
-PERF_OUT  = $(RUN_OUT_INNER)/perf_$(MODEL).yml
+STATS_OUT = $(RUN_OUT)/stats_$(BENCH_NAME).yml
+PERF_OUT  = $(RUN_OUT_INNER)/perf_$(BENCH_NAME).yml
 
 # ---------------------------------------------------------------------------
 # Targets
@@ -81,7 +86,7 @@ $(MODEL_OUT): $(TESTS_CONFIG) $(RUN_OUT) | $(BUILD_DIR)
 $(CACHE_OUTS): $(TESTS_CONFIG) | $(BUILD_DIR)
 	lumberjack-compiler build-cache-data $(MODEL_PATH) -a \
 		--output-dir $(BUILD_DIR) \
-		--prefix $(MODEL) \
+		--prefix $(BENCH_NAME) \
 		--num-cells $(NUM_CELLS) \
 		--placement-strategy $(PLACEMENT_STRATEGY) \
 		--partition-strategy $(PARTITION_STRATEGY)
@@ -104,7 +109,8 @@ run: all | $(RUN_OUT)
 	@echo "results -> $(RUN_OUT)/"
 	WAVES=1 RUN_ID=$(RUN_ID) uv run pytest benchmark.py -s \
 		-k test_run_benchmark \
-		--model=$(MODEL) \
+		--bench-name=$(BENCH_NAME) \
+		--model-name=$(MODEL_NAME) \
 		--model-out=$(MODEL_OUT) \
 		--model-path=$(MODEL_PATH) \
 		--placement-strategy=$(PLACEMENT_STRATEGY) \
@@ -114,7 +120,9 @@ run: all | $(RUN_OUT)
 		--perf-file=$(PERF_OUT) \
 		--run-id=$(RUN_ID) \
 		--num-trees=$(NUM_TREEs) \
-		--max-node=$(MAX_NODE)
+		--max-node=$(MAX_NODE) \
+		--vote-fifo-depth=$(VOTE_FIFO_DEPTH) \
+		--use-superscalar=$(USE_SUPERSCALAR)
 
 clean:
 	rm -rf $(BUILD_DIR) sim_build

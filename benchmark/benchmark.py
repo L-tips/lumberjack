@@ -18,17 +18,30 @@ MODULE = "benchmark"
 
 CLK_PERIOD_NS = 1
 
+
+def parse_yaml_bool(s: str) -> bool:
+    import yaml
+
+    result = yaml.safe_load(s)
+    if not isinstance(result, bool):
+        raise ValueError(f"Cannot parse {s!r} as a boolean")
+    return result
+
+
+BENCH_NAME = os.environ["BENCH_NAME"]
 CACHE_FILES = os.environ["BENCH_CACHE_FILES"].split(",")
-USED_CELLS = len(CACHE_FILES)
+NUM_CELLS = len(CACHE_FILES)
 PERF_OUT = os.environ["BENCH_PERF_FILE"]
 TEST_VEC_FILE = os.environ["BENCH_TEST_VECS"]
-MODEL_NAME = os.environ["BENCH_MODEL"]
+MODEL_NAME = os.environ["BENCH_MODEL_NAME"]
 MODEL_PATH = os.environ["BENCH_MODEL_PATH"]
 PLACEMENT_STRATEGY = os.environ["BENCH_PLACEMENT_STRATEGY"]
 PARTITION_STRATEGY = os.environ["BENCH_PARTITION_STRATEGY"]
 NUM_TREES = int(os.environ["BENCH_NUM_TREES"])
 MAX_NODE = int(os.environ["BENCH_MAX_NODE"])
 RUN_ID = os.environ["BENCH_RUN_ID"]
+VOTE_FIFO_DEPTH = int(os.environ["BENCH_VOTE_FIFO_DEPTH"])
+USE_SUPERSCALAR = parse_yaml_bool(os.environ["BENCH_USE_SUPERSCALAR"])
 
 
 @dataclass
@@ -94,18 +107,18 @@ async def perf_benchmark(dut):
             f"Wrong number of votes at feature {i}! Got: {pred_num_votes}, expected: {vec.expected_num_votes}. Features: {vec.features}"
         )
 
-    SUPERSCALAR_EXECUTION = bool(dut.forest_top.USE_SUPERSCALAR.value)
-    VOTE_FIFO_DEPTH = int(dut.forest_top.VOTE_FIFO_DEPTH.value)
     NUM_TEST_VECTORS = len(test_vectors)
     extra_data = {
+        "bench_name": BENCH_NAME,
+        "model_name": MODEL_NAME,
         "run_id": RUN_ID,
-        "used_cells": USED_CELLS,
+        "num_cells": NUM_CELLS,
         "model_path": MODEL_PATH,
         "test_vecs": TEST_VEC_FILE,
         "num_test_vectors": NUM_TEST_VECTORS,
         "placement_strategy": PLACEMENT_STRATEGY,
         "partition_strategy": PARTITION_STRATEGY,
-        "superscalar_execution": SUPERSCALAR_EXECUTION,
+        "superscalar_execution": USE_SUPERSCALAR,
         "vote_fifo_depth": VOTE_FIFO_DEPTH,
         "num_trees": NUM_TREES,
         "maxnode": MAX_NODE,
@@ -167,6 +180,8 @@ def test_run_benchmark():
         deps / s for s in DEPENDENCY_SOURCES
     ]
 
+    print(f"superscalar bit: {int(USE_SUPERSCALAR)}, {USE_SUPERSCALAR}")
+
     runner = get_runner(sim)
     runner.build(
         sources=sources,
@@ -177,6 +192,9 @@ def test_run_benchmark():
             "--trace-fst",
             "--trace-structs",
             "../../verilator_config.vlt",
+            f"-GCELL_INSTANCES={NUM_CELLS}",
+            f"-GVOTE_FIFO_DEPTH={VOTE_FIFO_DEPTH}",
+            f"-GUSE_SUPERSCALAR={int(USE_SUPERSCALAR)}",
         ],
         always=True,
     )

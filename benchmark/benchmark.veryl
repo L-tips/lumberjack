@@ -1,4 +1,9 @@
-module Benchmark (
+module Benchmark #(
+    param CELL_INSTANCES      : u32   = 4   ,
+    param USE_SUPERSCALAR     : bbool = true,
+    param VOTE_FIFO_DEPTH     : u32   = 4   ,
+    param READ_PORTS_PER_CACHE: u32   = 4   ,
+) (
     clk: input clock,
     rst: input reset,
 
@@ -7,12 +12,7 @@ module Benchmark (
 ) {
     const CELL_CACHE_SIZE      : u64 = 1024 * 32;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
-
-    const CELL_INSTANCES      : u32   = 4;
-    const READ_PORTS_PER_CACHE: u32   = 4;
-    const USE_SUPERSCALAR     : bbool = true;
-    const VOTE_FIFO_DEPTH     : u32   = 4;
-    const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
+    const CELL_CACHE_NUM_COL   : u8  = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
     let wb_rst: reset_async_high = rst as reset_async_high;
 

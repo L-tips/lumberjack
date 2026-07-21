@@ -1,54 +1,258 @@
-models:
-  test_forest:
-    num_cells: 2
+_models:
+  iris: &iris
+    model_name: iris
+    model_path: bench-data/iris_200_100.csv
+    test_vectors: bench-data/iris_test_vectors_2000.csv
+    num_trees: 200
+    maxnode: 100
+
+  skydive: &skydive
+    model_name: skydive
+    model_path: bench-data/skydive_200_100.csv
+    test_vectors: bench-data/skydive_test_vectors_2000.csv
+    num_trees: 200
+    maxnode: 100
+
+  covertype: &covertype
+    model_name: covertype
+    model_path: bench-data/covertype_200_100.csv
+    test_vectors: bench-data/covertype_test_vectors_2000.csv
+    num_trees: 200
+    maxnode: 100
+
+  breast_cancer: &breast_cancer
+    model_name: breast_cancer
+    model_path: bench-data/breast_cancer_200_100.csv
+    test_vectors: bench-data/breast_cancer_test_vectors_2000.csv
+    num_trees: 200
+    maxnode: 100
+
+  wine: &wine
+    model_name: wine
+    model_path: bench-data/wine_200_100.csv
+    test_vectors: bench-data/wine_test_vectors_2000.csv
+    num_trees: 200
+    maxnode: 100
+
+  test_forest: &test_forest
+    model_name: test_forest
     model_path: bench-data/test_forest_2t_6n.csv
     test_vectors: bench-data/test_forest_vectors_3.csv
-    placement_strategy: execution-aware
-    partition_strategy: greedy
     num_trees: 2
     maxnode: 3
 
-  single_nodes:
-    num_cells: 4
+  single_nodes: &single_nodes
+    model_name: single_nodes
     model_path: bench-data/single_nodes.csv
     test_vectors: bench-data/single_nodes_data.csv
-    placement_strategy: execution-aware
-    partition_strategy: equal-sorted
     num_trees: 40
     maxnode: 3
 
-  iris:
-    num_cells: 4
-    model_path: bench-data/iris_200_100.csv
-    test_vectors: bench-data/iris_test_vectors_2000.csv
+benches:
+  test_forest_2c_ss:
+    <<: *test_forest
+    num_cells: 2
+    vote_fifo_depth: 4
+    use_superscalar: true
     placement_strategy: execution-aware
     partition_strategy: greedy
-    num_trees: 200
-    maxnode: 100
 
-  skydive:
+  single_nodes_4c_ss:
+    <<: *single_nodes
     num_cells: 4
-    model_path: bench-data/skydive_200_100.csv
-    test_vectors: bench-data/skydive_test_vectors_2000.csv
-    placement_strategy: execution-aware
-    partition_strategy: greedy
-    num_trees: 200
-    maxnode: 100
-
-  breast_cancer:
-    num_cells: 4
-    model_path: bench-data/breast_cancer_200_100.csv
-    test_vectors: bench-data/breast_cancer_test_vectors_2000.csv
+    vote_fifo_depth: 4
+    use_superscalar: true
     placement_strategy: execution-aware
     partition_strategy: equal-sorted
-    num_trees: 200
-    maxnode: 100
 
-  wine:
+  single_nodes_4c_nss:
+    <<: *single_nodes
     num_cells: 4
-    model_path: bench-data/wine_200_100.csv
-    test_vectors: bench-data/wine_test_vectors_2000.csv
+    vote_fifo_depth: 4
+    use_superscalar: false
+    placement_strategy: execution-aware
+    partition_strategy: equal-sorted
+
+  iris_1c_ss:
+    <<: *iris
+    num_cells: 1
+    use_superscalar: true
+    vote_fifo_depth: 4
     placement_strategy: execution-aware
     partition_strategy: greedy
-    num_trees: 200
-    maxnode: 100
+
+  iris_1c_nss:
+    <<: *iris
+    num_cells: 1
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  iris_2c_ss:
+    <<: *iris
+    num_cells: 2
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  iris_2c_nss:
+    <<: *iris
+    num_cells: 2
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+  
+  iris_4c_ss:
+    <<: *iris
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  iris_4c_nss:
+    <<: *iris
+    num_cells: 4
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_1c_ss:
+    <<: *skydive
+    num_cells: 1
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_1c_nss:
+    <<: *skydive
+    num_cells: 1
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_2c_ss:
+    <<: *skydive
+    num_cells: 2
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_2c_nss:
+    <<: *skydive
+    num_cells: 2
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+  
+  skydive_4c_ss:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_4c_nss:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_4c_ss_random:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: random
+    partition_strategy: greedy
+
+  skydive_4c_ss_dfs:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: depth-first
+    partition_strategy: greedy
+
+  skydive_4c_ss_bfs:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: depth-first
+    partition_strategy: greedy
+
+  skydive_4c_nss_random:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: random
+    partition_strategy: greedy
+
+  skydive_4c_nss_dfs:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: depth-first
+    partition_strategy: greedy
+
+  skydive_4c_nss_bfs:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: depth-first
+    partition_strategy: greedy
+
+  skydive_8c_ss:
+    <<: *skydive
+    num_cells: 8
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  skydive_8c_nss:
+    <<: *skydive
+    num_cells: 8
+    use_superscalar: false
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  covertype_4c_ss:
+    <<: *covertype
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  breast_cancer_4c_ss:
+    <<: *breast_cancer
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy
+
+  wine_4c_ss:
+    <<: *wine
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: greedy

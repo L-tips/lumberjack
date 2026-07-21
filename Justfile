@@ -2,6 +2,7 @@ alias t := test
 alias ta := test-all
 alias b := build
 alias c := check
+alias ba := bench-all
 
 build:
     veryl build --quiet
@@ -16,12 +17,31 @@ fmt:
     veryl fmt --quiet
 
 [working-directory: 'benchmark/']
-bench MODEL:
+bench NAME:
     just build
-    make run MODEL={{MODEL}}
+    make run BENCH_NAME={{NAME}}
 
+[working-directory: 'benchmark/']
+bench-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just build
+    for bench in $(yq 'explode(.) | .benches | keys | .[]' testcases.yml); do
+    echo "Running bench: $bench"
+    just bench $bench
+    done
+
+[working-directory: 'benchmark/']
+clean-bench:
+    rm -rf build sim-build
+
+[working-directory: 'benchmark/']
+clean-bench-results:
+    rm -rf results/
+
+[working-directory: 'benchmark/']
 wave-bench:
-    surfer benchmark/sim_build/dump.fst -s benchmark/benchmark.surf.ron >&/dev/null &
+    surfer sim_build/dump.fst -s benchmark.surf.ron >&/dev/null &
 
 test TEST *extra_args:
     uv run veryl test tb/test_{{TEST}}.veryl \

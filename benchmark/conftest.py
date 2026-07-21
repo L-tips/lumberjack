@@ -5,7 +5,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tb"))
 
 
 def pytest_addoption(parser):
-    parser.addoption("--model", default=None)
+    parser.addoption("--bench-name", default=None)
+    parser.addoption("--model-name", default=None)
     parser.addoption("--model-out", default=None)
     parser.addoption("--model-path", default=None)
     parser.addoption("--placement-strategy", default=None)
@@ -16,14 +17,17 @@ def pytest_addoption(parser):
     parser.addoption("--num-trees", default=None)
     parser.addoption("--max-node", default=None)
     parser.addoption("--run-id", default=None)
+    parser.addoption("--use-superscalar", default=None)
+    parser.addoption("--vote-fifo-depth", default=None)
 
 
 def pytest_configure(config):
     import os
 
     # Only inject env vars if actually provided (not cocotb's internal re-parse)
-    if config.getoption("--model") is not None:
-        os.environ["BENCH_MODEL"] = config.getoption("--model")
+    if config.getoption("--bench-name") is not None:
+        os.environ["BENCH_NAME"] = config.getoption("--bench-name")
+        os.environ["BENCH_MODEL_NAME"] = config.getoption("--model-name")
         os.environ["BENCH_MODEL_OUT"] = config.getoption("--model-out")
         os.environ["BENCH_MODEL_PATH"] = config.getoption("--model-path")
         os.environ["BENCH_PLACEMENT_STRATEGY"] = config.getoption(
@@ -38,3 +42,5 @@ def pytest_configure(config):
         os.environ["BENCH_NUM_TREES"] = config.getoption("--num-trees")
         os.environ["BENCH_MAX_NODE"] = config.getoption("--max-node")
         os.environ["BENCH_RUN_ID"] = config.getoption("--run-id")
+        os.environ["BENCH_USE_SUPERSCALAR"] = config.getoption("--use-superscalar")
+        os.environ["BENCH_VOTE_FIFO_DEPTH"] = config.getoption("--vote-fifo-depth")
