@@ -14,8 +14,6 @@ class CellStats:
     total_vote_commits: int = 0
     superscalar_hits: int = 0
     superscalar_misses: int = 0
-    superscalar_hits_header: int = 0
-    superscalar_hits_midtree: int = 0
     mem_fetches: int = 0
     useful_node_evaluations: int = 0
     total_node_evaluations: int = 0
@@ -64,7 +62,7 @@ async def _cell_perf_task(
     clk, busy, cell_dut, superscalar_stages, stats: CellStats, stop_event
 ):
     """
-    Counts cycles where busy_signal is high.
+    Counts cycles in a cell when the parent evaluator shows busy.
     Stops when stop_event is triggered.
     """
     while not stop_event.is_set():
@@ -104,38 +102,11 @@ async def _cell_perf_task(
             if cell_dut.tree.prefetch_miss.value:
                 stats.branch_pred_miss += 1
 
-            try:
-                low_points_to_high = (
-                    cell_dut.tree.evaluator_1.node_low_points_to_node_high.value
-                )
-            except AttributeError:
-                low_points_to_high = False
-
-            useful_prefetch = (
-                cell_dut.tree.state.value == 4
-                and not cell_dut.tree.discard_prefetch.value
-                and not cell_dut.tree.prefetch_miss.value
-            )
-
-            header_superscalar_hit = (
-                cell_dut.tree.state.value == 1 or useful_prefetch
-            ) and cell_dut.tree.header_points_to_node_high.value
-
-            if header_superscalar_hit:
-                stats.superscalar_hits_header += 1
-
-            mid_tree_superscalar_hit = (
-                cell_dut.tree.state.value == 2 and low_points_to_high
-            )
-
-            if mid_tree_superscalar_hit:
-                stats.superscalar_hits_midtree += 1
-
-            if header_superscalar_hit or mid_tree_superscalar_hit:
+            if cell_dut.tree.dbg_superscalar_hit.value:
                 stats.superscalar_hits += 1
                 stats.useful_node_evaluations += superscalar_stages
                 stats.total_node_evaluations += superscalar_stages
-            elif cell_dut.tree.state.value == 1 or useful_prefetch:
+            elif cell_dut.tree.dbg_superscalar_miss.value:
                 stats.superscalar_misses += 1
                 stats.useful_node_evaluations += 1
                 stats.total_node_evaluations += superscalar_stages

@@ -27,8 +27,8 @@ bench-all:
     set -euo pipefail
     just build
     for bench in $(yq 'explode(.) | .benches | keys | .[]' testcases.yml); do
-    echo "Running bench: $bench"
-    just bench $bench
+        echo "Running bench: $bench"
+        just bench $bench
     done
 
 [working-directory: 'benchmark/']

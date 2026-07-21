@@ -161,6 +161,14 @@ benches:
     placement_strategy: execution-aware
     partition_strategy: greedy
 
+  skydive_4c_ss_equal-random:
+    <<: *skydive
+    num_cells: 4
+    use_superscalar: true
+    vote_fifo_depth: 4
+    placement_strategy: execution-aware
+    partition_strategy: equal-random
+
   skydive_4c_nss:
     <<: *skydive
     num_cells: 4

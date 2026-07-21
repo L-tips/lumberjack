@@ -114,46 +114,41 @@ pub module Forest::<L: Layout> #(
         inst cell_controller: CellController::<L> #(
             CELL_CACHE_ADDR_WIDTH  ,
         ) (
-            clk                     ,
-            rst                     ,
-            start_forest: start_eval,
-
-            cell_start                         ,
-            cell_restart                       ,
-            cell_pred_valid        : pred_valid,
-            cell_prediction                    ,
-            cell_pred_ack          : pred_ack  ,
-            num_trees_in_cell                  ,
-            num_trees_in_cell_valid            ,
-            cell_busy                          ,
-
-            vote_valid: vote_valid[i]  ,
-            vote_ack  : vote_ack[i]    ,
-            vote_class: vote_classes[i],
-
-            ready_o: cells_ready[i],
-            busy_o : cells_busy[i] ,
-
+            clk                                     ,
+            rst                                     ,
+            start_forest           : start_eval     ,
+            cell_start                              ,
+            cell_restart                            ,
+            cell_pred_valid        : pred_valid     ,
+            cell_prediction                         ,
+            cell_pred_ack          : pred_ack       ,
+            num_trees_in_cell                       ,
+            num_trees_in_cell_valid                 ,
+            cell_busy                               ,
+            vote_valid             : vote_valid[i]  ,
+            vote_ack               : vote_ack[i]    ,
+            vote_class             : vote_classes[i],
+            ready_o                : cells_ready[i] ,
+            busy_o                 : cells_busy[i]  ,
         );
 
         inst tree: TreeCell::<L> #(
             USE_SUPERSCALAR  ,
             CELL_CACHE_SIZE  ,
         ) (
-            clk                                     ,
-            rst                                     ,
-            rst_cache              : rst_cell_caches,
-            start                  : cell_start     ,
-            restart                : cell_restart   ,
-            pred_valid                              ,
-            prediction             : cell_prediction,
-            pred_ack                                ,
-            num_trees_in_cell                       ,
-            num_trees_in_cell_valid                 ,
-            busy                   : cell_busy      ,
-
-            feature_ports: feature_read_port[BASE_PORT+:PORTS_PER_TREE],
-            ram_port     : cell_cache_ports[i]                         ,
+            clk                                                                  ,
+            rst                                                                  ,
+            rst_cache              : rst_cell_caches                             ,
+            start                  : cell_start                                  ,
+            restart                : cell_restart                                ,
+            pred_valid                                                           ,
+            prediction             : cell_prediction                             ,
+            pred_ack                                                             ,
+            num_trees_in_cell                                                    ,
+            num_trees_in_cell_valid                                              ,
+            busy                   : cell_busy                                   ,
+            feature_ports          : feature_read_port[BASE_PORT+:PORTS_PER_TREE],
+            ram_port               : cell_cache_ports[i]                         ,
         );
     }
 

@@ -44,11 +44,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784245610,
-        "narHash": "sha256-WVKqMntTMfHnc3d7+XXv5FQ9Ahz6PlPpkbb9yoZa0+4=",
+        "lastModified": 1784613142,
+        "narHash": "sha256-PI1DIHPyDsxGuVnQ9GVt+ATpUSN3QGIRgrHjxYx4dfQ=",
         "owner": "L-tips",
         "repo": "lumberjack-compiler",
-        "rev": "0609d299f6a30d8f735e3d3a58a148968a65bbf8",
+        "rev": "27a06cce9de5934c4e23e2b0bdf368237af3f2cb",
         "type": "github"
       },
       "original": {
@@ -59,11 +59,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1784120854,
-        "narHash": "sha256-KesHgItiZPgGX740axSiQLcIQ8D24MDqNpkKYWIek8k=",
+        "lastModified": 1784497964,
+        "narHash": "sha256-vlHUuqAcbcH2RKmHbPiuQzbv1pnzzavXnI62RD0bqCU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "753cc8a3a87467296ddd1fa93f0cc3e81120ee46",
+        "rev": "241313f4e8e508cb9b13278c2b0fa25b9ca27163",
         "type": "github"
       },
       "original": {
