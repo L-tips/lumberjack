@@ -7,14 +7,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "bfloat16"
-version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/35/88eea22fb58cf158556769a42a32b7c5a7471c448ed2b8e7048be0210093/bfloat16-1.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:789feeb13ba24a78db095c6ccf25c38a5f9ee639e555f1c4b1d60ab296ae4450", size = 387235, upload-time = "2023-09-25T09:00:46.616Z" },
-]
-
-[[package]]
 name = "cocotb"
 version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -69,7 +61,6 @@ name = "lumberjack"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "bfloat16" },
     { name = "cocotb" },
     { name = "ml-dtypes" },
     { name = "numpy" },
@@ -85,7 +76,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bfloat16", specifier = ">=1.2" },
     { name = "cocotb", specifier = ">=2.0" },
     { name = "ml-dtypes" },
     { name = "numpy" },
