@@ -43,9 +43,6 @@ module Bram2Wishbone #(
         assign sub_word_idx = '0;
     }
 
-    // Bit offset of the WB word within the RAM word
-    let subword_bit_offset: logic<32> = sub_word_idx * DATA_WIDTH;
-
     // ---------------------------------------------------------------
     // Control signals
     // ---------------------------------------------------------------
