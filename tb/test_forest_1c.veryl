@@ -1,4 +1,8 @@
-module TestForest_1Cell (
+module TestForest #(
+    param CELL_INSTANCES      : u32   = 1   ,
+    param USE_SUPERSCALAR     : bbool = true,
+    param READ_PORTS_PER_CACHE: u32   = 2   ,
+) (
     clk: input clock,
     rst: input reset,
 
@@ -16,10 +20,7 @@ module TestForest_1Cell (
     const CELL_CACHE_SIZE      : u64 = 4096;
     const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
 
-    const CELL_INSTANCES      : u32   = 1;
-    const READ_PORTS_PER_CACHE: u32   = 1;
-    const USE_SUPERSCALAR     : bbool = false;
-    const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
+    const CELL_CACHE_NUM_COL: u8 = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
 
     #[allow(unassign_variable)]
     inst feature_write_bus: memutils::ScratchpadRamPort #(
@@ -62,6 +63,71 @@ module TestForest_1Cell (
     }
 }
 
+module TestForest_1Cell (
+    clk: input clock,
+    rst: input reset,
+
+    enable: input logic,
+
+    busy : output lbool,
+    ready: output lbool,
+
+    prediction: output test_layout::Prediction,
+    num_votes : output test_layout::NumVotes  ,
+
+    dbg_fault: input  lbool    ,
+    dbg_cycle: output logic<16>,
+) {
+
+    inst test_forest: TestForest #(
+        CELL_INSTANCES      : 1    ,
+        USE_SUPERSCALAR     : false,
+        READ_PORTS_PER_CACHE: 1    ,
+    ) (
+        clk         ,
+        rst         ,
+        enable      ,
+        busy        ,
+        ready       ,
+        prediction  ,
+        num_votes   ,
+        dbg_fault   ,
+        dbg_cycle   ,
+    );
+}
+
+module TestForest_1Cell_Superscalar (
+    clk: input clock,
+    rst: input reset,
+
+    enable: input logic,
+
+    busy : output lbool,
+    ready: output lbool,
+
+    prediction: output test_layout::Prediction,
+    num_votes : output test_layout::NumVotes  ,
+
+    dbg_fault: input  lbool    ,
+    dbg_cycle: output logic<16>,
+) {
+    inst test_forest: TestForest #(
+        CELL_INSTANCES      : 1   ,
+        USE_SUPERSCALAR     : true,
+        READ_PORTS_PER_CACHE: 2   ,
+    ) (
+        clk         ,
+        rst         ,
+        enable      ,
+        busy        ,
+        ready       ,
+        prediction  ,
+        num_votes   ,
+        dbg_fault   ,
+        dbg_cycle   ,
+    );
+}
+
 #[test(test_forest_1c, TestForest_1Cell)]
 embed (cocotb) py{{{
 
@@ -79,6 +145,47 @@ async def forest_1c_aligned(dut):
 
 @cocotb.test()
 async def forest_1c_misaligned(dut):
+    cases = [
+        test_cases.TC_MISALIGNED_1CELL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_1c_single_node(dut):
+    cases = [
+        test_cases.TC_SINGLE_NODE_1CELL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_1c_restart(dut):
+    cases = [
+        test_cases.TC_ALIGNED_1CELL,
+    ]
+
+    await test_forest.test_restart(dut, cases)
+
+}}}
+
+#[test(test_forest_1c_superscalar, TestForest_1Cell_Superscalar)]
+embed (cocotb) py{{{
+
+import cocotb
+import test_forest
+import test_cases
+
+@cocotb.test()
+async def forest_1c_aligned_sc(dut):
+    cases = [
+        test_cases.TC_ALIGNED_1CELL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_1c_misaligned_sc(dut):
     cases = [
         test_cases.TC_MISALIGNED_1CELL,
     ]

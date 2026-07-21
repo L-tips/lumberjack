@@ -103,3 +103,110 @@ async def forest_2c_restart(dut):
     await test_forest.test_restart(dut, cases)
 
 }}}
+
+module TestForest_2Cells_Superscalar (
+    clk: input clock,
+    rst: input reset,
+
+    enable: input logic,
+
+    busy : output lbool,
+    ready: output lbool,
+
+    prediction: output test_layout::Prediction,
+    num_votes : output test_layout::NumVotes  ,
+
+    dbg_fault: input  lbool    ,
+    dbg_cycle: output logic<16>,
+) {
+    const CELL_CACHE_SIZE      : u64 = 4096;
+    const CELL_CACHE_ADDR_WIDTH: u32 = $clog2(CELL_CACHE_SIZE);
+
+    const CELL_INSTANCES      : u32   = 2;
+    const READ_PORTS_PER_CACHE: u32   = 2;
+    const USE_SUPERSCALAR     : bbool = true;
+    const CELL_CACHE_NUM_COL  : u8    = if USE_SUPERSCALAR ? node_layout::NODE_SIZE * 2 : node_layout::NODE_SIZE;
+
+    #[allow(unassign_variable)]
+    inst feature_write_bus: memutils::ScratchpadRamPort #(
+        DATA_WIDTH: csr_types::<test_layout>::DATA_WIDTH,
+        ADDR_WIDTH: test_layout::FEAT_IDX_WIDTH         ,
+    );
+
+    #[allow(unassign_variable)]
+    inst cell_cache_ports: memutils::BramPort [CELL_INSTANCES] #(
+        NUM_COL   : CELL_CACHE_NUM_COL   ,
+        COL_WIDTH : 8                    ,
+        ADDR_WIDTH: CELL_CACHE_ADDR_WIDTH,
+    );
+
+    inst forest: Forest::<test_layout> #(
+        CELL_CACHE_SIZE       ,
+        CELL_INSTANCES        ,
+        USE_SUPERSCALAR       ,
+        READ_PORTS_PER_CACHE  ,
+    ) (
+        clk                                  ,
+        rst                                  ,
+        rst_cell_caches   : rst              ,
+        enable                               ,
+        busy                                 ,
+        ready                                ,
+        prediction                           ,
+        num_votes                            ,
+        feature_write_port: feature_write_bus,
+        cell_cache_ports                     ,
+        cells_busy        : _                ,
+    );
+
+    always_ff (clk, rst) {
+        if_reset {
+            dbg_cycle = 0;
+        } else {
+            dbg_cycle += 1;
+        }
+    }
+}
+
+#[test(test_forest_2c_superscalar, TestForest_2Cells_Superscalar)]
+embed (cocotb) py{{{
+
+import cocotb
+import test_forest
+import test_cases
+
+@cocotb.test()
+async def forest_2c_aligned_sc(dut):
+    cases = [
+        test_cases.TC_ALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+
+@cocotb.test()
+async def forest_2c_misaligned_sc(dut):
+    cases = [
+        test_cases.TC_MISALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+@cocotb.test()
+async def forest_2c_asymmetrical_sc(dut):
+    cases = [
+        test_cases.TC_2CELLS_ASYMMETRICAL,
+    ]
+
+    await test_forest.test_forest(dut, cases)
+
+
+@cocotb.test()
+async def forest_2c_restart_sc(dut):
+    cases = [
+        test_cases.TC_ALIGNED_2CELLS,
+    ]
+
+    await test_forest.test_restart(dut, cases)
+
+}}}
