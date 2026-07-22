@@ -56,7 +56,6 @@ _defaults:
     partition_strategy: equal-random
 
 benches:
-
   # =========================================================================
   # iris
   # =========================================================================
@@ -73,7 +72,6 @@ benches:
   iris_7c_ss:   {<<: [*iris, *ref], num_cells: 7, use_superscalar: true}
   iris_7c_nss:  {<<: [*iris, *ref], num_cells: 7, use_superscalar: false}
 
-
   # --- placement cross @ 4c (partition fixed = equal-random) ---
   iris_4c_ss_dfs:     {<<: [*iris, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
   iris_4c_nss_dfs:    {<<: [*iris, *ref], num_cells: 4, use_superscalar: false, placement_strategy: depth-first}
@@ -88,6 +86,20 @@ benches:
   iris_4c_ss_greedy:    {<<: [*iris, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: greedy}
   iris_4c_nss_greedy:   {<<: [*iris, *ref], num_cells: 4, use_superscalar: false, partition_strategy: greedy}
 
+  # --- placement cross @ 2c (partition fixed = equal-random) ---
+  iris_2c_ss_dfs:     {<<: [*iris, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: depth-first}
+  iris_2c_nss_dfs:    {<<: [*iris, *ref], num_cells: 2, use_superscalar: false, placement_strategy: depth-first}
+  iris_2c_ss_bfs:     {<<: [*iris, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: breadth-first}
+  iris_2c_nss_bfs:    {<<: [*iris, *ref], num_cells: 2, use_superscalar: false, placement_strategy: breadth-first}
+  iris_2c_ss_random:  {<<: [*iris, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: random}
+  iris_2c_nss_random: {<<: [*iris, *ref], num_cells: 2, use_superscalar: false, placement_strategy: random}
+
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
+  iris_2c_ss_eqsorted:  {<<: [*iris, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: equal-sorted}
+  iris_2c_nss_eqsorted: {<<: [*iris, *ref], num_cells: 2, use_superscalar: false, partition_strategy: equal-sorted}
+  iris_2c_ss_greedy:    {<<: [*iris, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: greedy}
+  iris_2c_nss_greedy:   {<<: [*iris, *ref], num_cells: 2, use_superscalar: false, partition_strategy: greedy}
+
   # --- placement cross @ 1c (partition is degenerate at 1 cell) ---
   iris_1c_ss_dfs:     {<<: [*iris, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   iris_1c_nss_dfs:    {<<: [*iris, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}
@@ -97,7 +109,7 @@ benches:
   iris_1c_nss_random: {<<: [*iris, *ref], num_cells: 1, use_superscalar: false, placement_strategy: random}
 
   # =========================================================================
-  # skydive  (full placement x partition grid @ 4c, 7c sweep point)
+  # skydive  (full placement x partition grid @ 4c
   # =========================================================================
 
   # --- cell sweep, reference strategies ---
@@ -140,6 +152,20 @@ benches:
   skydive_4c_ss_random_greedy:    {<<: [*skydive, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: random, partition_strategy: greedy}
   skydive_4c_nss_random_greedy:   {<<: [*skydive, *ref], num_cells: 4, use_superscalar: false, placement_strategy: random, partition_strategy: greedy}
 
+  # --- placement cross @ 2c (partition fixed = equal-random) ---
+  skydive_2c_ss_dfs:     {<<: [*skydive, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: depth-first}
+  skydive_2c_nss_dfs:    {<<: [*skydive, *ref], num_cells: 2, use_superscalar: false, placement_strategy: depth-first}
+  skydive_2c_ss_bfs:     {<<: [*skydive, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: breadth-first}
+  skydive_2c_nss_bfs:    {<<: [*skydive, *ref], num_cells: 2, use_superscalar: false, placement_strategy: breadth-first}
+  skydive_2c_ss_random:  {<<: [*skydive, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: random}
+  skydive_2c_nss_random: {<<: [*skydive, *ref], num_cells: 2, use_superscalar: false, placement_strategy: random}
+
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
+  skydive_2c_ss_eqsorted:  {<<: [*skydive, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: equal-sorted}
+  skydive_2c_nss_eqsorted: {<<: [*skydive, *ref], num_cells: 2, use_superscalar: false, partition_strategy: equal-sorted}
+  skydive_2c_ss_greedy:    {<<: [*skydive, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: greedy}
+  skydive_2c_nss_greedy:   {<<: [*skydive, *ref], num_cells: 2, use_superscalar: false, partition_strategy: greedy}
+
   # --- placement cross @ 1c ---
   skydive_1c_ss_dfs:     {<<: [*skydive, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   skydive_1c_nss_dfs:    {<<: [*skydive, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}
@@ -149,7 +175,7 @@ benches:
   skydive_1c_nss_random: {<<: [*skydive, *ref], num_cells: 1, use_superscalar: false, placement_strategy: random}
 
   # =========================================================================
-  # covertype  (7c sweep point)
+  # covertype
   # =========================================================================
 
   covertype_1c_ss:   {<<: [*covertype, *ref], num_cells: 1, use_superscalar: true}
@@ -163,6 +189,7 @@ benches:
   covertype_7c_ss:   {<<: [*covertype, *ref], num_cells: 7, use_superscalar: true}
   covertype_7c_nss:  {<<: [*covertype, *ref], num_cells: 7, use_superscalar: false}
 
+  # --- placement cross @ 4c (partition fixed = equal-random) ---
   covertype_4c_ss_dfs:     {<<: [*covertype, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
   covertype_4c_nss_dfs:    {<<: [*covertype, *ref], num_cells: 4, use_superscalar: false, placement_strategy: depth-first}
   covertype_4c_ss_bfs:     {<<: [*covertype, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: breadth-first}
@@ -170,10 +197,25 @@ benches:
   covertype_4c_ss_random:  {<<: [*covertype, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: random}
   covertype_4c_nss_random: {<<: [*covertype, *ref], num_cells: 4, use_superscalar: false, placement_strategy: random}
 
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
   covertype_4c_ss_eqsorted:  {<<: [*covertype, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: equal-sorted}
   covertype_4c_nss_eqsorted: {<<: [*covertype, *ref], num_cells: 4, use_superscalar: false, partition_strategy: equal-sorted}
   covertype_4c_ss_greedy:    {<<: [*covertype, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: greedy}
   covertype_4c_nss_greedy:   {<<: [*covertype, *ref], num_cells: 4, use_superscalar: false, partition_strategy: greedy}
+
+    # --- placement cross @ 2c (partition fixed = equal-random) ---
+  covertype_2c_ss_dfs:     {<<: [*covertype, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: depth-first}
+  covertype_2c_nss_dfs:    {<<: [*covertype, *ref], num_cells: 2, use_superscalar: false, placement_strategy: depth-first}
+  covertype_2c_ss_bfs:     {<<: [*covertype, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: breadth-first}
+  covertype_2c_nss_bfs:    {<<: [*covertype, *ref], num_cells: 2, use_superscalar: false, placement_strategy: breadth-first}
+  covertype_2c_ss_random:  {<<: [*covertype, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: random}
+  covertype_2c_nss_random: {<<: [*covertype, *ref], num_cells: 2, use_superscalar: false, placement_strategy: random}
+
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
+  covertype_2c_ss_eqsorted:  {<<: [*covertype, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: equal-sorted}
+  covertype_2c_nss_eqsorted: {<<: [*covertype, *ref], num_cells: 2, use_superscalar: false, partition_strategy: equal-sorted}
+  covertype_2c_ss_greedy:    {<<: [*covertype, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: greedy}
+  covertype_2c_nss_greedy:   {<<: [*covertype, *ref], num_cells: 2, use_superscalar: false, partition_strategy: greedy}
 
   covertype_1c_ss_dfs:     {<<: [*covertype, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   covertype_1c_nss_dfs:    {<<: [*covertype, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}
@@ -197,6 +239,7 @@ benches:
   breast_cancer_7c_ss:   {<<: [*breast_cancer, *ref], num_cells: 7, use_superscalar: true}
   breast_cancer_7c_nss:  {<<: [*breast_cancer, *ref], num_cells: 7, use_superscalar: false}
 
+  # --- placement cross @ 4c (partition fixed = equal-random) ---
   breast_cancer_4c_ss_dfs:     {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
   breast_cancer_4c_nss_dfs:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, placement_strategy: depth-first}
   breast_cancer_4c_ss_bfs:     {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: breadth-first}
@@ -204,10 +247,25 @@ benches:
   breast_cancer_4c_ss_random:  {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: random}
   breast_cancer_4c_nss_random: {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, placement_strategy: random}
 
+  # --- partition cross @ 4c (placement fixed = execution-aware) ---
   breast_cancer_4c_ss_greedy:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: greedy}
   breast_cancer_4c_nss_greedy:   {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, partition_strategy: greedy}
   breast_cancer_4c_ss_eqsorted:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: equal-sorted}
   breast_cancer_4c_nss_eqsorted:   {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, partition_strategy: equal-sorted}
+
+  # --- placement cross @ 2c (partition fixed = equal-random) ---
+  breast_cancer_2c_ss_dfs:     {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: depth-first}
+  breast_cancer_2c_nss_dfs:    {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: false, placement_strategy: depth-first}
+  breast_cancer_2c_ss_bfs:     {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: breadth-first}
+  breast_cancer_2c_nss_bfs:    {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: false, placement_strategy: breadth-first}
+  breast_cancer_2c_ss_random:  {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: random}
+  breast_cancer_2c_nss_random: {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: false, placement_strategy: random}
+
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
+  breast_cancer_2c_ss_eqsorted:  {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: equal-sorted}
+  breast_cancer_2c_nss_eqsorted: {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: false, partition_strategy: equal-sorted}
+  breast_cancer_2c_ss_greedy:    {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: greedy}
+  breast_cancer_2c_nss_greedy:   {<<: [*breast_cancer, *ref], num_cells: 2, use_superscalar: false, partition_strategy: greedy}
 
   breast_cancer_1c_ss_dfs:     {<<: [*breast_cancer, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   breast_cancer_1c_nss_dfs:    {<<: [*breast_cancer, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}
@@ -242,6 +300,20 @@ benches:
   wine_4c_nss_eqsorted: {<<: [*wine, *ref], num_cells: 4, use_superscalar: false, partition_strategy: equal-sorted}
   wine_4c_ss_greedy:    {<<: [*wine, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: greedy}
   wine_4c_nss_greedy:   {<<: [*wine, *ref], num_cells: 4, use_superscalar: false, partition_strategy: greedy}
+
+  # --- placement cross @ 2c (partition fixed = equal-random) ---
+  wine_2c_ss_dfs:     {<<: [*wine, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: depth-first}
+  wine_2c_nss_dfs:    {<<: [*wine, *ref], num_cells: 2, use_superscalar: false, placement_strategy: depth-first}
+  wine_2c_ss_bfs:     {<<: [*wine, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: breadth-first}
+  wine_2c_nss_bfs:    {<<: [*wine, *ref], num_cells: 2, use_superscalar: false, placement_strategy: breadth-first}
+  wine_2c_ss_random:  {<<: [*wine, *ref], num_cells: 2, use_superscalar: true,  placement_strategy: random}
+  wine_2c_nss_random: {<<: [*wine, *ref], num_cells: 2, use_superscalar: false, placement_strategy: random}
+
+  # --- partition cross @ 2c (placement fixed = execution-aware) ---
+  wine_2c_ss_eqsorted:  {<<: [*wine, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: equal-sorted}
+  wine_2c_nss_eqsorted: {<<: [*wine, *ref], num_cells: 2, use_superscalar: false, partition_strategy: equal-sorted}
+  wine_2c_ss_greedy:    {<<: [*wine, *ref], num_cells: 2, use_superscalar: true,  partition_strategy: greedy}
+  wine_2c_nss_greedy:   {<<: [*wine, *ref], num_cells: 2, use_superscalar: false, partition_strategy: greedy}
 
   wine_1c_ss_dfs:     {<<: [*wine, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   wine_1c_nss_dfs:    {<<: [*wine, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}

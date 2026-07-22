@@ -121,16 +121,19 @@ async def _cell_perf_task(
 
             if cell_dut.tree.discard_prefetch.value:
                 stats.fetch_discards += 1
+                continue
 
             if cell_dut.tree.prefetch_miss.value:
                 stats.branch_pred_miss += 1
+                continue
 
             if cell_dut.tree.dbg_superscalar_hit.value:
                 stats.superscalar_hits += 1
                 stats.useful_node_evaluations += superscalar_stages
                 stats.total_node_evaluations += superscalar_stages
-            elif cell_dut.tree.dbg_superscalar_miss.value:
-                stats.superscalar_misses += 1
+            else:
+                if cell_dut.tree.dbg_superscalar_miss.value:
+                    stats.superscalar_misses += 1
                 stats.useful_node_evaluations += 1
                 stats.total_node_evaluations += superscalar_stages
 
