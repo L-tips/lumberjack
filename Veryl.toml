@@ -4,8 +4,8 @@ version = "1.0.0"
 authors = ["Justin Beaurivage <code@beaurivage.io>"]
 
 [dependencies]
-memutils = { version = "0.4.1", github = "jbeaurivage/memutils-veryl" }
-# memutils = { version = "0.4.1", path = "../memutils-veryl" }
+memutils = { version = "0.4.2", github = "jbeaurivage/memutils-veryl" }
+# memutils = { version = "0.4.2", path = "../memutils-veryl" }
 
 [build]
 clock_type = "posedge"

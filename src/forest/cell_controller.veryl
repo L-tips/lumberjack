@@ -49,17 +49,15 @@ module CellController::<L: Layout> #(
     var next_active  : lbool   ;
 
     inst votes_fifo: $std::fifo #(
-        TYPE     : L::Prediction      ,
-        DEPTH    : VOTE_FIFO_DEPTH    ,
-        THRESHOLD: VOTE_FIFO_DEPTH - 1,
-        // combinational o_full/o_empty
-        FLAG_FF_OUT: false,
-        // registered o_data
-        DATA_FF_OUT  : true ,
-        RESET_RAM    : false,
-        RESET_DATA_FF: true ,
-        CLEAR_DATA   : false,
-        PUSH_ON_CLEAR: false,
+        TYPE         : L::Prediction      ,
+        DEPTH        : VOTE_FIFO_DEPTH    ,
+        THRESHOLD    : VOTE_FIFO_DEPTH - 1,
+        FLAG_FF_OUT  : true               ,
+        DATA_FF_OUT  : true               ,
+        RESET_RAM    : false              ,
+        RESET_DATA_FF: true               ,
+        CLEAR_DATA   : false              ,
+        PUSH_ON_CLEAR: false              ,
     ) (
         i_clk: clk,
         i_rst: rst,

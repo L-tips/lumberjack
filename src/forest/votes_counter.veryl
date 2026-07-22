@@ -25,20 +25,40 @@ module VotesCounter::<L: Layout> #(
     var winning_class_q: L::Prediction;
     var winning_votes_q: L::NumVotes  ;
 
-    let class_vote    : logic<DATA_WIDTH> = mem[class_idx];
-    let update_winning: lbool             = inc_en
+    inst write_port: memutils::ScratchpadRamPort #( DATA_WIDTH, ADDR_WIDTH );
+    inst read_port : memutils::ScratchpadRamPort [1] #( DATA_WIDTH, ADDR_WIDTH );
+
+    assign write_port.address   = class_idx;
+    assign read_port[0].address = class_idx;
+
+    let class_vote: logic<DATA_WIDTH> = read_port[0].data;
+    // Enable update to winning class with tie-breaker logic
+    let update_winning: lbool = inc_en
         && (class_vote + 1 >: winning_votes_q || (class_vote + 1 == winning_votes_q && class_idx <: winning_class_q));
-    let overflow      : lbool             = class_vote == {1'b1 repeat DATA_WIDTH};
+    let overflow      : lbool = class_vote == {1'b1 repeat DATA_WIDTH};
+    let do_increment  : lbool = inc_en && !overflow;
+
+    assign write_port.data         = class_vote + 1;
+    assign write_port.write_enable = do_increment;
+
+    inst ram: memutils::ScratchpadRam #(
+        DATA_WIDTH   ,
+        DEPTH        ,
+        READ_PORTS: 1,
+    ) (
+        clk              ,
+        rst              ,
+        write: write_port,
+        read : read_port ,
+    );
 
     always_comb {
         winning_class = winning_class_q;
         winning_votes = winning_votes_q;
 
-        if inc_en {
-            if update_winning && !overflow {
-                winning_votes = class_vote + 1;
-                winning_class = class_idx;
-            }
+        if do_increment && update_winning {
+            winning_votes = class_vote + 1;
+            winning_class = class_idx;
         }
     }
 
@@ -46,15 +66,10 @@ module VotesCounter::<L: Layout> #(
         if_reset {
             winning_class_q = 0;
             winning_votes_q = 0;
-            for i in 0..DEPTH {
-                mem[i] = 0;
-            }
         } else {
             winning_class_q = winning_class;
             winning_votes_q = winning_votes;
-            if inc_en {
-                mem[class_idx] += 1;
-            }
         }
     }
+
 }

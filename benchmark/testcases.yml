@@ -70,6 +70,9 @@ benches:
   iris_4c_nss:  {<<: [*iris, *ref], num_cells: 4, use_superscalar: false}
   iris_6c_ss:   {<<: [*iris, *ref], num_cells: 6, use_superscalar: true}
   iris_6c_nss:  {<<: [*iris, *ref], num_cells: 6, use_superscalar: false}
+  iris_7c_ss:   {<<: [*iris, *ref], num_cells: 7, use_superscalar: true}
+  iris_7c_nss:  {<<: [*iris, *ref], num_cells: 7, use_superscalar: false}
+
 
   # --- placement cross @ 4c (partition fixed = equal-random) ---
   iris_4c_ss_dfs:     {<<: [*iris, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
@@ -191,6 +194,8 @@ benches:
   breast_cancer_4c_nss:  {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false}
   breast_cancer_6c_ss:   {<<: [*breast_cancer, *ref], num_cells: 6, use_superscalar: true}
   breast_cancer_6c_nss:  {<<: [*breast_cancer, *ref], num_cells: 6, use_superscalar: false}
+  breast_cancer_7c_ss:   {<<: [*breast_cancer, *ref], num_cells: 7, use_superscalar: true}
+  breast_cancer_7c_nss:  {<<: [*breast_cancer, *ref], num_cells: 7, use_superscalar: false}
 
   breast_cancer_4c_ss_dfs:     {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
   breast_cancer_4c_nss_dfs:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, placement_strategy: depth-first}
@@ -201,6 +206,8 @@ benches:
 
   breast_cancer_4c_ss_greedy:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: greedy}
   breast_cancer_4c_nss_greedy:   {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, partition_strategy: greedy}
+  breast_cancer_4c_ss_eqsorted:    {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: true,  partition_strategy: equal-sorted}
+  breast_cancer_4c_nss_eqsorted:   {<<: [*breast_cancer, *ref], num_cells: 4, use_superscalar: false, partition_strategy: equal-sorted}
 
   breast_cancer_1c_ss_dfs:     {<<: [*breast_cancer, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: depth-first}
   breast_cancer_1c_nss_dfs:    {<<: [*breast_cancer, *ref], num_cells: 1, use_superscalar: false, placement_strategy: depth-first}
@@ -221,6 +228,8 @@ benches:
   wine_4c_nss:  {<<: [*wine, *ref], num_cells: 4, use_superscalar: false}
   wine_6c_ss:   {<<: [*wine, *ref], num_cells: 6, use_superscalar: true}
   wine_6c_nss:  {<<: [*wine, *ref], num_cells: 6, use_superscalar: false}
+  wine_7c_ss:   {<<: [*wine, *ref], num_cells: 7, use_superscalar: true}
+  wine_7c_nss:  {<<: [*wine, *ref], num_cells: 7, use_superscalar: false}
 
   wine_4c_ss_dfs:     {<<: [*wine, *ref], num_cells: 4, use_superscalar: true,  placement_strategy: depth-first}
   wine_4c_nss_dfs:    {<<: [*wine, *ref], num_cells: 4, use_superscalar: false, placement_strategy: depth-first}
