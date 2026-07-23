@@ -36,8 +36,11 @@ module CellController::<L: Layout> #(
     var fifo_full       : lbool;
     var fifo_nearly_full: lbool;
     // A vote is secured exactly when it is pushed.
-    let fifo_push: lbool = cell_pred_ack;
+    let fifo_push: lbool = cell_pred_valid && !fifo_full;
     let fifo_pop : lbool = vote_ack && !fifo_empty;
+
+    assign cell_pred_ack = !fifo_full;
+    assign vote_valid    = !fifo_empty;
 
     // Tree accounting. `trees_total` is latched from the cell 2 cycles after
     // start && restart; `trees_done` counts secured votes.
@@ -72,12 +75,6 @@ module CellController::<L: Layout> #(
         i_pop        : fifo_pop        ,
         o_data       : vote_class      ,
     );
-
-    // The cell is stalled only when the FIFO cannot accept the vote.
-    // Ack is otherwise unconditional -- predictions go indiscriminately in.
-    // Stall one slot early so the registered flag's staleness can never overflow.
-    assign cell_pred_ack = !fifo_full && cell_pred_valid;
-    assign vote_valid    = !fifo_empty;
 
     // More trees remain after the one whose vote we are securing now.
     let more_trees: lbool = trees_done <: trees_total;

@@ -35,8 +35,9 @@ module TreeCell::<L: Layout> #(
     /// Synchronous output. The evaluated tree's predicted class
     prediction: output L::Prediction,
 
-    /// Asynchronous input, active high. The prediction has been registered. May be asserted on
-    /// the same cycle as `pred_valid`.
+    /// Asynchronous input, active high. May be asserted any cycle
+    /// where a prediction may be accepted.
+    /// A prediction is considered registered when `pred_valid && pred_ack`.
     pred_ack: input lbool,
 
     /// Synchronous output. The number of trees in this cell's cache. This output is guaranteed to
@@ -324,7 +325,7 @@ module TreeCell::<L: Layout> #(
             default: {}
         }
 
-        if pred_ack {
+        if pred_ack && pred_valid {
             tree_cache_bus.enable = true;
             next_read_addr        = next_header_addr;
             header_addr           = next_header_addr;
