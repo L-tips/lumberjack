@@ -79,7 +79,7 @@ module TreeCell::<L: Layout> #(
     var current_tree_len  : node_layout::TreeLen;
     var current_tree_len_q: node_layout::TreeLen;
 
-    let master_select: lbool = !busy;
+    var master_select: lbool;
 
     var start_q  : lbool;
     var restart_q: lbool;
@@ -345,6 +345,7 @@ module TreeCell::<L: Layout> #(
             current_header_addr = 0;
             current_tree_len_q  = 0;
             state               = State::idle;
+            master_select = 1;
         } else {
             start_q                 = start;
             restart_q               = restart;
@@ -354,6 +355,7 @@ module TreeCell::<L: Layout> #(
             current_header_addr = header_addr;
             current_tree_len_q  = current_tree_len;
             state               = next_state;
+            master_select = !(start || start_q || state != State::idle);
         }
     }
 
