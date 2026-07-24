@@ -34,6 +34,42 @@ _models:
     num_trees: 200
     maxnode: 100
 
+_models-s:
+  iris-s: &iris-s
+    model_name: iris
+    model_path: bench-data/iris_100_100.csv
+    test_vectors: bench-data/iris_test_vectors_150.csv
+    num_trees: 200
+    maxnode: 100
+
+  skydive-s: &skydive-s
+    model_name: skydive
+    model_path: bench-data/skydive_50_100.csv
+    test_vectors: bench-data/skydive_test_vectors_1000.csv
+    num_trees: 200
+    maxnode: 100
+
+  covertype-s: &covertype-s
+    model_name: covertype
+    model_path: bench-data/covertype_50_50.csv
+    test_vectors: bench-data/covertype_test_vectors_400.csv
+    num_trees: 200
+    maxnode: 100
+
+  breast_cancer-s: &breast_cancer-s
+    model_name: breast_cancer
+    model_path: bench-data/breast_cancer_100_100.csv
+    test_vectors: bench-data/breast_cancer_test_vectors_683.csv
+    num_trees: 200
+    maxnode: 100
+
+  wine-s: &wine-s
+    model_name: wine
+    model_path: bench-data/wine_100_100.csv
+    test_vectors: bench-data/wine_test_vectors_178.csv
+    num_trees: 200
+    maxnode: 100
+
   test_forest: &test_forest
     model_name: test_forest
     model_path: bench-data/test_forest_2t_6n.csv
@@ -322,7 +358,16 @@ benches:
   wine_1c_ss_random:  {<<: [*wine, *ref], num_cells: 1, use_superscalar: true,  placement_strategy: random}
   wine_1c_nss_random: {<<: [*wine, *ref], num_cells: 1, use_superscalar: false, placement_strategy: random}
 
-_excluded:
+
+small-model-benches:
+  wine-s_4c_ss:           {<<: [*wine-s, *ref], num_cells: 4, use_superscalar: true}
+  iris-s_4c_ss:           {<<: [*iris-s, *ref], num_cells: 4, use_superscalar: true}
+  breast_cancer-s_4c_ss:  {<<: [*breast_cancer-s, *ref], num_cells: 4, use_superscalar: true}
+  skydive-s_4c_ss:        {<<: [*skydive-s, *ref], num_cells: 4, use_superscalar: true}
+  covertype-s_4c_ss:      {<<: [*covertype-s, *ref], num_cells: 4, use_superscalar: true}
+
+
+test-benches:
   test_forest_2c_ss:
     <<: [*test_forest, *ref]
     num_cells: 2
@@ -340,6 +385,7 @@ _excluded:
     use_superscalar: false
     partition_strategy: equal-sorted
 
+_excluded:
   skydive_8c_ss:
     <<: [*skydive, *ref]
     num_cells: 8

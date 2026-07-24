@@ -29,7 +29,9 @@ ifndef BENCH_NAME
 $(error BENCH_NAME is not set. Usage: make run MODEL=iris)
 endif
 
-_yq = $(shell yq 'explode(.) | .benches.$(BENCH_NAME).$1' $(TESTS_CONFIG) --yaml-fix-merge-anchor-to-spec)
+BENCH_SET ?= benches
+
+_yq = $(shell yq 'explode(.) | .$(BENCH_SET).$(BENCH_NAME).$1' $(TESTS_CONFIG) --yaml-fix-merge-anchor-to-spec)
 
 NUM_CELLS       := $(call _yq,num_cells)
 VOTE_FIFO_DEPTH := $(call _yq,vote_fifo_depth)

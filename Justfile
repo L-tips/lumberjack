@@ -17,18 +17,18 @@ fmt:
     veryl fmt --quiet
 
 [working-directory: 'benchmark/']
-bench NAME:
+bench NAME BENCH_SET="benches":
     just build
-    make run BENCH_NAME={{NAME}}
+    make run BENCH_NAME={{NAME}} BENCH_SET={{BENCH_SET}}
 
 # Run all declared benchmarks in parallel
 [working-directory: 'benchmark/']
-bench-all:
+bench-all BENCH_SET="benches":
     #!/usr/bin/env bash
     set -euo pipefail
     just build
-    yq 'explode(.) | .benches | keys | .[]' testcases.yml --yaml-fix-merge-anchor-to-spec | \
-        parallel -j$(($(nproc) - 2)) just bench {} >/dev/null
+    yq 'explode(.) | .{{BENCH_SET}} | keys | .[]' testcases.yml --yaml-fix-merge-anchor-to-spec | \
+        parallel -j$(($(nproc) - 2)) just bench {} {{BENCH_SET}} >/dev/null
 
 [working-directory: 'benchmark/']
 clean-bench:
