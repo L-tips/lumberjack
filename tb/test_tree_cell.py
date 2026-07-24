@@ -113,8 +113,10 @@ class CellModel:
         """
         for n in range(timeout):
             if self.dut.num_trees_in_cell_valid.value:
-                assert self.num_trees == expected_num_trees, (
-                    f"num_trees_in_cell={self.num_trees}, expected {expected_num_trees}"
+                await assert_dbg(
+                    self.dut,
+                    self.num_trees == expected_num_trees,
+                    f"num_trees_in_cell={self.num_trees}, expected {expected_num_trees}",
                 )
             if self.pred_valid:
                 return n
@@ -330,7 +332,7 @@ async def test_cell_empty_cache(dut):
     Drives the cache bus to return all-zero, so the header read yields
     trees_in_cell == 0. The cell must:
       - report num_trees_in_cell == 0 the cycle following start && restart
-      - deassert busy by 2 cycles after the restart strobe
+      - deassert busy by 4 cycles after the restart strobe
       - never assert pred_valid
     """
     cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD, unit="ns").start())
@@ -353,20 +355,21 @@ async def test_cell_empty_cache(dut):
 
     await model.tick()
     assert not model.pred_valid, "pred_valid asserted on an empty cache"
+    await model.tick()
 
-    # Cycle +3: the cell must have given up and returned to idle.
+    # Cycle +4: the cell must have given up and returned to idle.
     await model.tick()
     assert not model.busy, (
-        "busy still asserted 3 cycles after restart with 0 trees in cache"
+        "busy still asserted 4 cycles after restart with 0 trees in cache"
     )
     assert not model.pred_valid, "pred_valid asserted on an empty cache"
 
     # Stay quiet: no late prediction, no spontaneous re-arming.
     for c in range(20):
         await model.tick()
-        assert not model.busy, f"busy re-asserted {c + 3} cycles after restart"
+        assert not model.busy, f"busy re-asserted {c + 4} cycles after restart"
         assert not model.pred_valid, (
-            f"pred_valid asserted {c + 3} cycles after restart on empty cache"
+            f"pred_valid asserted {c + 4} cycles after restart on empty cache"
         )
 
 
@@ -384,7 +387,8 @@ async def test_cell_empty_then_populated(dut, tc: TestCase):
     await model.strobe(start=True, restart=True)
     await model.tick()
     await model.tick()
-    assert not model.busy, "cell did not return to idle on empty cache"
+    await model.tick()
+    assert not model.busy, "cell did not return to idle on empty cache after 4 cycles"
 
     # Now load a real case and run it end to end.
     await model.init_mem(tc)

@@ -345,7 +345,7 @@ module TreeCell::<L: Layout> #(
             current_header_addr = 0;
             current_tree_len_q  = 0;
             state               = State::idle;
-            master_select = 1;
+            master_select       = 1;
         } else {
             start_q                 = start;
             restart_q               = restart;
@@ -355,10 +355,10 @@ module TreeCell::<L: Layout> #(
             current_header_addr = header_addr;
             current_tree_len_q  = current_tree_len;
             state               = next_state;
-            master_select = !(start || start_q || state != State::idle);
+            master_select       = !(start || start_q || state != State::idle);
         }
     }
 
-    assign busy       = start_q || state != State::idle;
+    assign busy       = !master_select;
     assign prediction = eval_prediction;
 }
