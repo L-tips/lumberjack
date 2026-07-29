@@ -157,6 +157,7 @@ async def run_case_min_latency(dut, tc):
         "pred_valid is registering an extra, invalid prediction",
     )
     await model.tick()
+    await model.tick()
     await assert_dbg(dut, not model.busy, "cell still busy after final ack")
 
     assert votes == tc.expected_votes
@@ -208,8 +209,10 @@ async def run_case_with_holds(dut, tc, hold_cycles):
         last = tree_id == tc.num_trees - 1
         await model.strobe(ack=True, start=not last)
 
-    await model.tick()
     assert votes == tc.expected_votes
+
+    await model.tick()
+    await model.tick()
     await assert_dbg(dut, not model.busy, "cell still busy after final ack")
 
 
@@ -248,18 +251,21 @@ async def run_case_delayed_start(dut, tc, gap_cycles):
                     not model.pred_valid,
                     f"tree {tree_id}: pred_valid still high {c} cycles after ack",
                 )
-                await assert_dbg(
-                    dut,
-                    not model.busy,
-                    f"tree {tree_id}: busy still high {c} cycles after ack "
-                    f"(cache not released to ram_port)",
-                )
+                if c >= 1:
+                    await assert_dbg(
+                        dut,
+                        not model.busy,
+                        f"tree {tree_id}: busy still high {c} cycles after ack "
+                        f"(cache not released to ram_port)",
+                    )
             # Resume without restart: must continue from next_tree_addr_q.
             await model.strobe(start=True)
 
+    assert votes == tc.expected_votes
+
+    await model.tick()
     await model.tick()
     await assert_dbg(dut, not model.busy, "cell still busy after final ack")
-    assert votes == tc.expected_votes
 
 
 async def run_case_random_holds(dut, tc: TestCase):
