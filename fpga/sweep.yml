@@ -1,0 +1,39 @@
+defaults:
+  period_ns: 5.0
+  cell_cache_size: 16384
+  vote_fifo_depth: 4
+
+parts:
+  a100t:
+    part: xc7a100tftg256-1
+    # 5 ns is aggressive for this part; relax so placement does not thrash.
+    period_ns: 8.0
+  zu3eg:
+    part: xczu3eg-sfvc784-2-e
+    period_ns: 5.0
+
+configs:
+  c1_ss:
+    cells: 1
+    superscalar: 1
+  c1_nss:
+    cells: 1
+    superscalar: 0
+  c2_ss:
+    cells: 2
+    superscalar: 1
+  c2_nss:
+    cells: 2
+    superscalar: 0
+  c4_ss:
+    cells: 4
+    superscalar: 1
+  c4_nss:
+    cells: 4
+    superscalar: 0
+  c6_ss:
+    cells: 6
+    superscalar: 1
+  c6_nss:
+    cells: 6
+    superscalar: 0

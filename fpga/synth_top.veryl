@@ -1,83 +1,88 @@
-/// Bare-minimum synthesis harness for ForestTop.
+/// Synthesis harness for ForestTop.
 ///
-/// Not functionally meaningful: the Wishbone buses are driven with pseudo-random
-/// traffic rather than a valid protocol. The point is that no input is constant
-/// and every output is observed, so nothing is optimised away and the reported
-/// timing paths are all real core paths.
+/// A thin pass-through: every DUT port is exposed at the top level, so nothing
+/// can be optimised away and there is no stimulus generator to distort the
+/// results. The Wishbone bundles are flattened to plain vectors because Vivado
+/// does not accept SystemVerilog interfaces on the top-level synthesis boundary;
+/// they are re-bundled internally and handed to the DUT unchanged.
+///
+/// The boundary is false-pathed in the XDC, so the only timed paths are
+/// register-to-register inside the core.
 module BenchTop #(
-    param CELL_INSTANCES      : u32   = 4   ,
-    param USE_SUPERSCALAR     : bbool = true,
-    param READ_PORTS_PER_CACHE: u8    = 2   ,
-    param CELL_CACHE_SIZE     : u64   = 1024,
-    param VOTE_FIFO_DEPTH     : u32   = 4   ,
+    param CELL_INSTANCES      : u32   = 4    ,
+    param USE_SUPERSCALAR     : bbool = true ,
+    param READ_PORTS_PER_CACHE: u8    = 2    ,
+    param CELL_CACHE_SIZE     : u64   = 16384,
+    param VOTE_FIFO_DEPTH     : u32   = 4    ,
 
     const WB_ADDR_WIDTH: u8 = 32,
     const WB_DATA_WIDTH: u8 = 32,
+    const WB_SEL_WIDTH : u8 = 4 ,
 ) (
-    clk: input clock,
-    rst: input reset,
-    /// One real pin folded into the LFSR feedback. Belt-and-braces against
-    /// constant propagation; the LFSR alone is already unfoldable.
-    stim: input  logic   ,
-    obs : output logic<8>,
+    clk      : input clock           ,
+    wb_rst   : input reset_async_high,
+    rst_cache: input reset           ,
+
+    // ---- Control port (flattened Wishbone slave) -------------------------
+    ctrl_cyc         : input  logic                 ,
+    ctrl_stb         : input  logic                 ,
+    ctrl_we          : input  logic                 ,
+    ctrl_lock        : input  logic                 ,
+    ctrl_sel         : input  logic<WB_SEL_WIDTH>   ,
+    ctrl_addr        : input  logic<WB_ADDR_WIDTH>  ,
+    ctrl_write_data  : input  logic<WB_DATA_WIDTH>  ,
+    ctrl_read_data   : output logic<WB_DATA_WIDTH>  ,
+    ctrl_ack         : output logic                 ,
+
+    // ---- Cell cache ports (flattened, one slice per cell) ----------------
+    cache_cyc        : input  logic<CELL_INSTANCES>                 ,
+    cache_stb        : input  logic<CELL_INSTANCES>                 ,
+    cache_we         : input  logic<CELL_INSTANCES>                 ,
+    cache_lock       : input  logic<CELL_INSTANCES>                 ,
+    cache_sel        : input  logic<WB_SEL_WIDTH * CELL_INSTANCES>  ,
+    cache_addr       : input  logic<WB_ADDR_WIDTH * CELL_INSTANCES> ,
+    cache_write_data : input  logic<WB_DATA_WIDTH * CELL_INSTANCES> ,
+    cache_read_data  : output logic<WB_DATA_WIDTH * CELL_INSTANCES> ,
+    cache_ack        : output logic<CELL_INSTANCES>                 ,
+
+    interrupt: output logic,
 ) {
-    let wb_rst: reset_async_high = rst as reset_async_high;
+    // ---- Re-bundle -------------------------------------------------------
+    inst control_bus: memutils::Wishbone #(
+        ADDR_WIDTH: WB_ADDR_WIDTH,
+        DATA_WIDTH: WB_DATA_WIDTH,
+    );
 
-    // ---- Stimulus: free-running LFSR ------------------------------------
-    const LFSR_W: u32           = 64;
-    var   lfsr  : logic<LFSR_W>;
-    let   fb    : logic         = lfsr[63] ^ lfsr[62] ^ lfsr[60] ^ lfsr[59] ^ stim;
+    inst cache_bus: memutils::Wishbone [CELL_INSTANCES] #(
+        ADDR_WIDTH: WB_ADDR_WIDTH,
+        DATA_WIDTH: WB_DATA_WIDTH,
+    );
 
-    always_ff (clk, rst) {
-        if_reset {
-            lfsr = 64'h1234_5678_9abc_def1;
-        } else {
-            lfsr = {lfsr[LFSR_W - 2:0], fb};
-        }
-    }
+    assign control_bus.cyc          = ctrl_cyc;
+    assign control_bus.stb          = ctrl_stb;
+    assign control_bus.write_enable = ctrl_we;
+    assign control_bus.lock         = ctrl_lock;
+    assign control_bus.select       = ctrl_sel;
+    assign control_bus.addr         = ctrl_addr;
+    assign control_bus.write_data   = ctrl_write_data;
 
-    // Registered stimulus: puts a flop between the LFSR and the core so the
-    // reported paths start at a register on the core boundary.
-    var stim_q: logic<LFSR_W>;
-    always_ff (clk, rst) {
-        if_reset {
-            stim_q = 0;
-        } else {
-            stim_q = lfsr;
-        }
-    }
+    assign ctrl_read_data = control_bus.read_data;
+    assign ctrl_ack       = control_bus.ack;
 
-    // ---- Buses -----------------------------------------------------------
-    inst control_bus: memutils::Wishbone #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
+    for i in 0..CELL_INSTANCES :wire_cache {
+        assign cache_bus[i].cyc          = cache_cyc[i];
+        assign cache_bus[i].stb          = cache_stb[i];
+        assign cache_bus[i].write_enable = cache_we[i];
+        assign cache_bus[i].lock         = cache_lock[i];
+        assign cache_bus[i].select       = cache_sel[(i * WB_SEL_WIDTH)+:WB_SEL_WIDTH];
+        assign cache_bus[i].addr         = cache_addr[(i * WB_ADDR_WIDTH)+:WB_ADDR_WIDTH];
+        assign cache_bus[i].write_data   = cache_write_data[(i * WB_DATA_WIDTH)+:WB_DATA_WIDTH];
 
-    inst cache_bus: memutils::Wishbone [CELL_INSTANCES] #( ADDR_WIDTH: WB_ADDR_WIDTH, DATA_WIDTH: WB_DATA_WIDTH );
-
-    // Control port stimulus.
-    assign control_bus.cyc          = stim_q[0];
-    assign control_bus.stb          = stim_q[1];
-    assign control_bus.write_enable = stim_q[2];
-    assign control_bus.select       = stim_q[7:4];
-    assign control_bus.addr         = stim_q[39:8];
-    assign control_bus.write_data   = stim_q[63:32];
-    assign control_bus.lock         = 0;
-
-    // Cache port stimulus. Each cell gets a differently-rotated slice so the
-    // tool cannot merge the instances.
-    for i in 0..CELL_INSTANCES :drive_cache {
-        let rot: logic<LFSR_W> = {stim_q[LFSR_W - 1 - i:0], stim_q[LFSR_W - 1:LFSR_W - i]};
-
-        assign cache_bus[i].cyc          = rot[0];
-        assign cache_bus[i].stb          = rot[1];
-        assign cache_bus[i].write_enable = rot[2];
-        assign cache_bus[i].select       = rot[7:4];
-        assign cache_bus[i].addr         = rot[39:8];
-        assign cache_bus[i].write_data   = rot[63:32];
-        assign cache_bus[i].lock         = 0;
+        assign cache_read_data[(i * WB_DATA_WIDTH)+:WB_DATA_WIDTH] = cache_bus[i].read_data;
+        assign cache_ack[i]                                        = cache_bus[i].ack;
     }
 
     // ---- DUT -------------------------------------------------------------
-    var interrupt: logic;
-
     inst dut: ForestTop::<standard_layout> #(
         CELL_INSTANCES            ,
         USE_SUPERSCALAR           ,
@@ -87,58 +92,10 @@ module BenchTop #(
         VOTE_FIFO_DEPTH           ,
     ) (
         clk                       ,
-        wb_rst       : wb_rst     ,
-        rst_cache    : rst        ,
+        wb_rst                    ,
+        rst_cache                 ,
         control_port : control_bus,
         cell_cache_wb: cache_bus  ,
         interrupt                 ,
     );
-
-    // ---- Observation -----------------------------------------------------
-    // Register each bus return first, then reduce. Registering first keeps the
-    // harness's XOR tree off the core's critical path.
-    var ctrl_ret : logic<WB_DATA_WIDTH>                  ;
-    var ctrl_ack : logic                                 ;
-    var cache_ret: logic<WB_DATA_WIDTH>  [CELL_INSTANCES];
-    var cache_ack: logic<CELL_INSTANCES>                 ;
-    var irq_q    : logic                                 ;
-
-    always_ff (clk, rst) {
-        if_reset {
-            ctrl_ret = 0;
-            ctrl_ack = 0;
-            irq_q    = 0;
-            for i in 0..CELL_INSTANCES {
-                cache_ret[i] = 0;
-                cache_ack[i] = 0;
-            }
-        } else {
-            ctrl_ret = control_bus.read_data;
-            ctrl_ack = control_bus.ack;
-            irq_q    = interrupt;
-            for i in 0..CELL_INSTANCES {
-                cache_ret[i] = cache_bus[i].read_data;
-                cache_ack[i] = cache_bus[i].ack;
-            }
-        }
-    }
-
-    var fold: logic<WB_DATA_WIDTH>;
-    always_comb {
-        fold = ctrl_ret ^ {31'b0, ctrl_ack} ^ {31'b0, irq_q};
-        for i in 0..CELL_INSTANCES {
-            fold = fold ^ cache_ret[i] ^ {31'b0, cache_ack[i]};
-        }
-    }
-
-    var acc: logic<WB_DATA_WIDTH>;
-    always_ff (clk, rst) {
-        if_reset {
-            acc = 0;
-        } else {
-            acc = acc ^ fold;
-        }
-    }
-
-    assign obs = acc[7:0];
 }
