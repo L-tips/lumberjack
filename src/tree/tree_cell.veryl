@@ -156,8 +156,6 @@ module TreeCell::<L: Layout> #(
 
     // `current_node_idx + 1`, precomputed and registered so the adjacency
     // comparison sees a flop instead of a fresh subtract-and-increment.
-    // Derived from the *next* values of read_addr / current_header_addr so it
-    // is aligned with them once both are registered.
     let adjacent_idx  : NodePtr = (next_read_addr - header_addr) + 1;
     var adjacent_idx_q: NodePtr;
 

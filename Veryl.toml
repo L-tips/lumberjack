@@ -11,7 +11,7 @@ memutils = { version = "0.4.2", github = "jbeaurivage/memutils-veryl" }
 clock_type = "posedge"
 reset_type = "async_low"
 
-sources = ["src", "tb", "benchmark"]
+sources = ["src", "tb", "benchmark", "fpga"]
 target = { type = "directory", path = "target/veryl" }
 
 [format]
